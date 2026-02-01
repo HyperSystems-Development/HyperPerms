@@ -61,19 +61,26 @@ public class ChatListener {
     }
     
     /**
-     * Checks if HyFactions plugin is installed.
-     * Used to determine event priority - when HyFactions is present,
+     * Checks if a factions plugin is installed (HyFactions or HyperFactions).
+     * Used to determine event priority - when a factions plugin is present,
      * we run LAST to wrap its formatter instead of FIRST.
      *
-     * @return true if HyFactions is installed
+     * @return true if HyFactions or HyperFactions is installed
      */
     private static boolean isHyFactionsInstalled() {
+        // Check for HyFactions (legacy)
         try {
             Class.forName("com.kaws.hyfaction.Main");
             return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        } catch (ClassNotFoundException ignored) {}
+
+        // Check for HyperFactions
+        try {
+            Class.forName("com.hyperfactions.HyperFactions");
+            return true;
+        } catch (ClassNotFoundException ignored) {}
+
+        return false;
     }
 
     /**

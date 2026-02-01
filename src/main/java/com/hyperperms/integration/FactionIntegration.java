@@ -13,8 +13,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class FactionIntegration {
 
     private final HyperPerms plugin;
-    private final boolean hyfactionsAvailable;
+    private final boolean factionPluginAvailable;
     private final FactionProvider provider;
+    private final String detectedPlugin;
 
     // Cache for faction data to avoid repeated lookups
     private final Map<UUID, CachedFactionData> factionCache = new ConcurrentHashMap<>();
@@ -25,7 +26,7 @@ public final class FactionIntegration {
     private String noFactionDefault = "";
     private String noRankDefault = "";
     private String factionFormat = "%s"; // Just the name by default
-    
+
     // Prefix config options
     private boolean prefixEnabled = true;
     private String prefixFormat = "&7[&b%s&7] ";           // %s = faction name
@@ -34,11 +35,38 @@ public final class FactionIntegration {
 
     public FactionIntegration(@NotNull HyperPerms plugin) {
         this.plugin = plugin;
-        this.hyfactionsAvailable = checkHyFactionsAvailable();
-        this.provider = hyfactionsAvailable ? createReflectiveProvider() : null;
 
-        if (hyfactionsAvailable) {
-            Logger.info("HyFactions integration enabled - faction placeholders available");
+        // Check for HyperFactions first (preferred), then HyFactions (legacy)
+        if (checkHyperFactionsAvailable()) {
+            this.provider = createHyperFactionsProvider();
+            this.factionPluginAvailable = provider != null;
+            this.detectedPlugin = "HyperFactions";
+            if (factionPluginAvailable) {
+                Logger.info("HyperFactions integration enabled - faction placeholders available");
+            }
+        } else if (checkHyFactionsAvailable()) {
+            this.provider = createHyFactionsProvider();
+            this.factionPluginAvailable = provider != null;
+            this.detectedPlugin = "HyFactions";
+            if (factionPluginAvailable) {
+                Logger.info("HyFactions integration enabled - faction placeholders available");
+            }
+        } else {
+            this.provider = null;
+            this.factionPluginAvailable = false;
+            this.detectedPlugin = null;
+        }
+    }
+
+    /**
+     * Checks if HyperFactions plugin classes are available.
+     */
+    private boolean checkHyperFactionsAvailable() {
+        try {
+            Class.forName("com.hyperfactions.api.HyperFactionsAPI");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 
@@ -55,11 +83,25 @@ public final class FactionIntegration {
     }
 
     /**
-     * Creates a reflection-based provider for HyFactions.
+     * Creates a reflection-based provider for HyperFactions.
+     * Uses reflection to avoid compile-time dependency on HyperFactions.
+     */
+    @Nullable
+    private FactionProvider createHyperFactionsProvider() {
+        try {
+            return new ReflectiveHyperFactionsProvider();
+        } catch (Exception e) {
+            Logger.warn("Failed to initialize HyperFactions reflection provider: %s", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Creates a reflection-based provider for HyFactions (legacy).
      * Uses reflection to avoid compile-time dependency on HyFactions.
      */
     @Nullable
-    private FactionProvider createReflectiveProvider() {
+    private FactionProvider createHyFactionsProvider() {
         try {
             return new ReflectiveHyFactionsProvider();
         } catch (Exception e) {
@@ -69,17 +111,25 @@ public final class FactionIntegration {
     }
 
     /**
-     * @return true if HyFactions is available and integration is enabled
+     * @return true if a faction plugin is available and integration is enabled
      */
     public boolean isAvailable() {
-        return hyfactionsAvailable && enabled && provider != null;
+        return factionPluginAvailable && enabled && provider != null;
     }
 
     /**
-     * @return true if HyFactions JAR is present (regardless of enabled state)
+     * @return true if a faction plugin JAR is present (regardless of enabled state)
      */
     public boolean isHyFactionsInstalled() {
-        return hyfactionsAvailable;
+        return factionPluginAvailable;
+    }
+
+    /**
+     * @return the name of the detected faction plugin, or null if none
+     */
+    @Nullable
+    public String getDetectedPlugin() {
+        return detectedPlugin;
     }
 
     // ==================== Configuration ====================
@@ -355,7 +405,85 @@ public final class FactionIntegration {
     }
 
     /**
-     * Reflection-based HyFactions implementation.
+     * Reflection-based HyperFactions implementation.
+     * Uses pure reflection to avoid compile-time dependency on HyperFactions.
+     */
+    private static final class ReflectiveHyperFactionsProvider implements FactionProvider {
+
+        private final Class<?> apiClass;
+        private final Class<?> factionClass;
+        private final Class<?> factionMemberClass;
+        private final Class<?> factionRoleClass;
+        private final Method isAvailableMethod;
+        private final Method getPlayerFactionMethod;
+        private final Method factionNameMethod;
+        private final Method factionTagMethod;
+        private final Method factionGetMemberMethod;
+        private final Method memberRoleMethod;
+        private final Method roleGetDisplayNameMethod;
+
+        ReflectiveHyperFactionsProvider() throws Exception {
+            // Load HyperFactions classes via reflection
+            apiClass = Class.forName("com.hyperfactions.api.HyperFactionsAPI");
+            factionClass = Class.forName("com.hyperfactions.data.Faction");
+            factionMemberClass = Class.forName("com.hyperfactions.data.FactionMember");
+            factionRoleClass = Class.forName("com.hyperfactions.data.FactionRole");
+
+            // Cache method references
+            isAvailableMethod = apiClass.getMethod("isAvailable");
+            getPlayerFactionMethod = apiClass.getMethod("getPlayerFaction", UUID.class);
+            factionNameMethod = factionClass.getMethod("name");
+            factionTagMethod = factionClass.getMethod("tag");
+            factionGetMemberMethod = factionClass.getMethod("getMember", UUID.class);
+            memberRoleMethod = factionMemberClass.getMethod("role");
+            roleGetDisplayNameMethod = factionRoleClass.getMethod("getDisplayName");
+        }
+
+        @Override
+        @Nullable
+        public FactionData getFactionData(@NotNull UUID playerUuid) {
+            try {
+                // Check if API is available
+                Boolean available = (Boolean) isAvailableMethod.invoke(null);
+                if (available == null || !available) {
+                    return null;
+                }
+
+                // Get player's faction
+                Object faction = getPlayerFactionMethod.invoke(null, playerUuid);
+                if (faction == null) {
+                    return null;
+                }
+
+                // Extract faction data using reflection
+                String factionName = (String) factionNameMethod.invoke(faction);
+                String tag = (String) factionTagMethod.invoke(faction);
+
+                // Get member info
+                Object member = factionGetMemberMethod.invoke(faction, playerUuid);
+                if (member == null) {
+                    return null;
+                }
+
+                // Get role
+                Object role = memberRoleMethod.invoke(member);
+                String rankDisplayName = (String) roleGetDisplayNameMethod.invoke(role);
+                String roleName = role.toString(); // enum name like "LEADER", "OFFICER", "MEMBER"
+
+                boolean isOwner = "LEADER".equals(roleName);
+                boolean isOfficer = "OFFICER".equals(roleName);
+
+                return new FactionData(factionName, tag, rankDisplayName, isOwner, isOfficer);
+
+            } catch (Exception e) {
+                // Fail gracefully - return null if anything goes wrong
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Reflection-based HyFactions implementation (legacy).
      * Uses pure reflection to avoid compile-time dependency on HyFactions.
      */
     private static final class ReflectiveHyFactionsProvider implements FactionProvider {

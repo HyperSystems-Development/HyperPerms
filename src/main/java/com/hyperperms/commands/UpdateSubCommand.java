@@ -12,15 +12,6 @@ import java.awt.Color;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Subcommand for /hp update [confirm].
- * <p>
- * Checks for plugin updates and optionally downloads them.
- * <ul>
- *   <li>/hp update - Check for updates and display status</li>
- *   <li>/hp update confirm - Download and install the update</li>
- * </ul>
- */
 public class UpdateSubCommand extends AbstractCommand {
 
     private static final Color GOLD = new Color(255, 170, 0);
@@ -31,9 +22,11 @@ public class UpdateSubCommand extends AbstractCommand {
 
     private final HyperPerms hyperPerms;
 
+    @SuppressWarnings("this-escape")
     public UpdateSubCommand(@NotNull HyperPerms hyperPerms) {
         super("update", "Check for and download plugin updates");
         this.hyperPerms = hyperPerms;
+        addSubCommand(new ConfirmSubCommand(hyperPerms));
     }
 
     @Override
@@ -57,25 +50,7 @@ public class UpdateSubCommand extends AbstractCommand {
             return CompletableFuture.completedFuture(null);
         }
 
-        // Parse action from raw input
-        boolean isConfirm = parseIsConfirm(ctx);
-
-        if (isConfirm) {
-            return handleConfirm(ctx, checker);
-        } else {
-            return handleCheck(ctx, checker);
-        }
-    }
-    
-    /**
-     * Parses whether the confirm action was specified.
-     */
-    private boolean parseIsConfirm(CommandContext ctx) {
-        String input = ctx.getInputString();
-        if (input == null || input.isEmpty()) {
-            return false;
-        }
-        return input.toLowerCase().contains("confirm");
+        return handleCheck(ctx, checker);
     }
 
     /**
@@ -145,80 +120,25 @@ public class UpdateSubCommand extends AbstractCommand {
     }
 
     /**
-     * Handles /hp update confirm - downloads the update.
-     */
-    private CompletableFuture<Void> handleConfirm(CommandContext ctx, UpdateChecker checker) {
-        UpdateChecker.UpdateInfo info = checker.getCachedUpdate();
-
-        if (info == null) {
-            ctx.sender().sendMessage(
-                Message.raw("[HyperPerms] ").color(GRAY)
-                    .insert(Message.raw("No update available. Run ").color(GRAY))
-                    .insert(Message.raw("/hp update").color(GREEN))
-                    .insert(Message.raw(" to check for updates.").color(GRAY))
-            );
-            return CompletableFuture.completedFuture(null);
-        }
-
-        if (info.downloadUrl() == null || info.downloadUrl().isEmpty()) {
-            ctx.sender().sendMessage(
-                Message.raw("[HyperPerms] ").color(RED)
-                    .insert(Message.raw("No download URL available for this release.").color(RED))
-            );
-            return CompletableFuture.completedFuture(null);
-        }
-
-        String newVersion = info.version();
-
-        ctx.sender().sendMessage(
-            Message.raw("[HyperPerms] ").color(GOLD)
-                .insert(Message.raw("Downloading update v" + newVersion + "...").color(GOLD))
-        );
-
-        checker.downloadUpdate(info).thenAccept(path -> {
-            if (path != null) {
-                ctx.sender().sendMessage(
-                    Message.raw("[HyperPerms] ").color(GREEN)
-                        .insert(Message.raw("Update downloaded successfully!").color(GREEN).bold(true))
-                );
-                ctx.sender().sendMessage(
-                    Message.raw("[HyperPerms] ").color(GRAY)
-                        .insert(Message.raw("Restart the server to apply the update.").color(GOLD))
-                );
-                Logger.info("[Update] Downloaded update v%s to %s", newVersion, path.getFileName());
-            } else {
-                ctx.sender().sendMessage(
-                    Message.raw("[HyperPerms] ").color(RED)
-                        .insert(Message.raw("Failed to download update. Check console for details.").color(RED))
-                );
-            }
-        }).exceptionally(e -> {
-            ctx.sender().sendMessage(
-                Message.raw("[HyperPerms] ").color(RED)
-                    .insert(Message.raw("Failed to download update: " + e.getMessage()).color(RED))
-            );
-            Logger.warn("[Update] Failed to download update: %s", e.getMessage());
-            return null;
-        });
-
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
      * Checks if the sender has permission to use this command.
      * Checks for wildcard, admin permission, specific permission, and Hytale native permissions.
      */
-    private boolean hasPermission(CommandContext ctx) {
+    private static boolean hasPermission(CommandContext ctx) {
         // Console always has permission (null UUID means console)
         UUID uuid = ctx.sender().getUuid();
         if (uuid == null) {
             return true;
         }
 
+        HyperPerms hp = HyperPerms.getInstance();
+        if (hp == null) {
+            return false;
+        }
+
         // Check HyperPerms permissions (wildcard first, then specific)
-        if (hyperPerms.hasPermission(uuid, "hyperperms.*") ||
-            hyperPerms.hasPermission(uuid, "hyperperms.admin") ||
-            hyperPerms.hasPermission(uuid, "hyperperms.update")) {
+        if (hp.hasPermission(uuid, "hyperperms.*") ||
+            hp.hasPermission(uuid, "hyperperms.admin") ||
+            hp.hasPermission(uuid, "hyperperms.update")) {
             return true;
         }
         
@@ -239,7 +159,7 @@ public class UpdateSubCommand extends AbstractCommand {
     /**
      * Truncates changelog to a maximum length for display.
      */
-    private String truncateChangelog(String changelog, int maxLength) {
+    private static String truncateChangelog(String changelog, int maxLength) {
         // Remove markdown formatting and newlines
         String cleaned = changelog
             .replaceAll("#+\\s*", "")  // Remove headers
@@ -252,5 +172,102 @@ public class UpdateSubCommand extends AbstractCommand {
             return cleaned;
         }
         return cleaned.substring(0, maxLength - 3) + "...";
+    }
+
+    /**
+     * Nested subcommand for /hp update confirm.
+     * Downloads and installs the latest update.
+     */
+    private static class ConfirmSubCommand extends AbstractCommand {
+        private final HyperPerms hyperPerms;
+
+        ConfirmSubCommand(HyperPerms hyperPerms) {
+            super("confirm", "Download and install the latest update");
+            this.hyperPerms = hyperPerms;
+        }
+
+        @Override
+        protected CompletableFuture<Void> execute(CommandContext ctx) {
+            // Check permission - use outer class's static method
+            if (!UpdateSubCommand.hasPermission(ctx)) {
+                ctx.sender().sendMessage(
+                    Message.raw("[HyperPerms] ").color(RED)
+                        .insert(Message.raw("You don't have permission to use this command.").color(RED))
+                );
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Check if update checker is available
+            UpdateChecker checker = hyperPerms.getUpdateChecker();
+            if (checker == null) {
+                ctx.sender().sendMessage(
+                    Message.raw("[HyperPerms] ").color(RED)
+                        .insert(Message.raw("Update checking is disabled in config.").color(RED))
+                );
+                return CompletableFuture.completedFuture(null);
+            }
+
+            return handleConfirm(ctx, checker);
+        }
+
+        /**
+         * Handles /hp update confirm - downloads the update.
+         */
+        private CompletableFuture<Void> handleConfirm(CommandContext ctx, UpdateChecker checker) {
+            UpdateChecker.UpdateInfo info = checker.getCachedUpdate();
+
+            if (info == null) {
+                ctx.sender().sendMessage(
+                    Message.raw("[HyperPerms] ").color(GRAY)
+                        .insert(Message.raw("No update available. Run ").color(GRAY))
+                        .insert(Message.raw("/hp update").color(GREEN))
+                        .insert(Message.raw(" to check for updates.").color(GRAY))
+                );
+                return CompletableFuture.completedFuture(null);
+            }
+
+            if (info.downloadUrl() == null || info.downloadUrl().isEmpty()) {
+                ctx.sender().sendMessage(
+                    Message.raw("[HyperPerms] ").color(RED)
+                        .insert(Message.raw("No download URL available for this release.").color(RED))
+                );
+                return CompletableFuture.completedFuture(null);
+            }
+
+            String newVersion = info.version();
+
+            ctx.sender().sendMessage(
+                Message.raw("[HyperPerms] ").color(GOLD)
+                    .insert(Message.raw("Downloading update v" + newVersion + "...").color(GOLD))
+            );
+
+            checker.downloadUpdate(info).thenAccept(path -> {
+                if (path != null) {
+                    ctx.sender().sendMessage(
+                        Message.raw("[HyperPerms] ").color(GREEN)
+                            .insert(Message.raw("Update downloaded successfully!").color(GREEN).bold(true))
+                    );
+                    ctx.sender().sendMessage(
+                        Message.raw("[HyperPerms] ").color(GRAY)
+                            .insert(Message.raw("Restart the server to apply the update.").color(GOLD))
+                    );
+                    Logger.info("[Update] Downloaded update v%s to %s", newVersion, path.getFileName());
+                } else {
+                    ctx.sender().sendMessage(
+                        Message.raw("[HyperPerms] ").color(RED)
+                            .insert(Message.raw("Failed to download update. Check console for details.").color(RED))
+                    );
+                }
+            }).exceptionally(e -> {
+                ctx.sender().sendMessage(
+                    Message.raw("[HyperPerms] ").color(RED)
+                        .insert(Message.raw("Failed to download update: " + e.getMessage()).color(RED))
+                );
+                Logger.warn("[Update] Failed to download update: %s", e.getMessage());
+                return null;
+            });
+
+            return CompletableFuture.completedFuture(null);
+        }
     }
 }

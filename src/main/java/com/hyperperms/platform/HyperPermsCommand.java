@@ -3,6 +3,7 @@ package com.hyperperms.platform;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
+import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
@@ -1192,6 +1193,8 @@ public class HyperPermsCommand extends AbstractCommand {
             addSubCommand(new UserAddGroupSubCommand(hyperPerms));
             addSubCommand(new UserRemoveGroupSubCommand(hyperPerms));
             addSubCommand(new UserSetPrimaryGroupSubCommand(hyperPerms));
+            addSubCommand(new UserPromoteSubCommand(hyperPerms));
+            addSubCommand(new UserDemoteSubCommand(hyperPerms));
             addSubCommand(new UserSetPrefixSubCommand(hyperPerms));
             addSubCommand(new UserSetSuffixSubCommand(hyperPerms));
             addSubCommand(new UserClearSubCommand(hyperPerms));
@@ -1476,6 +1479,210 @@ public class HyperPermsCommand extends AbstractCommand {
             hyperPerms.getCache().invalidate(user.getUuid());
 
             ctx.sender().sendMessage(Message.raw("Set primary group of " + user.getFriendlyName() + " to " + groupName));
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+
+    private static class UserPromoteSubCommand extends HpCommand {
+        private static final java.awt.Color GREEN = new java.awt.Color(85, 255, 85);
+        private static final java.awt.Color GOLD = new java.awt.Color(255, 170, 0);
+        private static final java.awt.Color GRAY = java.awt.Color.GRAY;
+
+        private final HyperPerms hyperPerms;
+        private final RequiredArg<String> playerArg;
+        private final RequiredArg<String> trackArg;
+
+        UserPromoteSubCommand(HyperPerms hyperPerms) {
+            super("promote", "Promote a user along a track");
+            this.hyperPerms = hyperPerms;
+            this.playerArg = describeArg("player", "Player name or UUID", ArgTypes.STRING);
+            this.trackArg = describeArg("track", "Track name", ArgTypes.STRING);
+        }
+
+        @Override
+        protected CompletableFuture<Void> execute(CommandContext ctx) {
+            String identifier = ctx.get(playerArg);
+            String trackName = ctx.get(trackArg);
+
+            // Find track
+            Track track = hyperPerms.getTrackManager().getTrack(trackName);
+            if (track == null) {
+                ctx.sender().sendMessage(Message.raw("Track not found: " + trackName));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Check if track has groups
+            if (track.isEmpty()) {
+                ctx.sender().sendMessage(Message.raw("Track '" + trackName + "' has no groups defined."));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Find user
+            User user = resolveOrCreateUser(hyperPerms, identifier);
+            if (user == null) {
+                ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
+                ctx.sender().sendMessage(Message.raw("Tip: Use UUID for offline players (e.g., from Tebex)"));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Find user's current group on this track
+            String currentGroupOnTrack = null;
+            for (String groupName : user.getInheritedGroups()) {
+                if (track.containsGroup(groupName)) {
+                    // Use the highest position group if user has multiple groups on track
+                    if (currentGroupOnTrack == null || track.indexOf(groupName) > track.indexOf(currentGroupOnTrack)) {
+                        currentGroupOnTrack = groupName;
+                    }
+                }
+            }
+
+            String targetGroup;
+            String actionMessage;
+
+            if (currentGroupOnTrack == null) {
+                // User not on track - start at first group
+                targetGroup = track.getFirstGroup();
+                actionMessage = "Added to track at";
+            } else {
+                // User is on track - get next group
+                String nextGroup = track.getNextGroup(currentGroupOnTrack);
+                if (nextGroup == null) {
+                    ctx.sender().sendMessage(
+                        Message.raw(user.getFriendlyName() + " is already at the top of track '" + trackName + "' (" + currentGroupOnTrack + ")").color(GOLD)
+                    );
+                    return CompletableFuture.completedFuture(null);
+                }
+                targetGroup = nextGroup;
+                actionMessage = "Promoted from " + currentGroupOnTrack + " to";
+            }
+
+            // Verify target group exists
+            Group group = hyperPerms.getGroupManager().getGroup(targetGroup);
+            if (group == null) {
+                ctx.sender().sendMessage(Message.raw("Target group '" + targetGroup + "' does not exist. Please create the group first."));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Remove old group from track if present
+            if (currentGroupOnTrack != null) {
+                user.removeGroup(currentGroupOnTrack);
+            }
+
+            // Add new group
+            user.addGroup(targetGroup);
+
+            // Save changes
+            hyperPerms.getUserManager().saveUser(user).join();
+            hyperPerms.getCache().invalidate(user.getUuid());
+
+            ctx.sender().sendMessage(
+                Message.raw(actionMessage + " ").color(GRAY)
+                    .insert(Message.raw(targetGroup).color(GREEN))
+                    .insert(Message.raw(" for ").color(GRAY))
+                    .insert(Message.raw(user.getFriendlyName()).color(GREEN))
+                    .insert(Message.raw(" on track ").color(GRAY))
+                    .insert(Message.raw(trackName).color(GREEN))
+            );
+
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    private static class UserDemoteSubCommand extends HpCommand {
+        private static final java.awt.Color RED = new java.awt.Color(255, 85, 85);
+        private static final java.awt.Color GOLD = new java.awt.Color(255, 170, 0);
+        private static final java.awt.Color GRAY = java.awt.Color.GRAY;
+
+        private final HyperPerms hyperPerms;
+        private final RequiredArg<String> playerArg;
+        private final RequiredArg<String> trackArg;
+
+        UserDemoteSubCommand(HyperPerms hyperPerms) {
+            super("demote", "Demote a user along a track");
+            this.hyperPerms = hyperPerms;
+            this.playerArg = describeArg("player", "Player name or UUID", ArgTypes.STRING);
+            this.trackArg = describeArg("track", "Track name", ArgTypes.STRING);
+        }
+
+        @Override
+        protected CompletableFuture<Void> execute(CommandContext ctx) {
+            String identifier = ctx.get(playerArg);
+            String trackName = ctx.get(trackArg);
+
+            // Find track
+            Track track = hyperPerms.getTrackManager().getTrack(trackName);
+            if (track == null) {
+                ctx.sender().sendMessage(Message.raw("Track not found: " + trackName));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Check if track has groups
+            if (track.isEmpty()) {
+                ctx.sender().sendMessage(Message.raw("Track '" + trackName + "' has no groups defined."));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Find user
+            User user = resolveUser(hyperPerms, identifier);
+            if (user == null) {
+                ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Find user's current group on this track
+            String currentGroupOnTrack = null;
+            for (String groupName : user.getInheritedGroups()) {
+                if (track.containsGroup(groupName)) {
+                    // Use the highest position group if user has multiple groups on track
+                    if (currentGroupOnTrack == null || track.indexOf(groupName) > track.indexOf(currentGroupOnTrack)) {
+                        currentGroupOnTrack = groupName;
+                    }
+                }
+            }
+
+            if (currentGroupOnTrack == null) {
+                ctx.sender().sendMessage(
+                    Message.raw(user.getFriendlyName() + " is not on track '" + trackName + "'.").color(RED)
+                );
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Get previous group
+            String previousGroup = track.getPreviousGroup(currentGroupOnTrack);
+            if (previousGroup == null) {
+                ctx.sender().sendMessage(
+                    Message.raw(user.getFriendlyName() + " is already at the bottom of track '" + trackName + "' (" + currentGroupOnTrack + ")").color(GOLD)
+                );
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Verify target group exists
+            Group group = hyperPerms.getGroupManager().getGroup(previousGroup);
+            if (group == null) {
+                ctx.sender().sendMessage(Message.raw("Target group '" + previousGroup + "' does not exist. Please create the group first."));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Remove old group from track
+            user.removeGroup(currentGroupOnTrack);
+
+            // Add new group
+            user.addGroup(previousGroup);
+
+            // Save changes
+            hyperPerms.getUserManager().saveUser(user).join();
+            hyperPerms.getCache().invalidate(user.getUuid());
+
+            ctx.sender().sendMessage(
+                Message.raw("Demoted from " + currentGroupOnTrack + " to ").color(GRAY)
+                    .insert(Message.raw(previousGroup).color(RED))
+                    .insert(Message.raw(" for ").color(GRAY))
+                    .insert(Message.raw(user.getFriendlyName()).color(RED))
+                    .insert(Message.raw(" on track ").color(GRAY))
+                    .insert(Message.raw(trackName).color(RED))
+            );
+
             return CompletableFuture.completedFuture(null);
         }
     }

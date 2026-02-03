@@ -457,6 +457,40 @@ public final class HyperPerms implements HyperPermsAPI {
     }
 
     /**
+     * Checks a permission and returns the TriState result using the cache.
+     * This is used by HyperPermsPermissionSet for efficient permission checks
+     * that need the full TriState (TRUE/FALSE/UNDEFINED) rather than just boolean.
+     *
+     * @param uuid the player UUID
+     * @param permission the permission to check
+     * @param contexts the contexts to check in
+     * @return the TriState result of the permission check
+     */
+    @NotNull
+    public TriState checkPermission(@NotNull UUID uuid, @NotNull String permission, @NotNull ContextSet contexts) {
+        // Try cache first
+        var cachedPerms = cache.get(uuid, contexts);
+        if (cachedPerms != null) {
+            return cachedPerms.check(permission);
+        }
+
+        // Load user from memory, or from storage if not yet loaded
+        User user = userManager.getUser(uuid);
+        if (user == null) {
+            var loadResult = userManager.loadUser(uuid).join();
+            if (loadResult.isPresent()) {
+                user = loadResult.get();
+            } else {
+                user = userManager.getOrCreateUser(uuid);
+            }
+        }
+
+        var resolved = resolver.resolve(user, contexts);
+        cache.put(uuid, contexts, resolved);
+        return resolved.check(permission);
+    }
+
+    /**
      * Creates a permission check builder for fluent permission checks with contexts.
      * <p>
      * Example usage:

@@ -5,9 +5,9 @@ import com.hyperperms.migration.*;
 import com.hyperperms.migration.luckperms.LuckPermsMigrator;
 import com.hyperperms.util.Logger;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,46 +33,35 @@ import java.util.concurrent.CompletableFuture;
  *   <li>--overwrite - Overwrite existing data</li>
  * </ul>
  */
-public class MigrateSubCommand extends AbstractCommand {
+public class MigrateSubCommand extends HpCommand {
 
     private final HyperPerms hyperPerms;
     private final Map<String, PermissionMigrator> migrators;
-    private final OptionalArg<String> sourceArg;
-    private final OptionalArg<String> option1Arg;
-    private final OptionalArg<String> option2Arg;
-    private final OptionalArg<String> option3Arg;
+    private final RequiredArg<String> sourceArg;
 
     @SuppressWarnings("this-escape")
     public MigrateSubCommand(HyperPerms hyperPerms) {
         super("migrate", "Migrate permissions from another plugin");
         this.hyperPerms = hyperPerms;
         this.migrators = new HashMap<>();
-        
+
         // Register available migrators
         migrators.put("luckperms", new LuckPermsMigrator(hyperPerms));
-        
-        // Register arguments
-        this.sourceArg = withOptionalArg("source", "Source plugin (e.g., luckperms)", ArgTypes.STRING);
-        this.option1Arg = withOptionalArg("option1", "Migration option", ArgTypes.STRING);
-        this.option2Arg = withOptionalArg("option2", "Migration option", ArgTypes.STRING);
-        this.option3Arg = withOptionalArg("option3", "Migration option", ArgTypes.STRING);
+
+        // Register arguments - source with options embedded (e.g., "luckperms-confirm-verbose")
+        this.sourceArg = describeArg("source", "Source and options (e.g., luckperms-confirm)", ArgTypes.STRING);
     }
 
     @Override
     protected CompletableFuture<Void> execute(CommandContext ctx) {
-        String source = ctx.get(sourceArg);
-        String opt1 = ctx.get(option1Arg);
-        String opt2 = ctx.get(option2Arg);
-        String opt3 = ctx.get(option3Arg);
-        
-        // Show help if no source specified
-        if (source == null || source.isEmpty()) {
-            showHelp(ctx);
-            return CompletableFuture.completedFuture(null);
-        }
-        
-        source = source.toLowerCase();
-        
+        String input = ctx.get(sourceArg).toLowerCase();
+
+        // Parse source and options from input (format: source-option1-option2 or source)
+        String[] parts = input.split("-");
+        String source = parts[0];
+        String[] optionArgs = new String[parts.length - 1];
+        System.arraycopy(parts, 1, optionArgs, 0, parts.length - 1);
+
         // Handle help explicitly
         if (source.equals("help") || source.equals("?")) {
             showHelp(ctx);
@@ -91,15 +80,15 @@ public class MigrateSubCommand extends AbstractCommand {
         if (!migrator.canMigrate()) {
             sendError(ctx, "Cannot migrate from " + migrator.getSourceName() + ":");
             sendError(ctx, "  - Data not found or not accessible");
-            sendInfo(ctx, "Ensure the source plugin's data exists in the plugins folder.");
+            sendInfo(ctx, "Ensure the LuckPerms data folder exists in /mods/LuckPerms/");
+            sendInfo(ctx, "The folder should contain json-storage/, yaml-storage/, or database files.");
             return CompletableFuture.completedFuture(null);
         }
         
-        // Parse options from the option arguments
-        String[] optionArgs = collectOptions(opt1, opt2, opt3);
+        // Parse options from the embedded arguments
         MigrationOptions options = parseOptions(optionArgs);
-        boolean confirm = hasFlag(optionArgs, "--confirm");
-        boolean verbose = hasFlag(optionArgs, "--verbose");
+        boolean confirm = hasFlag(optionArgs, "confirm");
+        boolean verbose = hasFlag(optionArgs, "verbose");
         
         // Update options with verbose flag
         options = MigrationOptions.builder()
@@ -207,29 +196,28 @@ public class MigrateSubCommand extends AbstractCommand {
         ctx.sender().sendMessage(Message.raw(""));
         ctx.sender().sendMessage(parseColoredMessage("§eUsage:§r"));
         ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate <source>§7 - Preview migration (dry-run)"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate <source> --confirm§7 - Execute migration"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate <source>-confirm§7 - Execute migration"));
         ctx.sender().sendMessage(Message.raw(""));
         ctx.sender().sendMessage(parseColoredMessage("§eAvailable Sources:§r"));
-        
+
         for (Map.Entry<String, PermissionMigrator> entry : migrators.entrySet()) {
             PermissionMigrator m = entry.getValue();
             String status = m.canMigrate() ? "§a✓ Available" : "§c✗ Not found";
             ctx.sender().sendMessage(parseColoredMessage("  §f" + entry.getKey() + " §7- " + m.getSourceName() + " " + status));
         }
-        
+
         ctx.sender().sendMessage(Message.raw(""));
-        ctx.sender().sendMessage(parseColoredMessage("§eOptions:§r"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f--dry-run§7   - Preview without changes (default)"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f--confirm§7   - Execute the migration"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f--verbose§7   - Show detailed output"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f--merge§7     - Merge conflicting data (default)"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f--skip§7      - Skip conflicting items"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f--overwrite§7 - Replace existing data"));
+        ctx.sender().sendMessage(parseColoredMessage("§eOptions §7(append with -)§r:"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f-confirm§7   - Execute the migration"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f-verbose§7   - Show detailed output"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f-merge§7     - Merge conflicting data (default)"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f-skip§7      - Skip conflicting items"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f-overwrite§7 - Replace existing data"));
         ctx.sender().sendMessage(Message.raw(""));
         ctx.sender().sendMessage(parseColoredMessage("§eExamples:§r"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate luckperms§7          - Preview migration"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate luckperms --confirm§7 - Execute migration"));
-        ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate luckperms --verbose§7 - Detailed preview"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate luckperms§7               - Preview migration"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate luckperms-confirm§7       - Execute migration"));
+        ctx.sender().sendMessage(parseColoredMessage("  §f/hp migrate luckperms-confirm-skip§7  - Execute, skip conflicts"));
         ctx.sender().sendMessage(Message.raw(""));
     }
     
@@ -238,9 +226,9 @@ public class MigrateSubCommand extends AbstractCommand {
         
         for (String arg : args) {
             switch (arg.toLowerCase()) {
-                case "--merge" -> resolution = ConflictResolution.MERGE;
-                case "--skip" -> resolution = ConflictResolution.SKIP;
-                case "--overwrite" -> resolution = ConflictResolution.OVERWRITE;
+                case "--merge", "merge" -> resolution = ConflictResolution.MERGE;
+                case "--skip", "skip" -> resolution = ConflictResolution.SKIP;
+                case "--overwrite", "overwrite" -> resolution = ConflictResolution.OVERWRITE;
             }
         }
         
@@ -250,18 +238,13 @@ public class MigrateSubCommand extends AbstractCommand {
             .build();
     }
     
-    /**
-     * Collects non-null option arguments into an array.
-     */
-    private String[] collectOptions(String... options) {
-        return java.util.Arrays.stream(options)
-            .filter(o -> o != null && !o.isEmpty())
-            .toArray(String[]::new);
-    }
-    
     private boolean hasFlag(String[] args, String flag) {
+        // Strip -- prefix from flag for comparison
+        String flagName = flag.startsWith("--") ? flag.substring(2) : flag;
         for (String arg : args) {
-            if (arg.equalsIgnoreCase(flag)) {
+            // Accept both --flag and flag format
+            String argName = arg.startsWith("--") ? arg.substring(2) : arg;
+            if (argName.equalsIgnoreCase(flagName)) {
                 return true;
             }
         }

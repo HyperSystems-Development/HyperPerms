@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * Detects which LuckPerms storage backend is in use.
@@ -19,34 +20,90 @@ public final class LuckPermsStorageDetector {
     private static final Pattern STORAGE_METHOD_PATTERN = 
         Pattern.compile("storage-method:\\s*['\"]?([a-zA-Z0-9_-]+)['\"]?", Pattern.CASE_INSENSITIVE);
     
-    private final Path serverRoot;
-    private final Path luckPermsDir;
-    
+    private final Path modsDir;
+    private Path luckPermsDir;
+
     /**
      * Creates a new storage detector.
      *
-     * @param serverRoot the server root directory
+     * @param modsDir the mods directory (e.g., /server/mods/)
      */
-    public LuckPermsStorageDetector(@NotNull Path serverRoot) {
-        this.serverRoot = serverRoot;
-        this.luckPermsDir = serverRoot.resolve("plugins").resolve("LuckPerms");
+    public LuckPermsStorageDetector(@NotNull Path modsDir) {
+        this.modsDir = modsDir;
+        this.luckPermsDir = findLuckPermsDirectory();
     }
-    
+
+    /**
+     * Finds the LuckPerms directory by searching in the mods folder.
+     * Looks for folders containing "LuckPerms" (case-insensitive).
+     *
+     * @return the LuckPerms directory path, or null if not found
+     */
+    @Nullable
+    private Path findLuckPermsDirectory() {
+        Logger.debug("Searching for LuckPerms in: %s", modsDir.toAbsolutePath());
+
+        // Search directly in the mods directory
+        Path found = searchForLuckPermsIn(modsDir);
+        if (found != null) {
+            Logger.info("Found LuckPerms directory: %s", found.toAbsolutePath());
+            return found;
+        }
+
+        // Fallback: try plugins subfolder if it exists
+        Path pluginsDir = modsDir.resolve("plugins");
+        if (Files.isDirectory(pluginsDir)) {
+            found = searchForLuckPermsIn(pluginsDir);
+            if (found != null) {
+                Logger.info("Found LuckPerms directory in plugins: %s", found.toAbsolutePath());
+                return found;
+            }
+        }
+
+        Logger.debug("LuckPerms directory not found");
+        return null;
+    }
+
+    /**
+     * Searches for a LuckPerms folder within the given directory.
+     * Matches folders containing "luckperms" (case-insensitive).
+     *
+     * @param parentDir the directory to search in
+     * @return the LuckPerms directory path, or null if not found
+     */
+    @Nullable
+    private Path searchForLuckPermsIn(@NotNull Path parentDir) {
+        if (!Files.isDirectory(parentDir)) {
+            return null;
+        }
+
+        try (Stream<Path> stream = Files.list(parentDir)) {
+            return stream
+                .filter(Files::isDirectory)
+                .filter(p -> p.getFileName().toString().toLowerCase().contains("luckperms"))
+                .findFirst()
+                .orElse(null);
+        } catch (IOException e) {
+            Logger.debug("Error searching for LuckPerms in %s: %s", parentDir, e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * Checks if LuckPerms is installed.
      *
      * @return true if LuckPerms directory exists
      */
     public boolean isLuckPermsInstalled() {
-        return Files.isDirectory(luckPermsDir);
+        return luckPermsDir != null && Files.isDirectory(luckPermsDir);
     }
     
     /**
      * Gets the LuckPerms directory.
      *
-     * @return the LuckPerms plugin directory
+     * @return the LuckPerms plugin directory, or null if not found
      */
-    @NotNull
+    @Nullable
     public Path getLuckPermsDirectory() {
         return luckPermsDir;
     }
@@ -76,6 +133,9 @@ public final class LuckPermsStorageDetector {
      */
     @Nullable
     private LuckPermsStorageType readStorageTypeFromConfig() {
+        if (luckPermsDir == null) {
+            return null;
+        }
         Path configFile = luckPermsDir.resolve("config.yml");
         if (!Files.exists(configFile)) {
             return null;
@@ -121,6 +181,10 @@ public final class LuckPermsStorageDetector {
      */
     @NotNull
     private LuckPermsStorageType detectStorageTypeFromData() {
+        if (luckPermsDir == null) {
+            return LuckPermsStorageType.UNKNOWN;
+        }
+
         // Check file-based storage directories
         if (Files.isDirectory(luckPermsDir.resolve("yaml-storage"))) {
             return LuckPermsStorageType.YAML;
@@ -134,34 +198,70 @@ public final class LuckPermsStorageDetector {
         if (Files.isDirectory(luckPermsDir.resolve("toml-storage"))) {
             return LuckPermsStorageType.TOML;
         }
-        
-        // Check embedded database files
-        if (Files.exists(luckPermsDir.resolve("luckperms-h2.mv.db"))) {
+
+        // Check embedded database files (search for any luckperms database file)
+        Path h2Db = findDatabaseFile(".mv.db");  // H2 uses .mv.db extension
+        if (h2Db != null) {
+            Logger.debug("Found H2 database: %s", h2Db.getFileName());
             return LuckPermsStorageType.H2;
         }
-        if (Files.exists(luckPermsDir.resolve("luckperms-sqlite.db"))) {
+
+        Path sqliteDb = findDatabaseFile(".db");  // SQLite uses .db extension
+        if (sqliteDb != null && !sqliteDb.toString().endsWith(".mv.db")) {
+            Logger.debug("Found SQLite database: %s", sqliteDb.getFileName());
             return LuckPermsStorageType.SQLITE;
         }
-        
+
         // Cannot detect remote databases without config
         return LuckPermsStorageType.UNKNOWN;
+    }
+
+    /**
+     * Finds a LuckPerms database file with the given extension.
+     * Searches for files starting with "luckperms" and ending with the extension.
+     *
+     * @param extension the file extension to search for (e.g., ".mv.db", ".db")
+     * @return the database file path, or null if not found
+     */
+    @Nullable
+    private Path findDatabaseFile(@NotNull String extension) {
+        if (luckPermsDir == null) {
+            return null;
+        }
+
+        try (Stream<Path> stream = Files.list(luckPermsDir)) {
+            return stream
+                .filter(Files::isRegularFile)
+                .filter(p -> {
+                    String name = p.getFileName().toString().toLowerCase();
+                    return name.startsWith("luckperms") && name.endsWith(extension.toLowerCase());
+                })
+                .findFirst()
+                .orElse(null);
+        } catch (IOException e) {
+            Logger.debug("Error searching for database files: %s", e.getMessage());
+            return null;
+        }
     }
     
     /**
      * Gets the storage path for file-based or embedded storage.
      *
      * @param type the storage type
-     * @return the storage path, or null for remote databases
+     * @return the storage path, or null for remote databases or if LuckPerms not found
      */
     @Nullable
     public Path getStoragePath(@NotNull LuckPermsStorageType type) {
+        if (luckPermsDir == null) {
+            return null;
+        }
         return switch (type) {
             case YAML -> luckPermsDir.resolve("yaml-storage");
             case JSON -> luckPermsDir.resolve("json-storage");
             case HOCON -> luckPermsDir.resolve("hocon-storage");
             case TOML -> luckPermsDir.resolve("toml-storage");
-            case H2 -> luckPermsDir.resolve("luckperms-h2.mv.db");
-            case SQLITE -> luckPermsDir.resolve("luckperms-sqlite.db");
+            case H2 -> findDatabaseFile(".mv.db");
+            case SQLITE -> findDatabaseFile(".db");
             default -> null;
         };
     }
@@ -173,6 +273,9 @@ public final class LuckPermsStorageDetector {
      */
     @Nullable
     public Map<String, String> readMySqlConnectionDetails() {
+        if (luckPermsDir == null) {
+            return null;
+        }
         Path configFile = luckPermsDir.resolve("config.yml");
         if (!Files.exists(configFile)) {
             return null;
@@ -244,7 +347,7 @@ public final class LuckPermsStorageDetector {
         return switch (type) {
             case YAML -> new YamlStorageReader(storagePath);
             case JSON -> new JsonStorageReader(storagePath);
-            case H2 -> new H2StorageReader(storagePath);
+            case H2 -> new H2StorageReader(storagePath, luckPermsDir);
             case MYSQL, POSTGRESQL -> {
                 Map<String, String> connectionDetails = readMySqlConnectionDetails();
                 if (connectionDetails != null) {

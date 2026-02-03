@@ -46,34 +46,37 @@ public final class LuckPermsMigrator implements PermissionMigrator {
     
     public LuckPermsMigrator(@NotNull HyperPerms plugin) {
         this.plugin = plugin;
-        Path serverRoot = resolveServerRoot(plugin);
-        this.detector = serverRoot != null ? new LuckPermsStorageDetector(serverRoot) : null;
+        Path modsDir = resolveModsDirectory(plugin);
+        this.detector = modsDir != null ? new LuckPermsStorageDetector(modsDir) : null;
     }
 
     /**
-     * Safely resolves the server root directory from the plugin data directory.
+     * Resolves the mods directory from the plugin data directory.
+     * HyperPerms data dir is typically at /mods/HyperPerms/ so parent is /mods/
      *
      * @param plugin the HyperPerms plugin
-     * @return the server root path, or null if it cannot be determined
+     * @return the mods directory path, or null if it cannot be determined
      */
     @Nullable
-    private static Path resolveServerRoot(@NotNull HyperPerms plugin) {
+    private static Path resolveModsDirectory(@NotNull HyperPerms plugin) {
         Path dataDir = plugin.getDataDirectory();
         if (dataDir == null) {
-            Logger.debug("Cannot resolve server root: plugin data directory is null");
+            Logger.warn("Cannot resolve mods directory: plugin data directory is null");
             return null;
         }
-        Path parent = dataDir.getParent();
-        if (parent == null) {
-            Logger.debug("Cannot resolve server root: data directory parent is null");
+
+        Logger.debug("HyperPerms data directory: %s", dataDir.toAbsolutePath());
+
+        // The data directory is typically /mods/HyperPerms/
+        // So parent should be /mods/
+        Path modsDir = dataDir.getParent();
+        if (modsDir == null) {
+            Logger.warn("Cannot resolve mods directory: data directory has no parent");
             return null;
         }
-        Path serverRoot = parent.getParent();
-        if (serverRoot == null) {
-            Logger.debug("Cannot resolve server root: grandparent is null");
-            return null;
-        }
-        return serverRoot;
+
+        Logger.debug("Resolved mods directory: %s", modsDir.toAbsolutePath());
+        return modsDir;
     }
     
     @Override

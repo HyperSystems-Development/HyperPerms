@@ -250,7 +250,7 @@ public record MigrationPreview(
                     sb.append("      §7Source: ").append(conflict.sourceDetails).append("\n");
                     sb.append("      §7Existing: ").append(conflict.existingDetails).append("\n");
                 }
-                sb.append("      §7Options: --merge, --skip, --overwrite\n");
+                sb.append("      §7Options: merge, skip, overwrite\n");
             }
             sb.append("\n");
         }
@@ -268,8 +268,8 @@ public record MigrationPreview(
         sb.append("§7Backup will be created at: §f").append(backupPath).append("\n\n");
         
         // Instructions
-        sb.append("§7Run with §f--confirm§7 to apply migration.\n");
-        sb.append("§7Run with §f--verbose§7 for full permission listing.\n");
+        sb.append("§7Add §f-confirm§7 to apply migration (e.g., /hp migrate luckperms-confirm)\n");
+        sb.append("§7Add §f-verbose§7 for full permission listing.\n");
         
         return sb.toString();
     }

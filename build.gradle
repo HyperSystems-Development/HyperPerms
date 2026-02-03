@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.hyperperms'
-version = '2.7.0'
+version = '2.7.1'
 
 // Shared version property avoids accessing project at execution time
 def buildVersion = objects.property(String).convention(version)
@@ -43,7 +43,9 @@ dependencies {
     // YAML parsing (for LuckPerms migration)
     implementation 'org.yaml:snakeyaml:2.2'
 
-    // H2 database (optional, for LuckPerms H2 migration)
+    // H2 database (for LuckPerms H2 migration)
+    // compileOnly - we dynamically load the H2 driver from LuckPerms's libs folder
+    // to ensure version compatibility with their database format
     compileOnly 'com.h2database:h2:2.2.224'
 
     // Database - HikariCP connection pooling (P5 - deferred, for future MariaDB support)

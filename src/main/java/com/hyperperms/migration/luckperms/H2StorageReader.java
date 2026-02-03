@@ -242,6 +242,16 @@ public final class H2StorageReader implements LuckPermsStorageReader {
 
             return tryConnect(url);
         } catch (IOException e) {
+            // Check if this is a Windows file lock issue
+            boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+            if (isWindows && e.getMessage() != null &&
+                (e.getMessage().contains("locked") || e.getMessage().contains("another process"))) {
+                throw new SQLException(
+                    "Cannot copy H2 database - file is locked by LuckPerms. " +
+                    "On Windows, you must stop LuckPerms before migrating. " +
+                    "Either: (1) Stop the server, run migration, restart, or " +
+                    "(2) Temporarily unload LuckPerms with a plugin manager.", e);
+            }
             throw new SQLException("Failed to create temporary database copy: " + e.getMessage(), e);
         }
     }

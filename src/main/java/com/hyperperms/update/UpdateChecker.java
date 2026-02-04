@@ -131,6 +131,9 @@ public final class UpdateChecker {
                     UpdateInfo info = new UpdateInfo(latestVersion, downloadUrl, changelog);
                     cachedUpdate.set(info);
                     Logger.info("[Update] New version available: %s (current: %s)", latestVersion, currentVersion);
+                    if (downloadUrl != null && !downloadUrl.isEmpty()) {
+                        Logger.infoLink("[Update] Download: %s", downloadUrl, "Click to download");
+                    }
                     return info;
                 } else {
                     cachedUpdate.set(null);

@@ -1,0 +1,104 @@
+{
+  "name": "rpg",
+  "displayName": "RPG Server",
+  "description": "MMORPG-style server with classes and guilds",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "rpg.class.select", "description": "Select class" },
+        { "node": "rpg.quest.view", "description": "View quests" },
+        { "node": "rpg.quest.accept", "description": "Accept quests" },
+        { "node": "rpg.party.join", "description": "Join parties" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "adventurer": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "rpg.party.create", "description": "Create parties" },
+        { "node": "rpg.guild.join", "description": "Join guilds" },
+        { "node": "rpg.dungeon.normal", "description": "Normal dungeons" }
+      ],
+      "weight": 10,
+      "prefix": "&a[Adventurer] ",
+      "suffix": ""
+    },
+    "hero": {
+      "parents": ["adventurer"],
+      "permissions": [
+        { "node": "rpg.guild.create", "description": "Create guilds" },
+        { "node": "rpg.dungeon.hard", "description": "Hard dungeons" },
+        { "node": "rpg.mount.basic", "description": "Basic mounts" }
+      ],
+      "weight": 20,
+      "prefix": "&2[Hero] ",
+      "suffix": ""
+    },
+    "champion": {
+      "parents": ["hero"],
+      "permissions": [
+        { "node": "rpg.dungeon.legendary", "description": "Legendary dungeons" },
+        { "node": "rpg.mount.epic", "description": "Epic mounts" },
+        { "node": "rpg.title.custom", "description": "Custom titles" }
+      ],
+      "weight": 30,
+      "prefix": "&6[Champion] ",
+      "suffix": ""
+    },
+    "legend": {
+      "parents": ["champion"],
+      "permissions": [
+        { "node": "rpg.dungeon.*", "description": "All dungeons" },
+        { "node": "rpg.mount.*", "description": "All mounts" },
+        { "node": "rpg.cosmetic.*", "description": "All cosmetics" }
+      ],
+      "weight": 40,
+      "prefix": "&d[Legend] ",
+      "suffix": ""
+    },
+    "gamemaster": {
+      "parents": ["adventurer"],
+      "permissions": [
+        { "node": "hyperperms.command.check.others", "description": "Check others" },
+        { "node": "rpg.admin.spawn", "description": "Spawn mobs" },
+        { "node": "rpg.admin.quest", "description": "Quest management" }
+      ],
+      "weight": 60,
+      "prefix": "&b[GM] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["gamemaster"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All perms commands" },
+        { "node": "hytale.command.server.*", "description": "Server commands" },
+        { "node": "rpg.admin.*", "description": "RPG admin" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "ranks": ["default", "adventurer", "hero", "champion", "legend"],
+    "staff": ["gamemaster", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": [],
+    "notes": "MMORPG server with classes, dungeons, and guilds"
+  }
+}

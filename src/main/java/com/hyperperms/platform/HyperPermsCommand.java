@@ -102,6 +102,12 @@ public class HyperPermsCommand extends AbstractCommand {
         addSubCommand(new com.hyperperms.commands.UpdateSubCommand(hyperPerms));
         addSubCommand(new com.hyperperms.commands.UpdatesSubCommand(hyperPerms));
 
+        // Template commands
+        addSubCommand(new com.hyperperms.commands.TemplateSubCommand(hyperPerms));
+
+        // Analytics commands
+        addSubCommand(new com.hyperperms.commands.AnalyticsSubCommand(hyperPerms));
+
         // Add aliases
         addAliases("hyperperms", "perms");
     }

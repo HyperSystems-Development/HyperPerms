@@ -57,12 +57,20 @@ public final class HyperPermsConfig {
         }
     }
 
+    private static final String CURRENT_CONFIG_VERSION = "2.7.5";
+
     /**
      * Migrates older config versions to the latest format.
      * @return true if any migrations were applied
      */
     private boolean migrateConfig() {
         boolean migrated = false;
+
+        // Get current config version (default to "0.0.0" if not present)
+        String configVersion = "0.0.0";
+        if (config.has("configVersion") && config.get("configVersion").isJsonPrimitive()) {
+            configVersion = config.get("configVersion").getAsString();
+        }
 
         // Migration: Add webEditor.apiUrl if missing (v2.7.4+)
         if (config.has("webEditor") && config.get("webEditor").isJsonObject()) {
@@ -75,7 +83,74 @@ public final class HyperPermsConfig {
             }
         }
 
+        // Migration: Add console settings if missing (v2.7.4+)
+        if (!config.has("console")) {
+            JsonObject console = new JsonObject();
+            console.addProperty("clickableLinks", true);
+            console.addProperty("forceOsc8", false);
+            config.add("console", console);
+            Logger.info("Config migration: Added console settings for clickable links");
+            migrated = true;
+        }
+
+        // Migration: Add templates settings if missing (v2.7.4+)
+        if (!config.has("templates")) {
+            JsonObject templates = new JsonObject();
+            templates.addProperty("customDirectory", "templates");
+            config.add("templates", templates);
+            Logger.info("Config migration: Added templates settings");
+            migrated = true;
+        }
+
+        // Migration: Add analytics settings if missing (disabled by default - opt-in feature)
+        if (!config.has("analytics")) {
+            JsonObject analytics = new JsonObject();
+            analytics.addProperty("enabled", false);
+            analytics.addProperty("trackChecks", true);
+            analytics.addProperty("trackChanges", true);
+            analytics.addProperty("flushIntervalSeconds", 60);
+            analytics.addProperty("retentionDays", 90);
+            config.add("analytics", analytics);
+            Logger.info("Config migration: Added analytics settings (disabled by default)");
+            migrated = true;
+        }
+
+        // Update config version if migration occurred or version is outdated
+        if (migrated || compareVersions(configVersion, CURRENT_CONFIG_VERSION) < 0) {
+            config.addProperty("configVersion", CURRENT_CONFIG_VERSION);
+            migrated = true;
+        }
+
         return migrated;
+    }
+
+    /**
+     * Compares two semantic version strings.
+     * @return negative if v1 < v2, zero if equal, positive if v1 > v2
+     */
+    private int compareVersions(String v1, String v2) {
+        String[] parts1 = v1.split("\\.");
+        String[] parts2 = v2.split("\\.");
+        int maxLength = Math.max(parts1.length, parts2.length);
+
+        for (int i = 0; i < maxLength; i++) {
+            int num1 = i < parts1.length ? parseVersionPart(parts1[i]) : 0;
+            int num2 = i < parts2.length ? parseVersionPart(parts2[i]) : 0;
+            if (num1 != num2) {
+                return num1 - num2;
+            }
+        }
+        return 0;
+    }
+
+    private int parseVersionPart(String part) {
+        try {
+            // Remove any non-numeric suffix (e.g., "-SNAPSHOT", "-beta")
+            String numericPart = part.replaceAll("[^0-9].*", "");
+            return numericPart.isEmpty() ? 0 : Integer.parseInt(numericPart);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
@@ -105,6 +180,9 @@ public final class HyperPermsConfig {
 
     private JsonObject createDefaultConfig() {
         JsonObject root = new JsonObject();
+
+        // Config version for migrations
+        root.addProperty("configVersion", CURRENT_CONFIG_VERSION);
 
         // Storage settings
         JsonObject storage = new JsonObject();
@@ -209,6 +287,26 @@ public final class HyperPermsConfig {
         JsonObject vault = new JsonObject();
         vault.addProperty("enabled", true);
         root.add("vault", vault);
+
+        // Console settings
+        JsonObject console = new JsonObject();
+        console.addProperty("clickableLinks", true);
+        console.addProperty("forceOsc8", false);
+        root.add("console", console);
+
+        // Templates settings
+        JsonObject templates = new JsonObject();
+        templates.addProperty("customDirectory", "templates");
+        root.add("templates", templates);
+
+        // Analytics settings
+        JsonObject analytics = new JsonObject();
+        analytics.addProperty("enabled", false);
+        analytics.addProperty("trackChecks", true);
+        analytics.addProperty("trackChanges", true);
+        analytics.addProperty("flushIntervalSeconds", 60);
+        analytics.addProperty("retentionDays", 90);
+        root.add("analytics", analytics);
 
         return root;
     }
@@ -636,6 +734,85 @@ public final class HyperPermsConfig {
      */
     public int getTabListUpdateIntervalTicks() {
         return getNestedInt("tabList", "updateIntervalTicks", 20);
+    }
+
+    // ==================== Console Settings ====================
+
+    /**
+     * Checks if clickable console links are enabled.
+     *
+     * @return true if clickable links are enabled
+     */
+    public boolean isConsoleClickableLinksEnabled() {
+        return getNestedBoolean("console", "clickableLinks", true);
+    }
+
+    /**
+     * Checks if OSC 8 should be forced regardless of terminal detection.
+     *
+     * @return true if OSC 8 should be forced
+     */
+    public boolean isConsoleForceOsc8() {
+        return getNestedBoolean("console", "forceOsc8", false);
+    }
+
+    // ==================== Templates Settings ====================
+
+    /**
+     * Gets the directory for custom templates.
+     *
+     * @return the custom templates directory
+     */
+    @NotNull
+    public String getTemplatesCustomDirectory() {
+        return getNestedString("templates", "customDirectory", "templates");
+    }
+
+    // ==================== Analytics Settings ====================
+
+    /**
+     * Checks if analytics tracking is enabled.
+     *
+     * @return true if analytics is enabled
+     */
+    public boolean isAnalyticsEnabled() {
+        return getNestedBoolean("analytics", "enabled", false);
+    }
+
+    /**
+     * Checks if permission check tracking is enabled.
+     *
+     * @return true if check tracking is enabled
+     */
+    public boolean isAnalyticsTrackChecks() {
+        return getNestedBoolean("analytics", "trackChecks", true);
+    }
+
+    /**
+     * Checks if permission change tracking is enabled.
+     *
+     * @return true if change tracking is enabled
+     */
+    public boolean isAnalyticsTrackChanges() {
+        return getNestedBoolean("analytics", "trackChanges", true);
+    }
+
+    /**
+     * Gets the interval in seconds for flushing analytics data to storage.
+     *
+     * @return the flush interval in seconds
+     */
+    public int getAnalyticsFlushIntervalSeconds() {
+        return getNestedInt("analytics", "flushIntervalSeconds", 60);
+    }
+
+    /**
+     * Gets the number of days to retain analytics data.
+     *
+     * @return the retention period in days
+     */
+    public int getAnalyticsRetentionDays() {
+        return getNestedInt("analytics", "retentionDays", 90);
     }
 
     // ==================== Helper Methods ====================

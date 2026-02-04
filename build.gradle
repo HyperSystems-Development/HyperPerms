@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.hyperperms'
-version = '2.7.4'
+version = '2.7.5'
 
 // Shared version property avoids accessing project at execution time
 def buildVersion = objects.property(String).convention(version)
@@ -50,6 +50,11 @@ dependencies {
 
     // Database - HikariCP connection pooling (P5 - deferred, for future MariaDB support)
     // implementation 'com.zaxxer:HikariCP:6.2.1'
+
+    // Database - SQLite JDBC driver (for analytics)
+    implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+    // SLF4J no-op implementation to silence SQLite JDBC warnings
+    implementation 'org.slf4j:slf4j-nop:2.0.9'
 
     // Database - MariaDB JDBC driver (P5 - deferred)
     // implementation 'org.mariadb.jdbc:mariadb-java-client:3.5.1'
@@ -117,6 +122,7 @@ shadowJar {
     relocate 'com.google.gson', 'com.hyperperms.lib.gson'
     relocate 'com.github.benmanes.caffeine', 'com.hyperperms.lib.caffeine'
     relocate 'org.yaml.snakeyaml', 'com.hyperperms.lib.snakeyaml'
+    // Note: SQLite JDBC cannot be relocated due to native library loading
 
     // Future relocations when database support is added:
     // relocate 'com.zaxxer.hikari', 'com.hyperperms.lib.hikari'

@@ -1,0 +1,117 @@
+{
+  "name": "factions",
+  "displayName": "Factions Server",
+  "description": "War-focused server with territory and raids",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "hytale.command.player.whereami", "description": "Check location" },
+        { "node": "factions.command.create", "description": "Create a faction" },
+        { "node": "factions.command.join", "description": "Join a faction" },
+        { "node": "factions.command.leave", "description": "Leave a faction" },
+        { "node": "factions.command.info", "description": "View faction info" },
+        { "node": "factions.command.map", "description": "View faction map" },
+        { "node": "factions.command.chat", "description": "Toggle faction chat" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "soldier": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "factions.command.claim", "description": "Claim territory" },
+        { "node": "factions.command.unclaim", "description": "Unclaim territory" },
+        { "node": "factions.command.sethome", "description": "Set faction home" }
+      ],
+      "weight": 10,
+      "prefix": "&a[Soldier] ",
+      "suffix": ""
+    },
+    "warrior": {
+      "parents": ["soldier"],
+      "permissions": [
+        { "node": "factions.fly.territory", "description": "Fly in faction territory" },
+        { "node": "factions.command.invite", "description": "Invite players" }
+      ],
+      "weight": 20,
+      "prefix": "&2[Warrior] ",
+      "suffix": ""
+    },
+    "general": {
+      "parents": ["warrior"],
+      "permissions": [
+        { "node": "factions.command.kick", "description": "Kick faction members" },
+        { "node": "factions.command.promote", "description": "Promote members" },
+        { "node": "factions.command.demote", "description": "Demote members" },
+        { "node": "factions.command.ally", "description": "Manage alliances" }
+      ],
+      "weight": 30,
+      "prefix": "&6[General] ",
+      "suffix": ""
+    },
+    "warlord": {
+      "parents": ["general"],
+      "permissions": [
+        { "node": "factions.command.*", "description": "All faction commands" },
+        { "node": "factions.fly.*", "description": "Fly everywhere" }
+      ],
+      "weight": 40,
+      "prefix": "&c[Warlord] ",
+      "suffix": ""
+    },
+    "helper": {
+      "parents": ["soldier"],
+      "permissions": [
+        { "node": "hyperperms.command.check.others", "description": "Check others permissions" },
+        { "node": "hytale.command.server.who", "description": "View online players" }
+      ],
+      "weight": 50,
+      "prefix": "&e[Helper] ",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["helper"],
+      "permissions": [
+        { "node": "hytale.command.server.kick", "description": "Kick players" },
+        { "node": "hytale.command.player.teleport", "description": "Teleport" },
+        { "node": "hytale.command.player.inventory.see", "description": "View inventories" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["mod"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All permission commands" },
+        { "node": "hytale.command.server.ban", "description": "Ban players" },
+        { "node": "hytale.command.server.unban", "description": "Unban players" },
+        { "node": "factions.admin.*", "description": "Admin faction commands" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "ranks": ["default", "soldier", "warrior", "general", "warlord"],
+    "staff": ["helper", "mod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": ["HyperFactions"],
+    "notes": "Designed for competitive faction servers with PvP focus"
+  }
+}

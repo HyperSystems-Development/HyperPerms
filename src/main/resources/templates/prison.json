@@ -1,0 +1,107 @@
+{
+  "name": "prison",
+  "displayName": "Prison Server",
+  "description": "Mine-based progression with prestige system",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "prison.mine.a", "description": "Mine A access" },
+        { "node": "prison.sell", "description": "Sell items" },
+        { "node": "prison.balance", "description": "Check balance" }
+      ],
+      "weight": 0,
+      "prefix": "&8[A] ",
+      "suffix": ""
+    },
+    "rank_b": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "prison.mine.b", "description": "Mine B access" }
+      ],
+      "weight": 1,
+      "prefix": "&7[B] ",
+      "suffix": ""
+    },
+    "rank_c": {
+      "parents": ["rank_b"],
+      "permissions": [
+        { "node": "prison.mine.c", "description": "Mine C access" }
+      ],
+      "weight": 2,
+      "prefix": "&f[C] ",
+      "suffix": ""
+    },
+    "rank_d": {
+      "parents": ["rank_c"],
+      "permissions": [
+        { "node": "prison.mine.d", "description": "Mine D access" },
+        { "node": "prison.backpack.small", "description": "Small backpack" }
+      ],
+      "weight": 3,
+      "prefix": "&a[D] ",
+      "suffix": ""
+    },
+    "rank_free": {
+      "parents": ["rank_d"],
+      "permissions": [
+        { "node": "prison.mine.*", "description": "All mines" },
+        { "node": "prison.backpack.large", "description": "Large backpack" },
+        { "node": "prison.prestige", "description": "Can prestige" }
+      ],
+      "weight": 10,
+      "prefix": "&6[Free] ",
+      "suffix": ""
+    },
+    "helper": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "hyperperms.command.check.others", "description": "Check others" },
+        { "node": "hytale.command.server.who", "description": "Who online" }
+      ],
+      "weight": 50,
+      "prefix": "&e[Helper] ",
+      "suffix": ""
+    },
+    "guard": {
+      "parents": ["helper"],
+      "permissions": [
+        { "node": "prison.guard.arrest", "description": "Arrest players" },
+        { "node": "hytale.command.server.kick", "description": "Kick players" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Guard] ",
+      "suffix": ""
+    },
+    "warden": {
+      "parents": ["guard"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All perms commands" },
+        { "node": "hytale.command.server.ban", "description": "Ban players" },
+        { "node": "prison.admin.*", "description": "Prison admin" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Warden] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "ranks": ["default", "rank_b", "rank_c", "rank_d", "rank_free"],
+    "staff": ["helper", "guard", "warden", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": [],
+    "notes": "Prison server with mine progression A-Free"
+  }
+}

@@ -45,8 +45,8 @@ public class EditorSubCommand extends AbstractCommand {
                         ctx.sender().sendMessage(Message.raw(""));
                         ctx.sender().sendMessage(Message.raw("=== Web Editor Ready ==="));
                         ctx.sender().sendMessage(Message.raw(""));
-                        
-                        // Clickable link to the editor
+
+                        // Clickable link for in-game players
                         ctx.sender().sendMessage(
                             Message.raw("[Click here to open the editor]")
                                 .color(new java.awt.Color(0x55FF55))
@@ -61,8 +61,8 @@ public class EditorSubCommand extends AbstractCommand {
                         ctx.sender().sendMessage(Message.raw(""));
                         ctx.sender().sendMessage(Message.raw("After making changes, use /hp apply <session-id>"));
                         ctx.sender().sendMessage(Message.raw(""));
-                        
-                        // Alternative manual entry option
+
+                        // Alternative manual entry option with plain URL for console users
                         String manualUrl = hyperPerms.getConfig().getWebEditorUrl() + "/editor";
                         ctx.sender().sendMessage(
                             Message.raw("Or visit ")
@@ -72,7 +72,9 @@ public class EditorSubCommand extends AbstractCommand {
                                 .insert(Message.raw(" and enter your session ID manually."))
                         );
 
+                        // Log full URL to console for easy copying
                         Logger.info("Web editor session created: " + response.getSessionId());
+                        Logger.info("Editor URL: " + editorUrl);
                     } else {
                         ctx.sender().sendMessage(Message.raw(""));
                         ctx.sender().sendMessage(Message.raw("Failed to create editor session: " + response.getError()));

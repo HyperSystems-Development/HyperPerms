@@ -95,6 +95,10 @@ public final class HyperPerms implements HyperPermsAPI {
     @Nullable
     private com.hyperperms.update.UpdateNotificationPreferences notificationPreferences;
 
+    // Analytics
+    @Nullable
+    private com.hyperperms.analytics.AnalyticsManager analyticsManager;
+
     // Managers
     private UserManagerImpl userManager;
     private GroupManagerImpl groupManager;
@@ -305,6 +309,18 @@ public final class HyperPerms implements HyperPermsAPI {
             // Set verbose mode
             verboseMode = config.isVerboseEnabledByDefault();
 
+            // Initialize console links settings
+            com.hyperperms.util.ConsoleLinks.setEnabled(config.isConsoleClickableLinksEnabled());
+            com.hyperperms.util.ConsoleLinks.setForceOsc8(config.isConsoleForceOsc8());
+            Logger.debug("Console links: enabled=%s, forceOsc8=%s, osc8Supported=%s",
+                    config.isConsoleClickableLinksEnabled(),
+                    config.isConsoleForceOsc8(),
+                    com.hyperperms.util.ConsoleLinks.isOsc8Supported());
+
+            // Initialize analytics manager
+            analyticsManager = new com.hyperperms.analytics.AnalyticsManager(this);
+            analyticsManager.start();
+
             enabled = true;
             long elapsed = System.currentTimeMillis() - startTime;
             Logger.info("HyperPerms enabled in %dms", elapsed);
@@ -328,6 +344,11 @@ public final class HyperPerms implements HyperPermsAPI {
 
         // Shutdown VaultUnlocked integration
         VaultUnlockedIntegration.shutdown();
+
+        // Stop analytics manager
+        if (analyticsManager != null) {
+            analyticsManager.stop();
+        }
 
         // Stop backup manager
         if (backupManager != null) {
@@ -884,6 +905,18 @@ public final class HyperPerms implements HyperPermsAPI {
     @Nullable
     public UpdateChecker getUpdateChecker() {
         return updateChecker;
+    }
+
+    /**
+     * Gets the analytics manager.
+     * <p>
+     * The analytics manager tracks permission check statistics and audit logs.
+     *
+     * @return the analytics manager, or null if analytics is disabled
+     */
+    @Nullable
+    public com.hyperperms.analytics.AnalyticsManager getAnalyticsManager() {
+        return analyticsManager;
     }
 
     /**

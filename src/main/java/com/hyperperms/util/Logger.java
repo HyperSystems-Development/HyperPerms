@@ -161,4 +161,33 @@ public final class Logger {
     public static boolean isPermissionDebugEnabled() {
         return permissionDebugEnabled;
     }
+
+    /**
+     * Logs an info message with a clickable link.
+     * <p>
+     * Uses OSC 8 escape sequences in supported terminals, or falls back to
+     * displaying the URL in parentheses.
+     *
+     * @param message     the message (may contain %s for link text insertion)
+     * @param url         the URL to link to
+     * @param displayText the text to display for the link
+     */
+    public static void infoLink(@NotNull String message, @NotNull String url, @NotNull String displayText) {
+        String linkText = ConsoleLinks.link(url, displayText);
+        if (message.contains("%s")) {
+            info(String.format(message, linkText));
+        } else {
+            info(message + " " + linkText);
+        }
+    }
+
+    /**
+     * Logs an info message with a clickable link using the URL as display text.
+     *
+     * @param message the message
+     * @param url     the URL to link to and display
+     */
+    public static void infoLink(@NotNull String message, @NotNull String url) {
+        infoLink(message, url, url);
+    }
 }

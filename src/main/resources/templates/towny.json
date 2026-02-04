@@ -1,0 +1,119 @@
+{
+  "name": "towny",
+  "displayName": "Towny Server",
+  "description": "Town and nation building server",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "towny.command.resident", "description": "Resident commands" },
+        { "node": "towny.command.town.here", "description": "Check town" },
+        { "node": "towny.command.town.list", "description": "List towns" },
+        { "node": "towny.command.nation.list", "description": "List nations" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "nomad": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "towny.command.town.join", "description": "Join towns" },
+        { "node": "towny.command.town.spawn", "description": "Town spawn" }
+      ],
+      "weight": 5,
+      "prefix": "&7[Nomad] ",
+      "suffix": ""
+    },
+    "settler": {
+      "parents": ["nomad"],
+      "permissions": [
+        { "node": "towny.command.town.new", "description": "Create towns" },
+        { "node": "towny.command.plot.claim", "description": "Claim plots" }
+      ],
+      "weight": 10,
+      "prefix": "&a[Settler] ",
+      "suffix": ""
+    },
+    "citizen": {
+      "parents": ["settler"],
+      "permissions": [
+        { "node": "towny.command.plot.forsale", "description": "Sell plots" },
+        { "node": "towny.claimed.owntown.build.*", "description": "Build in town" }
+      ],
+      "weight": 20,
+      "prefix": "&2[Citizen] ",
+      "suffix": ""
+    },
+    "mayor": {
+      "parents": ["citizen"],
+      "permissions": [
+        { "node": "towny.command.town.*", "description": "All town commands" },
+        { "node": "towny.command.nation.new", "description": "Create nations" }
+      ],
+      "weight": 30,
+      "prefix": "&6[Mayor] ",
+      "suffix": ""
+    },
+    "king": {
+      "parents": ["mayor"],
+      "permissions": [
+        { "node": "towny.command.nation.*", "description": "All nation commands" }
+      ],
+      "weight": 40,
+      "prefix": "&5[King] ",
+      "suffix": ""
+    },
+    "helper": {
+      "parents": ["nomad"],
+      "permissions": [
+        { "node": "hyperperms.command.check.others", "description": "Check others" },
+        { "node": "towny.admin.town.info", "description": "Town info" }
+      ],
+      "weight": 50,
+      "prefix": "&e[Helper] ",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["helper"],
+      "permissions": [
+        { "node": "hytale.command.server.kick", "description": "Kick" },
+        { "node": "hytale.command.player.teleport", "description": "Teleport" },
+        { "node": "towny.admin.unclaim", "description": "Unclaim plots" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["mod"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All perms commands" },
+        { "node": "hytale.command.server.ban", "description": "Ban" },
+        { "node": "towny.admin.*", "description": "Towny admin" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "ranks": ["default", "nomad", "settler", "citizen", "mayor", "king"],
+    "staff": ["helper", "mod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": [],
+    "notes": "Town and nation building with economic progression"
+  }
+}

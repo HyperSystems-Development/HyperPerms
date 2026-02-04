@@ -1,0 +1,72 @@
+{
+  "name": "vanilla",
+  "displayName": "Vanilla Server",
+  "description": "Minimal permissions for vanilla-like experience",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "hytale.command.player.whereami", "description": "Check location" },
+        { "node": "hytale.command.player.whoami", "description": "Check self" },
+        { "node": "hytale.command.emote", "description": "Use emotes" },
+        { "node": "hytale.command.player.unstuck", "description": "Unstuck" }
+      ],
+      "weight": 0,
+      "prefix": "",
+      "suffix": ""
+    },
+    "player": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "hyperperms.chat.color", "description": "Chat colors" }
+      ],
+      "weight": 10,
+      "prefix": "",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["player"],
+      "permissions": [
+        { "node": "hyperperms.command.user.info", "description": "User info" },
+        { "node": "hyperperms.command.check.others", "description": "Check others" },
+        { "node": "hytale.command.server.kick", "description": "Kick" },
+        { "node": "hytale.command.server.who", "description": "Who online" },
+        { "node": "hytale.command.player.teleport", "description": "Teleport" }
+      ],
+      "weight": 50,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["mod"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All perms commands" },
+        { "node": "hytale.command.server.ban", "description": "Ban" },
+        { "node": "hytale.command.server.unban", "description": "Unban" },
+        { "node": "hytale.command.server.whitelist.*", "description": "Whitelist" },
+        { "node": "hytale.command.world.*", "description": "World commands" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "staff": ["mod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": [],
+    "notes": "Minimal setup for vanilla-like servers"
+  }
+}

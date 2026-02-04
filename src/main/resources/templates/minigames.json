@@ -1,0 +1,100 @@
+{
+  "name": "minigames",
+  "displayName": "Minigames Server",
+  "description": "Lobby server with multiple game modes",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "lobby.join", "description": "Join games" },
+        { "node": "lobby.spectate", "description": "Spectate games" },
+        { "node": "lobby.stats", "description": "View stats" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "vip": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "lobby.queue.priority", "description": "Priority queue" },
+        { "node": "lobby.cosmetics.basic", "description": "Basic cosmetics" },
+        { "node": "hyperperms.chat.color", "description": "Chat colors" }
+      ],
+      "weight": 10,
+      "prefix": "&a[VIP] ",
+      "suffix": ""
+    },
+    "mvp": {
+      "parents": ["vip"],
+      "permissions": [
+        { "node": "lobby.cosmetics.premium", "description": "Premium cosmetics" },
+        { "node": "lobby.private.create", "description": "Create private games" }
+      ],
+      "weight": 20,
+      "prefix": "&b[MVP] ",
+      "suffix": ""
+    },
+    "legend": {
+      "parents": ["mvp"],
+      "permissions": [
+        { "node": "lobby.cosmetics.*", "description": "All cosmetics" },
+        { "node": "lobby.fly", "description": "Fly in lobby" }
+      ],
+      "weight": 30,
+      "prefix": "&6[Legend] ",
+      "suffix": ""
+    },
+    "helper": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "hyperperms.command.check.others", "description": "Check others" },
+        { "node": "lobby.spectate.forced", "description": "Force spectate" }
+      ],
+      "weight": 50,
+      "prefix": "&e[Helper] ",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["helper"],
+      "permissions": [
+        { "node": "hytale.command.server.kick", "description": "Kick players" },
+        { "node": "lobby.game.end", "description": "End games" },
+        { "node": "lobby.ban.temp", "description": "Temp bans" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["mod"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All perms commands" },
+        { "node": "hytale.command.server.ban", "description": "Ban players" },
+        { "node": "lobby.admin.*", "description": "Game admin" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "donator": ["default", "vip", "mvp", "legend"],
+    "staff": ["helper", "mod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": [],
+    "notes": "Minigames/lobby server template"
+  }
+}

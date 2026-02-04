@@ -1,0 +1,100 @@
+{
+  "name": "staff",
+  "displayName": "Staff Hierarchy",
+  "description": "Standard staff ranks: Helper, Mod, Admin, Owner",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "hytale.command.player.whereami", "description": "Check location" },
+        { "node": "hytale.command.player.whoami", "description": "Check self" },
+        { "node": "hytale.command.emote", "description": "Use emotes" },
+        { "node": "hytale.command.player.unstuck", "description": "Unstuck" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "trial": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "hyperperms.command.check.others", "description": "Check others permissions" },
+        { "node": "hytale.command.server.who", "description": "View online players" },
+        { "node": "staff.tickets.view", "description": "View support tickets" },
+        { "node": "staff.tickets.respond", "description": "Respond to tickets" }
+      ],
+      "weight": 40,
+      "prefix": "&e[Trial] ",
+      "suffix": ""
+    },
+    "helper": {
+      "parents": ["trial"],
+      "permissions": [
+        { "node": "hyperperms.command.user.info", "description": "View user info" },
+        { "node": "hytale.command.player.teleport", "description": "Teleport to players" },
+        { "node": "staff.chat", "description": "Staff chat" },
+        { "node": "staff.vanish", "description": "Vanish mode" }
+      ],
+      "weight": 50,
+      "prefix": "&a[Helper] ",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["helper"],
+      "permissions": [
+        { "node": "hytale.command.server.kick", "description": "Kick players" },
+        { "node": "hytale.command.player.inventory.see", "description": "View inventories" },
+        { "node": "staff.mute", "description": "Mute players" },
+        { "node": "staff.warn", "description": "Warn players" },
+        { "node": "staff.tempban", "description": "Temporary bans" },
+        { "node": "staff.freeze", "description": "Freeze players" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "srmod": {
+      "parents": ["mod"],
+      "permissions": [
+        { "node": "hyperperms.command.user.*", "description": "User management" },
+        { "node": "hytale.command.server.ban", "description": "Permanent bans" },
+        { "node": "hytale.command.server.unban", "description": "Unban players" },
+        { "node": "staff.rollback", "description": "Rollback changes" }
+      ],
+      "weight": 70,
+      "prefix": "&3[Sr.Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["srmod"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All permission commands" },
+        { "node": "hytale.command.server.whitelist.*", "description": "Whitelist management" },
+        { "node": "hytale.command.world.*", "description": "World commands" },
+        { "node": "hytale.editor.*", "description": "World editor" },
+        { "node": "staff.admin.*", "description": "Admin tools" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "staff": ["trial", "helper", "mod", "srmod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": [],
+    "notes": "Standard staff hierarchy for any server type. Apply on top of other templates."
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "name": "creative",
+  "displayName": "Creative Server",
+  "description": "Building-focused server with plot protection",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "hytale.command.player.whereami", "description": "Check location" },
+        { "node": "plots.claim", "description": "Claim a plot" },
+        { "node": "plots.home", "description": "Teleport to plot" },
+        { "node": "plots.visit", "description": "Visit other plots" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "builder": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "hytale.command.player.gamemode.creative", "description": "Creative mode" },
+        { "node": "hytale.camera.flycam", "description": "Fly camera" },
+        { "node": "plots.limit.3", "description": "3 plots max" }
+      ],
+      "weight": 10,
+      "prefix": "&a[Builder] ",
+      "suffix": ""
+    },
+    "architect": {
+      "parents": ["builder"],
+      "permissions": [
+        { "node": "hytale.editor.builderTools", "description": "Builder tools" },
+        { "node": "hytale.editor.brush.use", "description": "Brush tools" },
+        { "node": "hytale.editor.selection.use", "description": "Selection tools" },
+        { "node": "plots.limit.10", "description": "10 plots max" }
+      ],
+      "weight": 20,
+      "prefix": "&2[Architect] ",
+      "suffix": ""
+    },
+    "master": {
+      "parents": ["architect"],
+      "permissions": [
+        { "node": "hytale.editor.selection.clipboard", "description": "Clipboard" },
+        { "node": "hytale.editor.history", "description": "Edit history" },
+        { "node": "hytale.editor.prefab.use", "description": "Prefabs" },
+        { "node": "plots.limit.unlimited", "description": "Unlimited plots" }
+      ],
+      "weight": 30,
+      "prefix": "&6[Master] ",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["builder"],
+      "permissions": [
+        { "node": "hyperperms.command.user.info", "description": "View user info" },
+        { "node": "hytale.command.server.kick", "description": "Kick players" },
+        { "node": "plots.admin.visit", "description": "Visit any plot" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["mod", "master"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All permission commands" },
+        { "node": "hytale.editor.*", "description": "All editor tools" },
+        { "node": "plots.admin.*", "description": "Plot admin" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "ranks": ["default", "builder", "architect", "master"],
+    "staff": ["mod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": ["HyperPlots"],
+    "notes": "Creative building server with plot system"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "name": "survival",
+  "displayName": "Survival Server",
+  "description": "Vanilla+ survival experience with land protection",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "hytale.command.player.whereami", "description": "Check location" },
+        { "node": "hytale.command.emote", "description": "Use emotes" },
+        { "node": "hytale.command.player.unstuck", "description": "Unstuck command" },
+        { "node": "survival.home.set", "description": "Set home" },
+        { "node": "survival.home.teleport", "description": "Teleport to home" },
+        { "node": "survival.tpa.send", "description": "Send teleport requests" },
+        { "node": "survival.tpa.accept", "description": "Accept teleport requests" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "member": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "survival.home.limit.3", "description": "3 homes" },
+        { "node": "survival.claim.create", "description": "Create land claims" },
+        { "node": "survival.claim.limit.5", "description": "5 claims max" }
+      ],
+      "weight": 10,
+      "prefix": "&a[Member] ",
+      "suffix": ""
+    },
+    "veteran": {
+      "parents": ["member"],
+      "permissions": [
+        { "node": "survival.home.limit.5", "description": "5 homes" },
+        { "node": "survival.claim.limit.10", "description": "10 claims max" },
+        { "node": "survival.back", "description": "Return to death location" }
+      ],
+      "weight": 20,
+      "prefix": "&2[Veteran] ",
+      "suffix": ""
+    },
+    "elite": {
+      "parents": ["veteran"],
+      "permissions": [
+        { "node": "survival.home.limit.10", "description": "10 homes" },
+        { "node": "survival.claim.limit.20", "description": "20 claims max" },
+        { "node": "survival.fly", "description": "Creative flight" },
+        { "node": "survival.workbench", "description": "Portable workbench" }
+      ],
+      "weight": 30,
+      "prefix": "&6[Elite] ",
+      "suffix": ""
+    },
+    "helper": {
+      "parents": ["member"],
+      "permissions": [
+        { "node": "hyperperms.command.user.info", "description": "View user info" },
+        { "node": "hyperperms.command.check.others", "description": "Check others permissions" },
+        { "node": "hytale.command.server.who", "description": "View online players" }
+      ],
+      "weight": 50,
+      "prefix": "&e[Helper] ",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["helper"],
+      "permissions": [
+        { "node": "hytale.command.server.kick", "description": "Kick players" },
+        { "node": "hytale.command.player.teleport", "description": "Teleport to players" },
+        { "node": "hytale.command.player.inventory.see", "description": "View inventories" },
+        { "node": "survival.claim.bypass", "description": "Bypass claim protection" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["mod"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All permission commands" },
+        { "node": "hytale.command.server.ban", "description": "Ban players" },
+        { "node": "hytale.command.server.unban", "description": "Unban players" },
+        { "node": "hytale.command.world.*", "description": "World commands" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "ranks": ["default", "member", "veteran", "elite"],
+    "staff": ["helper", "mod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": ["HyperHomes", "HyperClaims"],
+    "notes": "Balanced survival experience with progression"
+  }
+}

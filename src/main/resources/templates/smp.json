@@ -1,0 +1,85 @@
+{
+  "name": "smp",
+  "displayName": "SMP Server",
+  "description": "Whitelisted community survival multiplayer",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "hytale.command.player.whereami", "description": "Check location" },
+        { "node": "hytale.command.emote", "description": "Use emotes" },
+        { "node": "smp.home.set", "description": "Set home" },
+        { "node": "smp.home.teleport", "description": "Go home" },
+        { "node": "smp.spawn", "description": "Go to spawn" },
+        { "node": "smp.tpa", "description": "Teleport requests" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "member": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "smp.home.limit.3", "description": "3 homes" },
+        { "node": "smp.back", "description": "Return to death" },
+        { "node": "hyperperms.chat.color", "description": "Chat colors" }
+      ],
+      "weight": 10,
+      "prefix": "&a",
+      "suffix": ""
+    },
+    "trusted": {
+      "parents": ["member"],
+      "permissions": [
+        { "node": "smp.home.limit.5", "description": "5 homes" },
+        { "node": "smp.warp.create", "description": "Create warps" }
+      ],
+      "weight": 20,
+      "prefix": "&2",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["trusted"],
+      "permissions": [
+        { "node": "hyperperms.command.user.info", "description": "User info" },
+        { "node": "hyperperms.command.check.others", "description": "Check others" },
+        { "node": "hytale.command.server.kick", "description": "Kick players" },
+        { "node": "hytale.command.player.teleport", "description": "Teleport" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["mod"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All perms commands" },
+        { "node": "hytale.command.server.ban", "description": "Ban" },
+        { "node": "hytale.command.server.whitelist.*", "description": "Whitelist" },
+        { "node": "hytale.command.world.*", "description": "World commands" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "ranks": ["default", "member", "trusted"],
+    "staff": ["mod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": ["HyperHomes"],
+    "notes": "Small community SMP with trust-based ranks"
+  }
+}

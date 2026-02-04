@@ -1,0 +1,102 @@
+{
+  "name": "skyblock",
+  "displayName": "Skyblock Server",
+  "description": "Island-based survival with progression",
+  "version": "1.0.0",
+  "author": "HyperPerms",
+  "groups": {
+    "default": {
+      "permissions": [
+        { "node": "hyperperms.command.check.self", "description": "Check own permissions" },
+        { "node": "hytale.command.utility.help", "description": "View help" },
+        { "node": "skyblock.island.create", "description": "Create island" },
+        { "node": "skyblock.island.home", "description": "Go to island" },
+        { "node": "skyblock.island.visit", "description": "Visit islands" },
+        { "node": "skyblock.island.level", "description": "Check level" }
+      ],
+      "weight": 0,
+      "prefix": "&7",
+      "suffix": ""
+    },
+    "islander": {
+      "parents": ["default"],
+      "permissions": [
+        { "node": "skyblock.island.invite", "description": "Invite to island" },
+        { "node": "skyblock.island.coop", "description": "Coop players" },
+        { "node": "skyblock.minion.limit.5", "description": "5 minions" }
+      ],
+      "weight": 10,
+      "prefix": "&a[Islander] ",
+      "suffix": ""
+    },
+    "pioneer": {
+      "parents": ["islander"],
+      "permissions": [
+        { "node": "skyblock.island.warp", "description": "Create warps" },
+        { "node": "skyblock.minion.limit.10", "description": "10 minions" },
+        { "node": "skyblock.fly", "description": "Fly on island" }
+      ],
+      "weight": 20,
+      "prefix": "&2[Pioneer] ",
+      "suffix": ""
+    },
+    "legend": {
+      "parents": ["pioneer"],
+      "permissions": [
+        { "node": "skyblock.minion.limit.20", "description": "20 minions" },
+        { "node": "skyblock.island.size.large", "description": "Large island" },
+        { "node": "skyblock.sell.multiplier.1.5", "description": "1.5x sell" }
+      ],
+      "weight": 30,
+      "prefix": "&6[Legend] ",
+      "suffix": ""
+    },
+    "helper": {
+      "parents": ["islander"],
+      "permissions": [
+        { "node": "hyperperms.command.check.others", "description": "Check others" },
+        { "node": "skyblock.admin.visit", "description": "Visit any island" }
+      ],
+      "weight": 50,
+      "prefix": "&e[Helper] ",
+      "suffix": ""
+    },
+    "mod": {
+      "parents": ["helper"],
+      "permissions": [
+        { "node": "hytale.command.server.kick", "description": "Kick players" },
+        { "node": "skyblock.admin.ban.island", "description": "Ban from islands" }
+      ],
+      "weight": 60,
+      "prefix": "&b[Mod] ",
+      "suffix": ""
+    },
+    "admin": {
+      "parents": ["mod"],
+      "permissions": [
+        { "node": "hyperperms.command.*", "description": "All perms commands" },
+        { "node": "hytale.command.server.ban", "description": "Ban players" },
+        { "node": "skyblock.admin.*", "description": "Skyblock admin" }
+      ],
+      "weight": 90,
+      "prefix": "&c[Admin] ",
+      "suffix": ""
+    },
+    "owner": {
+      "permissions": [
+        { "node": "*", "description": "All permissions" }
+      ],
+      "weight": 100,
+      "prefix": "&4[Owner] ",
+      "suffix": ""
+    }
+  },
+  "tracks": {
+    "ranks": ["default", "islander", "pioneer", "legend"],
+    "staff": ["helper", "mod", "admin", "owner"]
+  },
+  "metadata": {
+    "recommendedPlugins": [],
+    "notes": "Skyblock server with island progression"
+  }
+}

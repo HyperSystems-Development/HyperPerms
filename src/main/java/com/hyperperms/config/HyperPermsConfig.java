@@ -40,6 +40,13 @@ public final class HyperPermsConfig {
                 Logger.warn("Configuration file was empty, using defaults");
                 config = createDefaultConfig();
             }
+
+            // Migrate older configs to add new fields
+            if (migrateConfig()) {
+                save();
+                Logger.info("Configuration migrated to latest version");
+            }
+
             Logger.info("Configuration loaded");
         } catch (JsonSyntaxException e) {
             Logger.severe("Configuration file is corrupted (invalid JSON), using defaults", e);
@@ -48,6 +55,27 @@ public final class HyperPermsConfig {
             Logger.severe("Failed to load configuration", e);
             config = createDefaultConfig();
         }
+    }
+
+    /**
+     * Migrates older config versions to the latest format.
+     * @return true if any migrations were applied
+     */
+    private boolean migrateConfig() {
+        boolean migrated = false;
+
+        // Migration: Add webEditor.apiUrl if missing (v2.7.3+)
+        if (config.has("webEditor") && config.get("webEditor").isJsonObject()) {
+            JsonObject webEditor = config.getAsJsonObject("webEditor");
+            if (!webEditor.has("apiUrl")) {
+                // Default to Cloudflare Worker endpoint for new installs
+                webEditor.addProperty("apiUrl", "https://api.hyperperms.com");
+                Logger.info("Config migration: Added webEditor.apiUrl (Cloudflare Workers API endpoint)");
+                migrated = true;
+            }
+        }
+
+        return migrated;
     }
 
     /**

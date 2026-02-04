@@ -51,8 +51,9 @@ public final class WebEditorService {
      * @return CompletableFuture with the session response
      */
     public CompletableFuture<SessionCreateResponse> createSession(int playerCount) {
-        String baseUrl = hyperPerms.getConfig().getWebEditorUrl();
-        String url = baseUrl + "/api/session/create";
+        // Use apiUrl for API calls (may be Cloudflare Worker)
+        String apiBaseUrl = hyperPerms.getConfig().getWebEditorApiUrl();
+        String url = apiBaseUrl + "/api/session/create";
 
         SessionData data = SessionData.fromHyperPerms(hyperPerms, playerCount);
         String json = GSON.toJson(data);
@@ -99,8 +100,9 @@ public final class WebEditorService {
      * @return CompletableFuture with the list of changes
      */
     public CompletableFuture<FetchChangesResult> fetchChanges(@NotNull String sessionId) {
-        String baseUrl = hyperPerms.getConfig().getWebEditorUrl();
-        String url = baseUrl + "/api/session/" + sessionId + "/changes";
+        // Use apiUrl for API calls (may be Cloudflare Worker)
+        String apiBaseUrl = hyperPerms.getConfig().getWebEditorApiUrl();
+        String url = apiBaseUrl + "/api/session/" + sessionId + "/changes";
 
         Logger.debug("Fetching changes from: " + url);
 
@@ -313,6 +315,8 @@ public final class WebEditorService {
         int weight = safeGetInt(groupObj, "weight", 0);
         String prefix = safeGetString(groupObj, "prefix");
         String suffix = safeGetString(groupObj, "suffix");
+        int prefixPriority = safeGetInt(groupObj, "prefixPriority", 0);
+        int suffixPriority = safeGetInt(groupObj, "suffixPriority", 0);
 
         List<Change.PermissionNode> permissions = new ArrayList<>();
         if (groupObj.has("permissions") && groupObj.get("permissions").isJsonArray()) {
@@ -343,7 +347,7 @@ public final class WebEditorService {
                 ? parseStringList(groupObj.getAsJsonArray("parents"))
                 : Collections.emptyList();
 
-        Change.GroupData groupData = new Change.GroupData(name, displayName, weight, prefix, suffix, permissions, parents);
+        Change.GroupData groupData = new Change.GroupData(name, displayName, weight, prefix, suffix, prefixPriority, suffixPriority, permissions, parents);
 
         return Change.builder(type)
                 .targetType("group")
@@ -372,6 +376,8 @@ public final class WebEditorService {
             safeGetInt(groupObj, "weight", 0),
             safeGetString(groupObj, "prefix"),
             safeGetString(groupObj, "suffix"),
+            safeGetInt(groupObj, "prefixPriority", 0),
+            safeGetInt(groupObj, "suffixPriority", 0),
             parsePermissionNodes(groupObj),
             groupObj.has("parents") && groupObj.get("parents").isJsonArray()
                 ? parseStringList(groupObj.getAsJsonArray("parents"))
@@ -720,6 +726,8 @@ public final class WebEditorService {
         int weight = safeGetInt(obj, "weight", 0);
         String prefix = safeGetString(obj, "prefix");
         String suffix = safeGetString(obj, "suffix");
+        int prefixPriority = safeGetInt(obj, "prefixPriority", 0);
+        int suffixPriority = safeGetInt(obj, "suffixPriority", 0);
 
         List<Change.PermissionNode> permissions = new ArrayList<>();
         if (obj.has("permissions") && obj.get("permissions").isJsonArray()) {
@@ -736,17 +744,17 @@ public final class WebEditorService {
                 }
                 boolean value = safeGetBoolean(permObj, "value", true);
                 Map<String, String> contexts = permObj.has("contexts") && !permObj.get("contexts").isJsonNull()
-                        ? parseContexts(permObj.getAsJsonObject("contexts")) 
+                        ? parseContexts(permObj.getAsJsonObject("contexts"))
                         : Collections.emptyMap();
                 permissions.add(new Change.PermissionNode(node, value, contexts));
             }
         }
 
         List<String> parents = obj.has("parents") && obj.get("parents").isJsonArray()
-                ? parseStringList(obj.getAsJsonArray("parents")) 
+                ? parseStringList(obj.getAsJsonArray("parents"))
                 : Collections.emptyList();
 
-        return new Change.GroupData(name, displayName, weight, prefix, suffix, permissions, parents);
+        return new Change.GroupData(name, displayName, weight, prefix, suffix, prefixPriority, suffixPriority, permissions, parents);
     }
 
     private Change.TrackData parseTrackData(JsonObject obj) {

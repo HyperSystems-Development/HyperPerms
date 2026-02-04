@@ -153,6 +153,7 @@ public final class HyperPermsConfig {
         // Web editor settings
         JsonObject webEditor = new JsonObject();
         webEditor.addProperty("url", "https://www.hyperperms.com");
+        webEditor.addProperty("apiUrl", "");  // Empty = use main URL for backward compatibility
         webEditor.addProperty("timeoutSeconds", 10);
         root.add("webEditor", webEditor);
 
@@ -382,12 +383,28 @@ public final class HyperPermsConfig {
 
     /**
      * Gets the web editor URL for remote permission management.
+     * This is used for browser URLs (where users access the editor).
      *
      * @return the web editor URL
      */
     @NotNull
     public String getWebEditorUrl() {
         return getNestedString("webEditor", "url", "https://www.hyperperms.com");
+    }
+
+    /**
+     * Gets the API URL for web editor API calls.
+     * If not configured, falls back to the main web editor URL for backward compatibility.
+     * This allows using a separate API endpoint (e.g., Cloudflare Workers) for API calls
+     * while keeping the main URL for browser access.
+     *
+     * @return the API URL
+     */
+    @NotNull
+    public String getWebEditorApiUrl() {
+        String apiUrl = getNestedString("webEditor", "apiUrl", "");
+        // If apiUrl is empty, fall back to main URL for backward compatibility
+        return apiUrl.isEmpty() ? getWebEditorUrl() : apiUrl;
     }
 
     /**

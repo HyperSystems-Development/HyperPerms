@@ -200,6 +200,8 @@ public final class Change {
         private final int weight;
         private final String prefix;
         private final String suffix;
+        private final int prefixPriority;
+        private final int suffixPriority;
         private final List<PermissionNode> permissions;
         private final List<String> parents;
 
@@ -209,6 +211,8 @@ public final class Change {
                 int weight,
                 @Nullable String prefix,
                 @Nullable String suffix,
+                int prefixPriority,
+                int suffixPriority,
                 @NotNull List<PermissionNode> permissions,
                 @NotNull List<String> parents
         ) {
@@ -217,6 +221,8 @@ public final class Change {
             this.weight = weight;
             this.prefix = prefix;
             this.suffix = suffix;
+            this.prefixPriority = prefixPriority;
+            this.suffixPriority = suffixPriority;
             this.permissions = permissions;
             this.parents = parents;
         }
@@ -243,6 +249,14 @@ public final class Change {
         @Nullable
         public String getSuffix() {
             return suffix;
+        }
+
+        public int getPrefixPriority() {
+            return prefixPriority;
+        }
+
+        public int getSuffixPriority() {
+            return suffixPriority;
         }
 
         @NotNull

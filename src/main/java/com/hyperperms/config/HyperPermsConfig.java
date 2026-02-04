@@ -64,7 +64,7 @@ public final class HyperPermsConfig {
     private boolean migrateConfig() {
         boolean migrated = false;
 
-        // Migration: Add webEditor.apiUrl if missing (v2.7.3+)
+        // Migration: Add webEditor.apiUrl if missing (v2.7.4+)
         if (config.has("webEditor") && config.get("webEditor").isJsonObject()) {
             JsonObject webEditor = config.getAsJsonObject("webEditor");
             if (!webEditor.has("apiUrl")) {

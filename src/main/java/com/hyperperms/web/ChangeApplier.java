@@ -193,6 +193,8 @@ public final class ChangeApplier {
         group.setWeight(data.getWeight());
         group.setPrefix(data.getPrefix());
         group.setSuffix(data.getSuffix());
+        group.setPrefixPriority(data.getPrefixPriority());
+        group.setSuffixPriority(data.getSuffixPriority());
 
         // Clear existing permissions and parents if updating (clearNodes removes all including parent groups)
         if (!isNew) {
@@ -276,6 +278,22 @@ public final class ChangeApplier {
                 case "prefix" -> group.setPrefix(newValue);
                 case "suffix" -> group.setSuffix(newValue);
                 case "displayname" -> group.setDisplayName(newValue);
+                case "prefixpriority" -> {
+                    try {
+                        group.setPrefixPriority(Integer.parseInt(newValue));
+                    } catch (NumberFormatException e) {
+                        Logger.warn("Invalid prefixPriority value: " + newValue);
+                        return false;
+                    }
+                }
+                case "suffixpriority" -> {
+                    try {
+                        group.setSuffixPriority(Integer.parseInt(newValue));
+                    } catch (NumberFormatException e) {
+                        Logger.warn("Invalid suffixPriority value: " + newValue);
+                        return false;
+                    }
+                }
                 default -> {
                     Logger.warn("Unknown meta key: " + key);
                     return false;

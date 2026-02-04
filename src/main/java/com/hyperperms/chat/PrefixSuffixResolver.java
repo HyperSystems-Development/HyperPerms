@@ -12,12 +12,13 @@ import java.util.stream.Collectors;
 
 /**
  * Resolves the effective prefix and suffix for a user based on their groups.
- * 
+ *
  * <p>Resolution Priority (highest to lowest):
  * <ol>
  *   <li>User's custom prefix/suffix (if set)</li>
- *   <li>Group with highest prefixPriority/suffixPriority</li>
+ *   <li>Group with highest prefixPriority/suffixPriority (weight-based selection)</li>
  *   <li>Group with highest weight (if priorities are equal)</li>
+ *   <li>Primary group's prefix/suffix (fallback if no group has a prefix/suffix)</li>
  *   <li>Default prefix/suffix from config</li>
  * </ol>
  * 
@@ -285,8 +286,9 @@ public class PrefixSuffixResolver {
     
     /**
      * Resolves prefix/suffix from a list of groups.
-     * If a primary group is provided and has a prefix/suffix, that takes priority.
-     * Otherwise falls back to highest priority/weight group.
+     * Always uses weight/priority-based selection first (highest prefixPriority/suffixPriority,
+     * then highest group weight). Primary group is only used as a fallback if no group
+     * has a prefix/suffix set.
      */
     private ResolveResult resolveFromGroupList(
             @NotNull List<Group> groups,
@@ -303,39 +305,35 @@ public class PrefixSuffixResolver {
         if (customPrefix != null) {
             resolvedPrefix = customPrefix;
         } else {
-            // First try primary group's prefix
-            if (primaryGroup != null && primaryGroup.getPrefix() != null && !primaryGroup.getPrefix().isEmpty()) {
+            // Always use weight/priority-based selection first
+            GroupPrefixSuffix best = findBestPrefix(groups);
+            if (best != null) {
+                resolvedPrefix = best.value;
+                prefixSource = best.group;
+            } else if (primaryGroup != null && primaryGroup.getPrefix() != null && !primaryGroup.getPrefix().isEmpty()) {
+                // Fall back to primary group only if no weighted prefix found
                 resolvedPrefix = primaryGroup.getPrefix();
                 prefixSource = primaryGroup;
             } else {
-                // Fall back to highest priority/weight group
-                GroupPrefixSuffix best = findBestPrefix(groups);
-                if (best != null) {
-                    resolvedPrefix = best.value;
-                    prefixSource = best.group;
-                } else {
-                    resolvedPrefix = defaultPrefix;
-                }
+                resolvedPrefix = defaultPrefix;
             }
         }
-        
+
         // Resolve suffix
         if (customSuffix != null) {
             resolvedSuffix = customSuffix;
         } else {
-            // First try primary group's suffix
-            if (primaryGroup != null && primaryGroup.getSuffix() != null && !primaryGroup.getSuffix().isEmpty()) {
+            // Always use weight/priority-based selection first
+            GroupPrefixSuffix best = findBestSuffix(groups);
+            if (best != null) {
+                resolvedSuffix = best.value;
+                suffixSource = best.group;
+            } else if (primaryGroup != null && primaryGroup.getSuffix() != null && !primaryGroup.getSuffix().isEmpty()) {
+                // Fall back to primary group only if no weighted suffix found
                 resolvedSuffix = primaryGroup.getSuffix();
                 suffixSource = primaryGroup;
             } else {
-                // Fall back to highest priority/weight group
-                GroupPrefixSuffix best = findBestSuffix(groups);
-                if (best != null) {
-                    resolvedSuffix = best.value;
-                    suffixSource = best.group;
-                } else {
-                    resolvedSuffix = defaultSuffix;
-                }
+                resolvedSuffix = defaultSuffix;
             }
         }
         

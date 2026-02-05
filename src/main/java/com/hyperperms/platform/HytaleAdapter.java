@@ -3,8 +3,6 @@ package com.hyperperms.platform;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.context.PlayerContextProvider;
 import com.hyperperms.util.Logger;
-import com.hypixel.hytale.protocol.GameMode;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -58,24 +56,10 @@ public class HytaleAdapter implements PlayerContextProvider {
     @Nullable
     public String getGameMode(@NotNull UUID uuid) {
         PlayerData data = playerData.get(uuid);
-        if (data == null || data.playerRef == null) {
-            return null;
+        if (data != null) {
+            return data.gameMode;
         }
-
-        try {
-            // Get the Player entity from the PlayerRef
-            Player player = getPlayerEntity(data.playerRef);
-            if (player != null) {
-                GameMode gameMode = player.getGameMode();
-                if (gameMode != null) {
-                    return gameMode.name().toLowerCase();
-                }
-            }
-        } catch (Exception e) {
-            Logger.debug("Failed to get game mode for %s: %s", uuid, e.getMessage());
-        }
-
-        return data.gameMode; // Fall back to cached value
+        return null;
     }
 
     @Override
@@ -87,42 +71,9 @@ public class HytaleAdapter implements PlayerContextProvider {
     @Nullable
     public String getTimeOfDay(@NotNull UUID uuid) {
         PlayerData data = playerData.get(uuid);
-        if (data == null || data.playerRef == null) {
-            return null;
+        if (data != null) {
+            return getTimePeriod(data.dayProgress);
         }
-
-        try {
-            // Get the world the player is in
-            var holder = data.playerRef.getHolder();
-            if (holder == null) {
-                return null;
-            }
-
-            // Try to get time from the world's time resource
-            // WorldTimeResource provides getDayProgress() which returns 0.0-1.0
-            // We need to map this to dawn/day/dusk/night periods
-            // For now, return cached time or calculate from day progress
-            
-            // Time periods based on typical day/night cycle:
-            // Dawn: ~0.20-0.30 (5:00-7:00)
-            // Day: ~0.30-0.70 (7:00-17:00)
-            // Dusk: ~0.70-0.80 (17:00-19:00)
-            // Night: ~0.80-0.20 (19:00-5:00)
-            
-            float dayProgress = data.dayProgress;
-            if (dayProgress < 0.20f || dayProgress >= 0.80f) {
-                return "night";
-            } else if (dayProgress < 0.30f) {
-                return "dawn";
-            } else if (dayProgress < 0.70f) {
-                return "day";
-            } else {
-                return "dusk";
-            }
-        } catch (Exception e) {
-            Logger.debug("Failed to get time of day for %s: %s", uuid, e.getMessage());
-        }
-
         return null;
     }
 
@@ -285,26 +236,6 @@ public class HytaleAdapter implements PlayerContextProvider {
     }
 
     // ==================== Utility Methods ====================
-
-    /**
-     * Gets the Player entity from a PlayerRef.
-     *
-     * @param playerRef the player reference
-     * @return the Player entity, or null if not available
-     */
-    @Nullable
-    private Player getPlayerEntity(@NotNull PlayerRef playerRef) {
-        try {
-            var holder = playerRef.getHolder();
-            if (holder != null) {
-                return holder.getComponent(Player.getComponentType());
-            }
-        } catch (Exception e) {
-            // Player may not be fully initialized yet
-            Logger.debug("Could not get Player entity: %s", e.getMessage());
-        }
-        return null;
-    }
 
     /**
      * Gets a tracked player's data.

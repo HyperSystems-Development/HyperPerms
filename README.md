@@ -5,15 +5,15 @@
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.gg/SNPjyfkYPc)
 [![GitHub Stars](https://img.shields.io/github/stars/HyperSystemsDev/HyperPerms?style=social)](https://github.com/HyperSystemsDev/HyperPerms)
 
-**The permission system for Hytale.** Web editor, LuckPerms migration, and everything you need out of the box.
+**The permission system for Hytale.** Web editor, templates, and everything you need out of the box.
+
+**[Documentation](https://www.hyperperms.com/wiki)** | **[Web Editor](https://hyperperms.com)** | **[Discord](https://discord.gg/SNPjyfkYPc)**
 
 ![Web Editor](web-editor.png)
 
 ## Features
 
 **Web Editor** - Edit permissions in your browser at [hyperperms.com](https://hyperperms.com). No port forwarding needed.
-
-**LuckPerms Migration** - One-command import from LuckPerms (YAML, JSON, H2, SQLite).
 
 **Permission Templates** - Pre-built roles (admin, moderator, builder, member) ready to use.
 
@@ -22,6 +22,16 @@
 **Wildcard Support** - `plugin.command.*` matches all subpermissions automatically.
 
 **Tracks & Inheritance** - Promotion tracks with weight-based group priority.
+
+**Timed Permissions** - Temporary permissions with automatic expiration and cleanup.
+
+**VaultUnlocked Integration** - Economy and chat prefix/suffix support out of the box.
+
+**Analytics & Auditing** - Track permission usage, view hotspots, and audit change history.
+
+**High Performance** - LRU caching, async operations, and efficient permission resolution.
+
+**LuckPerms Migration** - One-command import from LuckPerms (YAML, JSON, H2, SQLite).
 
 ## Quick Start
 
@@ -162,6 +172,7 @@ api.getGroupManager().createGroup(admin);
 
 ## Links
 
+- [Documentation](https://www.hyperperms.com/wiki) - Full wiki and guides
 - [Discord](https://discord.gg/SNPjyfkYPc) - Support & community
 - [Issues](https://github.com/HyperSystemsDev/HyperPerms/issues) - Bug reports & features
 - [Releases](https://github.com/HyperSystemsDev/HyperPerms/releases) - Downloads

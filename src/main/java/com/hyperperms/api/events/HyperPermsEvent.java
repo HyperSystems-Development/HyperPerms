@@ -42,9 +42,24 @@ public interface HyperPermsEvent {
         GROUP_DELETE,
 
         /**
+         * Fired when a group's properties are modified.
+         */
+        GROUP_MODIFY,
+
+        /**
          * Fired when a user's group membership changes.
          */
         USER_GROUP_CHANGE,
+
+        /**
+         * Fired when a user is loaded from storage.
+         */
+        USER_LOAD,
+
+        /**
+         * Fired when a user is unloaded from the cache.
+         */
+        USER_UNLOAD,
 
         /**
          * Fired when a player's context changes (world, gamemode, etc.).
@@ -54,6 +69,16 @@ public interface HyperPermsEvent {
         /**
          * Fired when data is reloaded.
          */
-        DATA_RELOAD
+        DATA_RELOAD,
+
+        /**
+         * Fired when a user is promoted along a track.
+         */
+        TRACK_PROMOTION,
+
+        /**
+         * Fired when a user is demoted along a track.
+         */
+        TRACK_DEMOTION
     }
 }

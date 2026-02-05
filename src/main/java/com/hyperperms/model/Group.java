@@ -1,11 +1,13 @@
 package com.hyperperms.model;
 
 import com.hyperperms.api.PermissionHolder;
+import com.hyperperms.api.PermissionHolderListener;
 import com.hyperperms.api.context.ContextSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -25,6 +27,7 @@ public final class Group implements PermissionHolder {
     private volatile int prefixPriority;
     private volatile int suffixPriority;
     private final Set<Node> nodes = ConcurrentHashMap.newKeySet();
+    private volatile PermissionHolderListener listener = PermissionHolderListener.EMPTY;
 
     /**
      * Creates a new group.
@@ -178,6 +181,28 @@ public final class Group implements PermissionHolder {
         this.suffixPriority = suffixPriority;
     }
 
+    /**
+     * Sets the permission holder listener.
+     * <p>
+     * The listener will be notified of changes to this group's permissions and inheritance.
+     * This is typically set by the GroupManager when the group is loaded.
+     *
+     * @param listener the listener, or null to remove
+     */
+    public void setListener(@Nullable PermissionHolderListener listener) {
+        this.listener = listener != null ? listener : PermissionHolderListener.EMPTY;
+    }
+
+    /**
+     * Gets the current permission holder listener.
+     *
+     * @return the listener, never null
+     */
+    @NotNull
+    public PermissionHolderListener getListener() {
+        return listener;
+    }
+
     @Override
     @NotNull
     public String getIdentifier() {
@@ -225,8 +250,10 @@ public final class Group implements PermissionHolder {
     public DataMutateResult addNode(@NotNull Node node) {
         Objects.requireNonNull(node, "node cannot be null");
         if (nodes.add(node)) {
+            listener.onNodeAdded(this, node, DataMutateResult.SUCCESS);
             return DataMutateResult.SUCCESS;
         }
+        listener.onNodeAdded(this, node, DataMutateResult.ALREADY_EXISTS);
         return DataMutateResult.ALREADY_EXISTS;
     }
 
@@ -235,8 +262,10 @@ public final class Group implements PermissionHolder {
     public DataMutateResult removeNode(@NotNull Node node) {
         Objects.requireNonNull(node, "node cannot be null");
         if (nodes.remove(node)) {
+            listener.onNodeRemoved(this, node, DataMutateResult.SUCCESS);
             return DataMutateResult.SUCCESS;
         }
+        listener.onNodeRemoved(this, node, DataMutateResult.DOES_NOT_EXIST);
         return DataMutateResult.DOES_NOT_EXIST;
     }
 
@@ -245,8 +274,17 @@ public final class Group implements PermissionHolder {
     public DataMutateResult removeNode(@NotNull String permission) {
         Objects.requireNonNull(permission, "permission cannot be null");
         String lowerPerm = permission.toLowerCase();
-        boolean removed = nodes.removeIf(node -> node.getPermission().equals(lowerPerm));
-        return removed ? DataMutateResult.SUCCESS : DataMutateResult.DOES_NOT_EXIST;
+        List<Node> toRemove = nodes.stream()
+                .filter(node -> node.getPermission().equals(lowerPerm))
+                .toList();
+        if (toRemove.isEmpty()) {
+            return DataMutateResult.DOES_NOT_EXIST;
+        }
+        for (Node node : toRemove) {
+            nodes.remove(node);
+            listener.onNodeRemoved(this, node, DataMutateResult.SUCCESS);
+        }
+        return DataMutateResult.SUCCESS;
     }
 
     @Override
@@ -255,17 +293,20 @@ public final class Group implements PermissionHolder {
         Objects.requireNonNull(node, "node cannot be null");
         nodes.removeIf(existing -> existing.equalsIgnoringExpiry(node));
         nodes.add(node);
+        listener.onNodeSet(this, node, DataMutateResult.SUCCESS);
         return DataMutateResult.SUCCESS;
     }
 
     @Override
     public void clearNodes() {
         nodes.clear();
+        listener.onNodesCleared(this, null);
     }
 
     @Override
     public void clearNodes(@NotNull ContextSet contexts) {
         nodes.removeIf(node -> node.getContexts().equals(contexts));
+        listener.onNodesCleared(this, contexts);
     }
 
     @Override
@@ -294,14 +335,31 @@ public final class Group implements PermissionHolder {
     @Override
     @NotNull
     public DataMutateResult addGroup(@NotNull String groupName) {
-        return addNode(Node.group(groupName));
+        Node groupNode = Node.group(groupName);
+        if (nodes.add(groupNode)) {
+            listener.onGroupAdded(this, groupName, DataMutateResult.SUCCESS);
+            return DataMutateResult.SUCCESS;
+        }
+        listener.onGroupAdded(this, groupName, DataMutateResult.ALREADY_EXISTS);
+        return DataMutateResult.ALREADY_EXISTS;
     }
 
     @Override
     @NotNull
     public DataMutateResult removeGroup(@NotNull String groupName) {
         String groupPerm = Node.GROUP_PREFIX + groupName.toLowerCase();
-        return removeNode(groupPerm);
+        List<Node> toRemove = nodes.stream()
+                .filter(node -> node.getPermission().equals(groupPerm))
+                .toList();
+        if (toRemove.isEmpty()) {
+            listener.onGroupRemoved(this, groupName, DataMutateResult.DOES_NOT_EXIST);
+            return DataMutateResult.DOES_NOT_EXIST;
+        }
+        for (Node node : toRemove) {
+            nodes.remove(node);
+        }
+        listener.onGroupRemoved(this, groupName, DataMutateResult.SUCCESS);
+        return DataMutateResult.SUCCESS;
     }
 
     @Override

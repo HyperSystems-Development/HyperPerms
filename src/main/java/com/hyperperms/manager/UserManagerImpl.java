@@ -1,7 +1,12 @@
 package com.hyperperms.manager;
 
 import com.hyperperms.api.HyperPermsAPI.UserManager;
+import com.hyperperms.api.PermissionHolder;
+import com.hyperperms.api.PermissionHolderListener;
+import com.hyperperms.api.context.ContextSet;
+import com.hyperperms.api.events.*;
 import com.hyperperms.cache.PermissionCache;
+import com.hyperperms.model.Node;
 import com.hyperperms.model.User;
 import com.hyperperms.storage.StorageProvider;
 import com.hyperperms.util.Logger;
@@ -20,15 +25,29 @@ public final class UserManagerImpl implements UserManager {
 
     private final StorageProvider storage;
     private final PermissionCache cache;
+    private final EventBus eventBus;
     private final Map<UUID, User> loadedUsers = new ConcurrentHashMap<>();
     private final Map<UUID, Object> userLocks = new ConcurrentHashMap<>();
     private final String defaultGroup;
+    private final UserPermissionListener permissionListener;
 
     public UserManagerImpl(@NotNull StorageProvider storage, @NotNull PermissionCache cache,
-                           @NotNull String defaultGroup) {
+                           @NotNull EventBus eventBus, @NotNull String defaultGroup) {
         this.storage = storage;
         this.cache = cache;
+        this.eventBus = eventBus;
         this.defaultGroup = defaultGroup;
+        this.permissionListener = new UserPermissionListener();
+    }
+
+    /**
+     * Creates a user manager without event bus support.
+     * @deprecated Use the constructor with EventBus parameter
+     */
+    @Deprecated
+    public UserManagerImpl(@NotNull StorageProvider storage, @NotNull PermissionCache cache,
+                           @NotNull String defaultGroup) {
+        this(storage, cache, new EventBus(), defaultGroup);
     }
 
     @Override
@@ -40,19 +59,34 @@ public final class UserManagerImpl implements UserManager {
         }
 
         return storage.loadUser(uuid).thenApply(opt -> {
+            boolean isNew = opt.isEmpty();
+            User loaded;
+
             if (opt.isPresent()) {
-                User loaded = opt.get();
-                // compute() is atomic - captures the result directly to avoid TOCTOU
-                User result = loadedUsers.compute(uuid, (key, existing) -> {
-                    if (existing == null || existing.getPrimaryGroup().equals(defaultGroup)) {
-                        return loaded;
-                    }
-                    return existing;
-                });
-                cache.invalidate(uuid);
-                return Optional.of(result);
+                loaded = opt.get();
+            } else {
+                // Create a new user with default settings
+                loaded = new User(uuid, null);
+                loaded.setPrimaryGroup(defaultGroup);
             }
-            return opt;
+
+            // Set the listener on the user
+            loaded.setListener(permissionListener);
+
+            // compute() is atomic - captures the result directly to avoid TOCTOU
+            User result = loadedUsers.compute(uuid, (key, existing) -> {
+                if (existing == null || existing.getPrimaryGroup().equals(defaultGroup)) {
+                    return loaded;
+                }
+                return existing;
+            });
+
+            cache.invalidate(uuid);
+
+            // Fire user load event
+            eventBus.fire(new UserLoadEvent(result, UserLoadEvent.LoadSource.STORAGE, isNew));
+
+            return Optional.of(result);
         });
     }
 
@@ -68,6 +102,11 @@ public final class UserManagerImpl implements UserManager {
         return loadedUsers.computeIfAbsent(uuid, id -> {
             User user = new User(id, null);
             user.setPrimaryGroup(defaultGroup);
+            user.setListener(permissionListener);
+
+            // Fire user load event for new user
+            eventBus.fire(new UserLoadEvent(user, UserLoadEvent.LoadSource.API, true));
+
             return user;
         });
     }
@@ -111,8 +150,23 @@ public final class UserManagerImpl implements UserManager {
 
     @Override
     public void unload(@NotNull UUID uuid) {
-        loadedUsers.remove(uuid);
+        User user = loadedUsers.remove(uuid);
         cache.invalidate(uuid);
+
+        // Fire user unload event
+        eventBus.fire(new UserUnloadEvent(uuid, user, UserUnloadEvent.UnloadReason.API));
+    }
+
+    /**
+     * Unloads a user with a specific reason.
+     *
+     * @param uuid   the user UUID
+     * @param reason the reason for unloading
+     */
+    public void unload(@NotNull UUID uuid, @NotNull UserUnloadEvent.UnloadReason reason) {
+        User user = loadedUsers.remove(uuid);
+        cache.invalidate(uuid);
+        eventBus.fire(new UserUnloadEvent(uuid, user, reason));
     }
 
     /**
@@ -122,9 +176,86 @@ public final class UserManagerImpl implements UserManager {
      */
     public CompletableFuture<Void> loadAll() {
         return storage.loadAllUsers().thenAccept(users -> {
+            for (User user : users.values()) {
+                user.setListener(permissionListener);
+            }
             loadedUsers.putAll(users);
             Logger.info("Loaded %d users from storage", users.size());
         });
+    }
+
+    /**
+     * Loads multiple users from storage.
+     *
+     * @param uuids the UUIDs to load
+     * @return a future that completes with a map of loaded users
+     */
+    public CompletableFuture<Map<UUID, User>> loadUsers(@NotNull Collection<UUID> uuids) {
+        List<CompletableFuture<Optional<User>>> futures = new ArrayList<>();
+        Map<UUID, User> results = new ConcurrentHashMap<>();
+
+        for (UUID uuid : uuids) {
+            User cached = loadedUsers.get(uuid);
+            if (cached != null) {
+                results.put(uuid, cached);
+            } else {
+                futures.add(loadUser(uuid).thenApply(opt -> {
+                    opt.ifPresent(user -> results.put(uuid, user));
+                    return opt;
+                }));
+            }
+        }
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
+                .thenApply(v -> results);
+    }
+
+    /**
+     * Saves multiple users to storage.
+     *
+     * @param users the users to save
+     * @return a future that completes when all users are saved
+     */
+    public CompletableFuture<Void> saveUsers(@NotNull Collection<User> users) {
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (User user : users) {
+            if (user.hasData()) {
+                futures.add(saveUser(user));
+            }
+        }
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]));
+    }
+
+    /**
+     * Applies a modification to multiple users and saves them.
+     *
+     * @param uuids  the UUIDs to modify
+     * @param action the modification to apply
+     * @return a future that completes when all users are saved
+     */
+    public CompletableFuture<Void> batchModify(@NotNull Collection<UUID> uuids, @NotNull Consumer<User> action) {
+        return loadUsers(uuids).thenCompose(users -> {
+            for (User user : users.values()) {
+                Object lock = userLocks.computeIfAbsent(user.getUuid(), k -> new Object());
+                synchronized (lock) {
+                    action.accept(user);
+                }
+            }
+            return saveUsers(users.values());
+        }).thenRun(() -> {
+            for (UUID uuid : uuids) {
+                cache.invalidate(uuid);
+            }
+        });
+    }
+
+    /**
+     * Gets all known user UUIDs from storage.
+     *
+     * @return a future that completes with the set of all known UUIDs
+     */
+    public CompletableFuture<Set<UUID>> getAllKnownUUIDs() {
+        return storage.loadAllUsers().thenApply(Map::keySet);
     }
 
     /**
@@ -163,5 +294,68 @@ public final class UserManagerImpl implements UserManager {
             }
         }
         return total;
+    }
+
+    /**
+     * Gets the event bus used by this manager.
+     *
+     * @return the event bus
+     */
+    @NotNull
+    public EventBus getEventBus() {
+        return eventBus;
+    }
+
+    /**
+     * Internal listener that fires events when user permissions change.
+     */
+    private class UserPermissionListener implements PermissionHolderListener {
+
+        @Override
+        public void onNodeAdded(@NotNull PermissionHolder holder, @NotNull Node node,
+                                @NotNull PermissionHolder.DataMutateResult result) {
+            if (result == PermissionHolder.DataMutateResult.SUCCESS) {
+                eventBus.fire(new PermissionChangeEvent(holder, node, PermissionChangeEvent.ChangeType.ADD));
+            }
+        }
+
+        @Override
+        public void onNodeRemoved(@NotNull PermissionHolder holder, @NotNull Node node,
+                                  @NotNull PermissionHolder.DataMutateResult result) {
+            if (result == PermissionHolder.DataMutateResult.SUCCESS) {
+                eventBus.fire(new PermissionChangeEvent(holder, node, PermissionChangeEvent.ChangeType.REMOVE));
+            }
+        }
+
+        @Override
+        public void onNodeSet(@NotNull PermissionHolder holder, @NotNull Node node,
+                              @NotNull PermissionHolder.DataMutateResult result) {
+            if (result == PermissionHolder.DataMutateResult.SUCCESS) {
+                eventBus.fire(new PermissionChangeEvent(holder, node, PermissionChangeEvent.ChangeType.UPDATE));
+            }
+        }
+
+        @Override
+        public void onGroupAdded(@NotNull PermissionHolder holder, @NotNull String groupName,
+                                 @NotNull PermissionHolder.DataMutateResult result) {
+            if (result == PermissionHolder.DataMutateResult.SUCCESS && holder instanceof User user) {
+                eventBus.fire(new UserGroupChangeEvent(user, UserGroupChangeEvent.ChangeType.ADD, groupName));
+            }
+        }
+
+        @Override
+        public void onGroupRemoved(@NotNull PermissionHolder holder, @NotNull String groupName,
+                                   @NotNull PermissionHolder.DataMutateResult result) {
+            if (result == PermissionHolder.DataMutateResult.SUCCESS && holder instanceof User user) {
+                eventBus.fire(new UserGroupChangeEvent(user, UserGroupChangeEvent.ChangeType.REMOVE, groupName));
+            }
+        }
+
+        @Override
+        public void onNodesCleared(@NotNull PermissionHolder holder, @Nullable ContextSet contexts) {
+            // Create a synthetic node to represent the clear operation
+            Node clearNode = Node.builder("*").build();
+            eventBus.fire(new PermissionChangeEvent(holder, clearNode, PermissionChangeEvent.ChangeType.CLEAR));
+        }
     }
 }

@@ -1,8 +1,14 @@
 package com.hyperperms;
 
+import com.hyperperms.api.AsyncPermissionCheckBuilder;
 import com.hyperperms.api.HyperPermsAPI;
+import com.hyperperms.api.MetricsAPI;
 import com.hyperperms.api.PermissionCheckBuilder;
+import com.hyperperms.api.QueryAPI;
+import com.hyperperms.api.TriState;
 import com.hyperperms.api.context.ContextSet;
+import com.hyperperms.metrics.MetricsAPIImpl;
+import com.hyperperms.query.QueryAPIImpl;
 import com.hyperperms.api.events.EventBus;
 import com.hyperperms.api.events.PermissionCheckEvent;
 import com.hyperperms.cache.CacheInvalidator;
@@ -43,6 +49,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.concurrent.Executor;
 import java.util.logging.Level;
 
 /**
@@ -106,6 +113,12 @@ public final class HyperPerms implements HyperPermsAPI {
     // Analytics
     @Nullable
     private com.hyperperms.analytics.AnalyticsManager analyticsManager;
+
+    // API implementations
+    @Nullable
+    private QueryAPI queryApi;
+    @Nullable
+    private MetricsAPI metricsApi;
 
     // Managers
     private UserManagerImpl userManager;
@@ -196,10 +209,10 @@ public final class HyperPerms implements HyperPermsAPI {
             // Initialize event bus
             eventBus = new EventBus();
 
-            // Initialize managers
-            groupManager = new GroupManagerImpl(storage, cacheInvalidator);
+            // Initialize managers with event bus
+            groupManager = new GroupManagerImpl(storage, cacheInvalidator, eventBus);
             trackManager = new TrackManagerImpl(storage);
-            userManager = new UserManagerImpl(storage, cache, config.getDefaultGroup());
+            userManager = new UserManagerImpl(storage, cache, eventBus, config.getDefaultGroup());
 
             // Load data
             groupManager.loadAll().join();
@@ -347,6 +360,16 @@ public final class HyperPerms implements HyperPermsAPI {
             // Initialize analytics manager
             analyticsManager = new com.hyperperms.analytics.AnalyticsManager(this);
             analyticsManager.start();
+
+            // Initialize API implementations
+            queryApi = new QueryAPIImpl(userManager, groupManager, () -> trackManager.getLoadedTracks());
+            if (analyticsManager.isEnabled()) {
+                metricsApi = new MetricsAPIImpl(
+                        analyticsManager,
+                        () -> cache.getStatistics(),
+                        () -> cache.size()
+                );
+            }
 
             enabled = true;
             long elapsed = System.currentTimeMillis() - startTime;
@@ -564,7 +587,44 @@ public final class HyperPerms implements HyperPermsAPI {
         return new PermissionCheckBuilder(this, uuid);
     }
 
-    private void fireCheckEvent(UUID uuid, String permission, ContextSet contexts, TriState result,
+    @Override
+    @NotNull
+    public CompletableFuture<Boolean> hasPermissionAsync(@NotNull UUID uuid, @NotNull String permission,
+                                                          @NotNull ContextSet contexts) {
+        return CompletableFuture.supplyAsync(() -> hasPermission(uuid, permission, contexts));
+    }
+
+    @Override
+    @NotNull
+    public TriState getPermissionValue(@NotNull UUID uuid, @NotNull String permission,
+                                        @NotNull ContextSet contexts) {
+        com.hyperperms.resolver.WildcardMatcher.TriState internal = checkPermission(uuid, permission, contexts);
+        return TriState.fromInternal(internal);
+    }
+
+    @Override
+    @NotNull
+    public CompletableFuture<TriState> getPermissionValueAsync(@NotNull UUID uuid, @NotNull String permission,
+                                                                @NotNull ContextSet contexts) {
+        return CompletableFuture.supplyAsync(() -> getPermissionValue(uuid, permission, contexts));
+    }
+
+    @Override
+    @NotNull
+    public AsyncPermissionCheckBuilder checkAsync(@NotNull UUID uuid) {
+        return new AsyncPermissionCheckBuilder(this, uuid);
+    }
+
+    @Override
+    @NotNull
+    public java.util.concurrent.Executor getSyncExecutor() {
+        // Return the scheduler executor if available, otherwise the common pool
+        // In a real implementation, this would be the main thread executor from the platform
+        return scheduler != null ? scheduler : java.util.concurrent.ForkJoinPool.commonPool();
+    }
+
+    private void fireCheckEvent(UUID uuid, String permission, ContextSet contexts,
+                                 com.hyperperms.resolver.WildcardMatcher.TriState result,
                                  PermissionTrace trace) {
         if (verboseMode) {
             if (trace != null) {

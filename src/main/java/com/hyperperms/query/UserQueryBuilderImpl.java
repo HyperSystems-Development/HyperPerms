@@ -1,5 +1,6 @@
 package com.hyperperms.query;
 
+import com.hyperperms.api.context.Context;
 import com.hyperperms.api.query.UserQueryBuilder;
 import com.hyperperms.manager.UserManagerImpl;
 import com.hyperperms.model.Node;
@@ -82,7 +83,7 @@ public final class UserQueryBuilderImpl implements UserQueryBuilder {
     public UserQueryBuilder withContext(@NotNull String key, @NotNull String value) {
         filters.add(user -> user.getNodes().stream()
                 .filter(node -> !node.isExpired())
-                .anyMatch(node -> node.getContexts().has(key, value)));
+                .anyMatch(node -> node.getContexts().contains(new Context(key, value))));
         return this;
     }
 

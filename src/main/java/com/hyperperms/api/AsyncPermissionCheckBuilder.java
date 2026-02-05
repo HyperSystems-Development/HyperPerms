@@ -146,7 +146,7 @@ public final class AsyncPermissionCheckBuilder {
      */
     @NotNull
     private ContextSet buildContexts() {
-        return contexts.isEmpty() ? ContextSet.empty() : ContextSet.of(contexts);
+        return contexts.isEmpty() ? ContextSet.empty() : ContextSet.of(contexts.toArray(Context[]::new));
     }
 
     /**

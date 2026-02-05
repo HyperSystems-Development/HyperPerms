@@ -35,7 +35,7 @@ import com.hyperperms.manager.TrackManagerImpl;
 import com.hyperperms.manager.UserManagerImpl;
 import com.hyperperms.model.User;
 import com.hyperperms.resolver.PermissionResolver;
-import com.hyperperms.resolver.WildcardMatcher.TriState;
+import com.hyperperms.resolver.WildcardMatcher;
 import com.hyperperms.storage.StorageFactory;
 import com.hyperperms.storage.StorageProvider;
 import com.hyperperms.task.ExpiryCleanupTask;
@@ -367,7 +367,7 @@ public final class HyperPerms implements HyperPermsAPI {
                 metricsApi = new MetricsAPIImpl(
                         analyticsManager,
                         () -> cache.getStatistics(),
-                        () -> cache.size()
+                        () -> (int) cache.size()  // Safe cast - cache size won't exceed Integer.MAX_VALUE
                 );
             }
 
@@ -499,7 +499,7 @@ public final class HyperPerms implements HyperPermsAPI {
                 fireCheckEvent(uuid, permission, contexts, trace.result(), trace);
                 return trace.result().asBoolean();
             } else {
-                TriState result = cachedPerms.check(permission);
+                WildcardMatcher.TriState result = cachedPerms.check(permission);
                 fireCheckEvent(uuid, permission, contexts, result, null);
                 return result.asBoolean();
             }
@@ -526,7 +526,7 @@ public final class HyperPerms implements HyperPermsAPI {
             fireCheckEvent(uuid, permission, contexts, trace.result(), trace);
             return trace.result().asBoolean();
         } else {
-            TriState result = resolved.check(permission);
+            WildcardMatcher.TriState result = resolved.check(permission);
             fireCheckEvent(uuid, permission, contexts, result, null);
             return result.asBoolean();
         }
@@ -543,7 +543,7 @@ public final class HyperPerms implements HyperPermsAPI {
      * @return the TriState result of the permission check
      */
     @NotNull
-    public TriState checkPermission(@NotNull UUID uuid, @NotNull String permission, @NotNull ContextSet contexts) {
+    public WildcardMatcher.TriState checkPermission(@NotNull UUID uuid, @NotNull String permission, @NotNull ContextSet contexts) {
         // Try cache first
         var cachedPerms = cache.get(uuid, contexts);
         if (cachedPerms != null) {
@@ -665,6 +665,21 @@ public final class HyperPerms implements HyperPermsAPI {
     @NotNull
     public ContextSet getContexts(@NotNull UUID uuid) {
         return contextManager.getContexts(uuid);
+    }
+
+    @Override
+    @NotNull
+    public QueryAPI getQuery() {
+        if (queryApi == null) {
+            throw new IllegalStateException("QueryAPI not initialized - plugin may not be fully enabled");
+        }
+        return queryApi;
+    }
+
+    @Override
+    @Nullable
+    public MetricsAPI getMetrics() {
+        return metricsApi;
     }
 
     // ==================== Accessors ====================

@@ -51,10 +51,10 @@ public final class MetricsAPIImpl implements MetricsAPI {
     public PermissionCheckStats getCheckStats() {
         return analyticsManager.getSummary()
                 .thenApply(summary -> new PermissionCheckStats(
-                        summary.totalChecks(),
-                        summary.grantedChecks(),
-                        summary.deniedChecks(),
-                        summary.totalChecks() - summary.grantedChecks() - summary.deniedChecks()
+                        summary.getTotalChecks(),
+                        summary.getTotalGrants(),
+                        summary.getTotalDenies(),
+                        summary.getTotalChecks() - summary.getTotalGrants() - summary.getTotalDenies()
                 ))
                 .exceptionally(e -> new PermissionCheckStats(0, 0, 0, 0))
                 .join();
@@ -148,7 +148,7 @@ public final class MetricsAPIImpl implements MetricsAPI {
 
     private AuditEntry convertAuditEntry(AnalyticsSummary.AuditEntry internal) {
         return new AuditEntry(
-                internal.timestamp(),
+                Instant.ofEpochMilli(internal.timestamp()),
                 internal.holderType(),
                 internal.holderId(),
                 internal.action(),

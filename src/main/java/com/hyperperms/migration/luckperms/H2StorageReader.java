@@ -72,53 +72,54 @@ public final class H2StorageReader implements LuckPermsStorageReader {
             return false;
         }
 
-        // Try to load H2 driver from LuckPerms libs first, then fall back to bundled
+        // Try to load H2 driver from LuckPerms libs
         if (loadH2Driver()) {
             return true;
         }
 
-        Logger.warn("H2 driver not found. Migration from H2 database not available.");
+        Logger.warn("H2 driver not found. H2 migration requires LuckPerms to be installed with its H2 driver in the libs folder.");
         return false;
     }
 
     /**
-     * Attempts to load the H2 driver, first from LuckPerms libs folder (for version compatibility),
-     * then falls back to the bundled H2 driver.
+     * Attempts to load the H2 driver from LuckPerms libs folder.
+     * <p>
+     * H2 migration requires LuckPerms to be installed with its H2 driver in the libs folder.
+     * We dynamically load from LuckPerms to ensure version compatibility with their database format.
      *
      * @return true if driver was loaded successfully
      */
     private boolean loadH2Driver() {
-        // First, try to load from LuckPerms libs folder for version compatibility
-        if (luckPermsDir != null) {
-            Path libsDir = luckPermsDir.resolve("libs");
-            if (Files.isDirectory(libsDir)) {
-                Path h2Jar = findH2JarInLibs(libsDir);
-                if (h2Jar != null) {
-                    try {
-                        Logger.info("Loading H2 driver from LuckPerms: %s", h2Jar.getFileName());
-                        h2ClassLoader = new URLClassLoader(
-                            new URL[]{h2Jar.toUri().toURL()},
-                            getClass().getClassLoader()
-                        );
-                        Class<?> driverClass = h2ClassLoader.loadClass(H2_DRIVER);
-                        h2Driver = (Driver) driverClass.getDeclaredConstructor().newInstance();
-                        Logger.debug("Successfully loaded H2 driver from LuckPerms libs");
-                        return true;
-                    } catch (Exception e) {
-                        Logger.debug("Failed to load H2 from LuckPerms libs: %s", e.getMessage());
-                        closeClassLoader();
-                    }
-                }
-            }
+        if (luckPermsDir == null) {
+            Logger.debug("LuckPerms directory not provided, cannot load H2 driver");
+            return false;
         }
 
-        // Fall back to bundled H2 driver
+        Path libsDir = luckPermsDir.resolve("libs");
+        if (!Files.isDirectory(libsDir)) {
+            Logger.debug("LuckPerms libs directory not found: %s", libsDir);
+            return false;
+        }
+
+        Path h2Jar = findH2JarInLibs(libsDir);
+        if (h2Jar == null) {
+            Logger.debug("H2 driver JAR not found in LuckPerms libs folder");
+            return false;
+        }
+
         try {
-            Class.forName(H2_DRIVER);
-            Logger.debug("Using bundled H2 driver");
+            Logger.info("Loading H2 driver from LuckPerms: %s", h2Jar.getFileName());
+            h2ClassLoader = new URLClassLoader(
+                new URL[]{h2Jar.toUri().toURL()},
+                getClass().getClassLoader()
+            );
+            Class<?> driverClass = h2ClassLoader.loadClass(H2_DRIVER);
+            h2Driver = (Driver) driverClass.getDeclaredConstructor().newInstance();
+            Logger.debug("Successfully loaded H2 driver from LuckPerms libs");
             return true;
-        } catch (ClassNotFoundException e) {
-            Logger.debug("Bundled H2 driver not found");
+        } catch (Exception e) {
+            Logger.debug("Failed to load H2 from LuckPerms libs: %s", e.getMessage());
+            closeClassLoader();
             return false;
         }
     }

@@ -2,6 +2,7 @@ package com.hyperperms.chat;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.integration.FactionIntegration;
+import com.hyperperms.integration.PlaceholderAPIIntegration;
 import com.hyperperms.integration.WerChatIntegration;
 import com.hyperperms.model.User;
 import com.hyperperms.util.Logger;
@@ -65,6 +66,10 @@ public class ChatManager {
     // WerChat integration (optional, set after construction)
     @Nullable
     private volatile WerChatIntegration werchatIntegration;
+
+    // PlaceholderAPI integration (optional, set after construction)
+    @Nullable
+    private volatile PlaceholderAPIIntegration placeholderApiIntegration;
     
     /**
      * Creates a new ChatManager.
@@ -144,7 +149,31 @@ public class ChatManager {
     public WerChatIntegration getWerChatIntegration() {
         return werchatIntegration;
     }
-    
+
+    /**
+     * Sets up PlaceholderAPI integration for parsing external placeholders.
+     * This enables parsing of PAPI placeholders from other plugins in chat messages.
+     *
+     * @param placeholderApiIntegration the PlaceholderAPI integration instance
+     */
+    public void setPlaceholderAPIIntegration(@Nullable PlaceholderAPIIntegration placeholderApiIntegration) {
+        this.placeholderApiIntegration = placeholderApiIntegration;
+
+        if (placeholderApiIntegration != null && placeholderApiIntegration.isAvailable()) {
+            Logger.info("PlaceholderAPI external placeholder parsing enabled for chat");
+        }
+    }
+
+    /**
+     * Gets the current PlaceholderAPI integration.
+     *
+     * @return the PlaceholderAPI integration, or null if not available
+     */
+    @Nullable
+    public PlaceholderAPIIntegration getPlaceholderAPIIntegration() {
+        return placeholderApiIntegration;
+    }
+
     /**
      * Registers faction-related placeholders.
      */
@@ -307,10 +336,15 @@ public class ChatManager {
         
         // Format the message
         String formatted = ChatFormatter.format(chatFormat, context);
-        
+
+        // Parse external PlaceholderAPI placeholders (e.g., %player_health%, %vault_balance%)
+        if (playerUuid != null && placeholderApiIntegration != null && placeholderApiIntegration.shouldParseExternal()) {
+            formatted = placeholderApiIntegration.parsePlaceholders(playerUuid, formatted);
+        }
+
         // Process colors
         String colorized = ColorUtil.colorize(formatted);
-        
+
         return new FormattedChatMessage(colorized, message, displayData);
     }
     

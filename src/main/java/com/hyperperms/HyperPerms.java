@@ -18,6 +18,7 @@ import com.hyperperms.context.calculators.ServerContextCalculator;
 import com.hyperperms.context.calculators.TimeContextCalculator;
 import com.hyperperms.context.calculators.WorldContextCalculator;
 import com.hyperperms.integration.FactionIntegration;
+import com.hyperperms.integration.PlaceholderAPIIntegration;
 import com.hyperperms.integration.VaultUnlockedIntegration;
 import com.hyperperms.integration.WerChatIntegration;
 import com.hyperperms.discovery.RuntimePermissionDiscovery;
@@ -83,6 +84,10 @@ public final class HyperPerms implements HyperPermsAPI {
     // WerChat integration (optional - soft dependency on WerChat)
     @Nullable
     private WerChatIntegration werchatIntegration;
+
+    // PlaceholderAPI integration (optional - soft dependency on PlaceholderAPI)
+    @Nullable
+    private PlaceholderAPIIntegration placeholderApiIntegration;
 
     // Web editor
     private com.hyperperms.web.WebEditorService webEditorService;
@@ -263,6 +268,15 @@ public final class HyperPerms implements HyperPermsAPI {
             werchatIntegration.setChannelFormat(config.getWerChatChannelFormat());
             chatManager.setWerChatIntegration(werchatIntegration);
 
+            // Initialize PlaceholderAPI integration (soft dependency on PlaceholderAPI)
+            placeholderApiIntegration = new PlaceholderAPIIntegration(this);
+            placeholderApiIntegration.setEnabled(config.isPlaceholderAPIEnabled());
+            placeholderApiIntegration.setParseExternal(config.isPlaceholderAPIParseExternal());
+            chatManager.setPlaceholderAPIIntegration(placeholderApiIntegration);
+            if (placeholderApiIntegration.isAvailable()) {
+                Logger.info("PlaceholderAPI integration enabled - placeholders available");
+            }
+
             // Initialize VaultUnlocked integration (soft dependency)
             if (config.isVaultIntegrationEnabled()) {
                 VaultUnlockedIntegration.init(this);
@@ -357,6 +371,11 @@ public final class HyperPerms implements HyperPermsAPI {
 
         // Shutdown VaultUnlocked integration
         VaultUnlockedIntegration.shutdown();
+
+        // Unregister PlaceholderAPI expansion
+        if (placeholderApiIntegration != null) {
+            placeholderApiIntegration.unregister();
+        }
 
         // Stop analytics manager
         if (analyticsManager != null) {
@@ -870,6 +889,23 @@ public final class HyperPerms implements HyperPermsAPI {
     @Nullable
     public WerChatIntegration getWerChatIntegration() {
         return werchatIntegration;
+    }
+
+    /**
+     * Gets the PlaceholderAPI integration.
+     * <p>
+     * The PlaceholderAPI integration provides two-way integration:
+     * <ul>
+     *   <li>Exposes HyperPerms placeholders to other plugins</li>
+     *   <li>Parses external PAPI placeholders in chat format</li>
+     * </ul>
+     * Returns null if PlaceholderAPI is not installed.
+     *
+     * @return the PlaceholderAPI integration, or null if not available
+     */
+    @Nullable
+    public PlaceholderAPIIntegration getPlaceholderAPIIntegration() {
+        return placeholderApiIntegration;
     }
 
     /**

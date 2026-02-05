@@ -115,6 +115,16 @@ public final class HyperPermsConfig {
             migrated = true;
         }
 
+        // Migration: Add PlaceholderAPI settings if missing
+        if (!config.has("placeholderapi")) {
+            JsonObject placeholderapi = new JsonObject();
+            placeholderapi.addProperty("enabled", true);
+            placeholderapi.addProperty("parseExternal", true);
+            config.add("placeholderapi", placeholderapi);
+            Logger.info("Config migration: Added PlaceholderAPI integration settings");
+            migrated = true;
+        }
+
         // Update config version if migration occurred or version is outdated
         if (migrated || compareVersions(configVersion, CURRENT_CONFIG_VERSION) < 0) {
             config.addProperty("configVersion", CURRENT_CONFIG_VERSION);
@@ -307,6 +317,12 @@ public final class HyperPermsConfig {
         analytics.addProperty("flushIntervalSeconds", 60);
         analytics.addProperty("retentionDays", 90);
         root.add("analytics", analytics);
+
+        // PlaceholderAPI integration settings
+        JsonObject placeholderapi = new JsonObject();
+        placeholderapi.addProperty("enabled", true);
+        placeholderapi.addProperty("parseExternal", true);
+        root.add("placeholderapi", placeholderapi);
 
         return root;
     }
@@ -813,6 +829,30 @@ public final class HyperPermsConfig {
      */
     public int getAnalyticsRetentionDays() {
         return getNestedInt("analytics", "retentionDays", 90);
+    }
+
+    // ==================== PlaceholderAPI Integration Settings ====================
+
+    /**
+     * Checks if PlaceholderAPI integration is enabled.
+     * When enabled, HyperPerms will register its own expansion with PlaceholderAPI
+     * to expose placeholders like %hyperperms_prefix%, %hyperperms_group%, etc.
+     *
+     * @return true if PlaceholderAPI integration is enabled
+     */
+    public boolean isPlaceholderAPIEnabled() {
+        return getNestedBoolean("placeholderapi", "enabled", true);
+    }
+
+    /**
+     * Checks if external PlaceholderAPI placeholder parsing is enabled.
+     * When enabled, HyperPerms will parse external PAPI placeholders
+     * (from other plugins) in chat format strings.
+     *
+     * @return true if external placeholder parsing is enabled
+     */
+    public boolean isPlaceholderAPIParseExternal() {
+        return getNestedBoolean("placeholderapi", "parseExternal", true);
     }
 
     // ==================== Helper Methods ====================

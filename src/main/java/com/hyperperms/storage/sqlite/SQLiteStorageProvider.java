@@ -6,6 +6,7 @@ import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
 import com.hyperperms.storage.StorageProvider;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.SQLiteDriverLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,8 +45,6 @@ import java.util.concurrent.TimeUnit;
  */
 public final class SQLiteStorageProvider implements StorageProvider {
 
-    private static final String DRIVER_CLASS = "org.sqlite.JDBC";
-    
     private final Path databaseFile;
     private final Path backupsDirectory;
     private final ExecutorService executor;
@@ -64,16 +63,14 @@ public final class SQLiteStorageProvider implements StorageProvider {
 
     /**
      * Checks if the SQLite JDBC driver is available.
+     * <p>
+     * The driver must be downloaded separately and placed in the lib directory.
+     * See {@link SQLiteDriverLoader#getDownloadInstructions()} for details.
      *
      * @return true if SQLite can be used
      */
     public static boolean isDriverAvailable() {
-        try {
-            Class.forName(DRIVER_CLASS);
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return SQLiteDriverLoader.isAvailable();
     }
 
     @Override
@@ -94,20 +91,17 @@ public final class SQLiteStorageProvider implements StorageProvider {
             try {
                 // Check if driver is available
                 if (!isDriverAvailable()) {
-                    throw new RuntimeException(
-                        "SQLite JDBC driver not found. " +
-                        "Please download sqlite-jdbc and place it in plugins/HyperPerms/lib/"
-                    );
+                    throw new RuntimeException(SQLiteDriverLoader.getDownloadInstructions());
                 }
 
                 // Create directories
                 Files.createDirectories(databaseFile.getParent());
                 Files.createDirectories(backupsDirectory);
 
-                // Open connection
+                // Open connection using the dynamically loaded driver
                 String url = "jdbc:sqlite:" + databaseFile.toAbsolutePath();
-                connection = DriverManager.getConnection(url);
-                
+                connection = SQLiteDriverLoader.getConnection(url);
+
                 // Enable WAL mode for better concurrent access
                 try (Statement stmt = connection.createStatement()) {
                     stmt.execute("PRAGMA journal_mode=WAL");
@@ -757,9 +751,9 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 // Replace database file
                 Files.copy(backupFile, databaseFile, StandardCopyOption.REPLACE_EXISTING);
 
-                // Reopen connection
+                // Reopen connection using the dynamically loaded driver
                 String url = "jdbc:sqlite:" + databaseFile.toAbsolutePath();
-                connection = DriverManager.getConnection(url);
+                connection = SQLiteDriverLoader.getConnection(url);
 
                 Logger.info("SQLite backup restored: " + name);
                 return true;

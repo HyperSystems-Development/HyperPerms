@@ -3,6 +3,7 @@ package com.hyperperms.analytics;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.SQLiteDriverLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,11 +44,13 @@ public final class SQLiteAnalyticsStorage implements AnalyticsStorage {
                 // Ensure parent directory exists
                 Files.createDirectories(databasePath.getParent());
 
-                // Load SQLite JDBC driver explicitly (needed due to relocation)
-                Class.forName("org.sqlite.JDBC");
+                // Check if SQLite driver is available (must be downloaded separately)
+                if (!SQLiteDriverLoader.isAvailable()) {
+                    throw new RuntimeException(SQLiteDriverLoader.getDownloadInstructions());
+                }
 
-                // Connect to database
-                connection = DriverManager.getConnection("jdbc:sqlite:" + databasePath.toAbsolutePath());
+                // Connect to database using the dynamically loaded driver
+                connection = SQLiteDriverLoader.getConnection("jdbc:sqlite:" + databasePath.toAbsolutePath());
 
                 // Create tables
                 try (Statement stmt = connection.createStatement()) {

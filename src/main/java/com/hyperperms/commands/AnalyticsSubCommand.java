@@ -4,6 +4,7 @@ import com.hyperperms.HyperPerms;
 import com.hyperperms.analytics.AnalyticsManager;
 import com.hyperperms.analytics.AnalyticsSummary;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.SQLiteDriverLoader;
 import com.hyperperms.util.TimeUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
@@ -33,9 +34,13 @@ public class AnalyticsSubCommand extends AbstractCommand {
     private static final Color WHITE = Color.WHITE;
     private static final Color AQUA = new Color(85, 255, 255);
     private static final Color YELLOW = new Color(255, 255, 85);
+    private static final Color BLUE = new Color(85, 85, 255);
 
-    private static final DateTimeFormatter TIME_FORMAT = 
+    private static final DateTimeFormatter TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private static final String SQLITE_DOWNLOAD_PAGE =
+            "https://github.com/xerial/sqlite-jdbc/releases/";
 
     private final HyperPerms hyperPerms;
 
@@ -68,7 +73,7 @@ public class AnalyticsSubCommand extends AbstractCommand {
     }
 
     private Message buildHelp() {
-        return Message.raw("--- Analytics Commands ---\n").color(GRAY)
+        Message help = Message.raw("--- Analytics Commands ---\n").color(GRAY)
                 .insert(Message.raw("  /hp analytics summary").color(GOLD))
                 .insert(Message.raw(" - Overview of permission health\n").color(WHITE))
                 .insert(Message.raw("  /hp analytics hotspots [limit]").color(GOLD))
@@ -80,12 +85,57 @@ public class AnalyticsSubCommand extends AbstractCommand {
                 .insert(Message.raw("  /hp analytics export [--format]").color(GOLD))
                 .insert(Message.raw(" - Export analytics data\n").color(WHITE))
                 .insert(Message.raw("----------------------------").color(GRAY));
+
+        // Add SQLite status note if driver not available
+        if (!SQLiteDriverLoader.isAvailable()) {
+            help = help.insert(Message.raw("\n").color(GRAY))
+                       .insert(Message.raw("Note: ").color(YELLOW))
+                       .insert(Message.raw("SQLite driver required. Run any command for info.").color(GRAY));
+        }
+
+        return help;
     }
 
     private AnalyticsManager getManager(CommandContext ctx) {
+        // First check if SQLite driver is available
+        if (!SQLiteDriverLoader.isAvailable()) {
+            ctx.sender().sendMessage(Message.raw(""));
+            ctx.sender().sendMessage(Message.raw("=== SQLite Driver Required ===").color(GOLD));
+            ctx.sender().sendMessage(Message.raw(""));
+            ctx.sender().sendMessage(Message.raw("Analytics requires the SQLite JDBC driver.").color(WHITE));
+            ctx.sender().sendMessage(Message.raw("The driver is not bundled to keep the JAR small.").color(GRAY));
+            ctx.sender().sendMessage(Message.raw(""));
+            ctx.sender().sendMessage(Message.raw("To enable analytics:").color(WHITE));
+            ctx.sender().sendMessage(Message.raw(""));
+            ctx.sender().sendMessage(Message.raw("1. Download the driver from Maven Central:").color(GRAY));
+            ctx.sender().sendMessage(
+                Message.raw("   [Click here to visit download page]")
+                    .color(GREEN)
+                    .bold(true)
+                    .link(SQLITE_DOWNLOAD_PAGE)
+            );
+            ctx.sender().sendMessage(Message.raw(""));
+            ctx.sender().sendMessage(Message.raw("2. Place it in:").color(GRAY));
+            String libPath = SQLiteDriverLoader.getLibDirectory() != null
+                ? SQLiteDriverLoader.getLibDirectory().toString()
+                : "mods/com.hyperperms_HyperPerms/lib/";
+            ctx.sender().sendMessage(Message.raw("   " + libPath).color(AQUA));
+            ctx.sender().sendMessage(Message.raw(""));
+            ctx.sender().sendMessage(Message.raw("3. Restart your server").color(GRAY));
+            ctx.sender().sendMessage(Message.raw(""));
+            ctx.sender().sendMessage(Message.raw("=============================").color(GOLD));
+
+            // Also log the URL to console for easy copying
+            Logger.info("[Analytics] SQLite driver required. Download page:");
+            Logger.info("[Analytics] " + SQLITE_DOWNLOAD_PAGE);
+
+            return null;
+        }
+
         AnalyticsManager manager = hyperPerms.getAnalyticsManager();
         if (manager == null || !manager.isEnabled()) {
-            ctx.sender().sendMessage(Message.raw("Analytics is disabled. Enable it in config.json").color(RED));
+            ctx.sender().sendMessage(Message.raw("Analytics is disabled. Enable it in config.json:").color(RED));
+            ctx.sender().sendMessage(Message.raw("  \"analytics\": { \"enabled\": true }").color(GRAY));
             return null;
         }
         return manager;

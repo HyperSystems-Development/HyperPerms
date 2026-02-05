@@ -33,9 +33,12 @@ import com.hyperperms.storage.StorageFactory;
 import com.hyperperms.storage.StorageProvider;
 import com.hyperperms.task.ExpiryCleanupTask;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.SQLiteDriverLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -158,6 +161,16 @@ public final class HyperPerms implements HyperPermsAPI {
             // Initialize logger
             Logger.init(parentLogger);
             Logger.info("Enabling HyperPerms...");
+
+            // Initialize lib directory for optional SQLite driver
+            Path libDir = dataDirectory.resolve("lib");
+            try {
+                Files.createDirectories(libDir);
+            } catch (IOException e) {
+                Logger.warn("Failed to create lib directory: %s", e.getMessage());
+            }
+            SQLiteDriverLoader.setLibDirectory(libDir);
+            Logger.debug("SQLite lib directory: %s", libDir);
 
             // Load configuration
             config = new HyperPermsConfig(dataDirectory);

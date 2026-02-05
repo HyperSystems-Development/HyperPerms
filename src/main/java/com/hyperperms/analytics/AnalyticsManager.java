@@ -3,6 +3,7 @@ package com.hyperperms.analytics;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.api.events.*;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.SQLiteDriverLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -72,9 +73,20 @@ public final class AnalyticsManager {
      */
     public void start() {
         loadConfig();
-        
+
         if (!enabled) {
             Logger.info("[Analytics] Analytics is disabled in config");
+            return;
+        }
+
+        // Check if SQLite driver is available (required for analytics)
+        if (!SQLiteDriverLoader.isAvailable()) {
+            Logger.warn("[Analytics] SQLite driver not found. Analytics disabled.");
+            Logger.warn("[Analytics] To enable analytics, download sqlite-jdbc JAR to: %s",
+                SQLiteDriverLoader.getLibDirectory() != null
+                    ? SQLiteDriverLoader.getLibDirectory()
+                    : "mods/com.hyperperms_HyperPerms/lib/");
+            enabled = false;
             return;
         }
 

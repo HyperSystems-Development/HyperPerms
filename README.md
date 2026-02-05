@@ -1,205 +1,74 @@
 # HyperPerms
 
+[![Latest Release](https://img.shields.io/github/v/release/HyperSystemsDev/HyperPerms?label=version)](https://github.com/HyperSystemsDev/HyperPerms/releases)
+[![License](https://img.shields.io/badge/license-GPLv3-green)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.gg/SNPjyfkYPc)
-[![GitHub](https://img.shields.io/github/stars/HyperSystemsDev/HyperPerms?style=social)](https://github.com/HyperSystemsDev/HyperPerms)
+[![GitHub Stars](https://img.shields.io/github/stars/HyperSystemsDev/HyperPerms?style=social)](https://github.com/HyperSystemsDev/HyperPerms)
 
-A production-grade permissions management plugin for Hytale servers. Part of the **HyperSystems** plugin suite.
+**The permission system for Hytale.** Web editor, LuckPerms migration, and everything you need out of the box.
 
-**Version:** 2.7.7
-**Game:** Hytale Early Access
-**License:** GPLv3
+![Web Editor](web-editor.png)
 
----
+## Features
 
-## Overview
+**Web Editor** - Edit permissions in your browser at [hyperperms.com](https://hyperperms.com). No port forwarding needed.
 
-HyperPerms provides advanced permission management with contextual permissions, wildcard support, group inheritance, promotion tracks, and a web-based editor. Built for performance with LRU caching and async operations.
+**LuckPerms Migration** - One-command import from LuckPerms (YAML, JSON, H2, SQLite).
 
----
+**Permission Templates** - Pre-built roles (admin, moderator, builder, member) ready to use.
 
-## Key Features
+**Contextual Permissions** - Scope permissions per-world, per-region, or per-server.
 
-- **Web Editor** - Browser-based permission editing via [hyperperms.com](https://hyperperms.com)
-- **Permission Templates** - Pre-built role configurations (admin, moderator, builder, etc.)
-- **Contextual Permissions** - Per-world, per-region, per-server permission contexts
-- **Wildcard Support** - Full wildcard matching (`plugin.command.*` matches `plugin.command.home`)
-- **Timed Permissions** - Temporary permissions with automatic expiration cleanup
-- **Group Inheritance** - Weight-based priority system with cycle detection
-- **Track System** - Promotion/demotion tracks for rank progression
-- **LuckPerms Migration** - Seamless migration from LuckPerms (YAML, JSON, H2, SQLite)
-- **VaultUnlocked Integration** - Economy and chat prefix support
-- **Analytics System** - Permission usage tracking and audit logs (optional)
-- **Console Clickable Links** - OSC8 hyperlinks for modern terminals
-- **Pluggable Storage** - JSON (default), SQLite support
-- **LRU Caching** - High-performance caching with smart invalidation
-- **Event System** - Full event bus for permission changes and checks
-- **Async Operations** - Non-blocking storage operations
+**Wildcard Support** - `plugin.command.*` matches all subpermissions automatically.
 
----
+**Tracks & Inheritance** - Promotion tracks with weight-based group priority.
 
-## Installation
+## Quick Start
 
-1. Download the latest release JAR
-2. Place in your server's `mods` folder
-3. Start the server
-4. Configure in `mods/com.hyperperms_HyperPerms/config.json`
+1. Drop `HyperPerms-2.7.7.jar` in your `mods/` folder
+2. Start your server
+3. Run `/hp editor` to open the web editor, or use commands:
 
----
-
-## Web Editor
-
-Edit permissions in your browser at [hyperperms.com](https://hyperperms.com):
-
-1. Run `/hp editor` in-game or console
-2. Click the generated link (or copy to browser)
-3. Make changes in the visual editor
-4. Apply with one click - changes sync automatically
-
-No port forwarding required - uses secure Cloudflare Workers API.
-
----
-
-## Permission Templates
-
-Quick-start with pre-built role configurations:
-
-| Command | Description |
-|---------|-------------|
-| `/hp template list` | View available templates |
-| `/hp template apply <name>` | Apply a template |
-| `/hp template preview <name>` | Preview before applying |
-
-**Built-in templates:** `admin`, `moderator`, `builder`, `member`, `default`
-
-**Custom templates:** Place in the `templates/` folder
-
----
-
-## Migrating from LuckPerms
-
-HyperPerms can import your existing LuckPerms data:
-
-1. Run `/hp migrate luckperms`
-2. Review the migration preview
-3. Confirm to import groups, users, and tracks
-
-**Supported formats:** YAML, JSON, H2, SQLite
-
----
-
-## Optional: SQLite Support
-
-SQLite enables analytics tracking and SQLite storage backend.
-It's **not bundled** to keep the JAR small (~2.4MB vs ~15MB).
-
-### Why SQLite is Optional
-
-The SQLite JDBC driver includes native libraries for 20+ platforms (Linux, Windows, macOS, FreeBSD, Android - all architectures), which adds ~12MB to the JAR. Since most users only need JSON storage, we made it optional.
-
-### Enabling SQLite Features
-
-1. **Download the driver** from GitHub:
-   - Releases page: https://github.com/xerial/sqlite-jdbc/releases/
-   - Download the JAR file from the latest release
-
-2. **Place the JAR** in your HyperPerms lib folder:
-   ```
-   mods/com.hyperperms_HyperPerms/lib/sqlite-jdbc-3.45.1.0.jar
-   ```
-
-3. **Restart your server**
-
-The plugin will automatically detect and load the driver on startup.
-
-### Verifying Installation
-
-On startup, you'll see one of these messages:
-
-**Driver found:**
 ```
-[HyperPerms] [SQLite] Loading SQLite JDBC from: sqlite-jdbc-3.45.1.0.jar
-[HyperPerms] [SQLite] Successfully loaded SQLite JDBC driver
+/hp group create admin              # Create a group
+/hp group admin permission set *    # Grant all permissions
+/hp user Steve parent add admin     # Add player to group
+/hp template apply moderator        # Apply pre-built template
 ```
-
-**Driver not found (analytics enabled in config):**
-```
-[HyperPerms] [Analytics] SQLite driver not found. Analytics disabled.
-[HyperPerms] [Analytics] To enable analytics, download sqlite-jdbc JAR to: .../lib/
-```
-
-### Without SQLite Driver
-
-- Analytics is disabled (no impact on permissions)
-- JSON storage works perfectly (default)
-- All permission features work normally
-- LuckPerms H2 migration still works (uses LuckPerms's bundled H2 driver)
-
----
-
-## Analytics (Optional)
-
-Track permission usage and audit changes. Requires SQLite (see above).
-
-Enable in `config.json`:
-```json
-{
-  "analytics": {
-    "enabled": true,
-    "trackChecks": true,
-    "trackChanges": true,
-    "retentionDays": 90
-  }
-}
-```
-
-**Commands:**
-- `/hp analytics top` - Most checked permissions
-- `/hp analytics audit` - Recent permission changes
-
----
 
 ## Commands
 
-| Command | Description | Permission |
-|---------|-------------|------------|
-| `/hp reload` | Reload configuration | `hyperperms.admin.reload` |
-| `/hp info` | Plugin information | `hyperperms.admin.info` |
-| `/hp editor` | Open web editor | `hyperperms.admin.editor` |
-| `/hp user <player> info` | View player permissions | `hyperperms.user.info` |
-| `/hp user <player> permission set <perm>` | Set permission | `hyperperms.user.permission.set` |
-| `/hp user <player> parent add <group>` | Add to group | `hyperperms.user.parent.add` |
-| `/hp group create <name>` | Create group | `hyperperms.group.create` |
-| `/hp group <group> permission set <perm>` | Set group permission | `hyperperms.group.permission.set` |
-| `/hp track create <name>` | Create track | `hyperperms.track.create` |
-| `/hp track <track> promote <player>` | Promote player | `hyperperms.track.promote` |
-| `/hp migrate luckperms` | Migrate from LuckPerms | `hyperperms.admin.migrate` |
-| `/hp template list` | List templates | `hyperperms.admin.template` |
-| `/hp template apply <name>` | Apply template | `hyperperms.admin.template` |
-| `/hp analytics top` | Top checked permissions | `hyperperms.admin.analytics` |
-| `/hp analytics audit` | Recent audit log | `hyperperms.admin.analytics` |
+| Command | Description |
+|---------|-------------|
+| `/hp editor` | Open web-based permission editor |
+| `/hp user <player> info` | View player's permissions |
+| `/hp user <player> permission set <perm>` | Set a permission |
+| `/hp user <player> parent add <group>` | Add player to group |
+| `/hp group create <name>` | Create a new group |
+| `/hp group <name> permission set <perm>` | Set group permission |
+| `/hp track <name> promote <player>` | Promote on a track |
+| `/hp template apply <name>` | Apply permission template |
+| `/hp migrate luckperms` | Import from LuckPerms |
+| `/hp reload` | Reload configuration |
 
----
+<details>
+<summary><strong>All Permissions</strong></summary>
 
-## Permissions
+| Permission | Description |
+|------------|-------------|
+| `hyperperms.admin.*` | Full admin access |
+| `hyperperms.user.*` | User management |
+| `hyperperms.group.*` | Group management |
+| `hyperperms.track.*` | Track management |
 
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `hyperperms.admin.*` | Full admin access | op |
-| `hyperperms.admin.reload` | Reload configuration | op |
-| `hyperperms.admin.info` | View plugin info | op |
-| `hyperperms.admin.editor` | Use web editor | op |
-| `hyperperms.admin.migrate` | Migrate from LuckPerms | op |
-| `hyperperms.admin.template` | Manage templates | op |
-| `hyperperms.admin.analytics` | View analytics | op |
-| `hyperperms.user.*` | User management | op |
-| `hyperperms.group.*` | Group management | op |
-| `hyperperms.track.*` | Track management | op |
-
----
+</details>
 
 ## Configuration
 
-Configuration file: `mods/com.hyperperms_HyperPerms/config.json`
+Config file: `mods/com.hyperperms_HyperPerms/config.json`
+
+<details>
+<summary><strong>View full config</strong></summary>
 
 ```json
 {
@@ -220,29 +89,49 @@ Configuration file: `mods/com.hyperperms_HyperPerms/config.json`
     "enabled": false,
     "trackChecks": true,
     "trackChanges": true,
-    "flushIntervalSeconds": 60,
     "retentionDays": 90
   },
   "console": {
-    "clickableLinksEnabled": true,
-    "forceOsc8": false
+    "clickableLinksEnabled": true
   }
 }
 ```
 
----
+</details>
 
-## API Usage
+## Optional: SQLite & Analytics
+
+SQLite enables analytics tracking and audit logs. It's **not bundled** to keep the JAR small (2.4MB vs 15MB).
+
+<details>
+<summary><strong>Enable SQLite features</strong></summary>
+
+1. Download from [sqlite-jdbc releases](https://github.com/xerial/sqlite-jdbc/releases/)
+2. Place the JAR in `mods/com.hyperperms_HyperPerms/lib/`
+3. Restart your server
+
+**Without SQLite:** Everything works fine - analytics is simply disabled and JSON storage is used.
+
+**Analytics commands:**
+- `/hp analytics summary` - Permission health overview
+- `/hp analytics hotspots` - Most checked permissions
+- `/hp analytics audit` - Change history
+
+</details>
+
+## For Developers
+
+<details>
+<summary><strong>API Usage</strong></summary>
 
 ```java
-// Get the API instance
 HyperPermsAPI api = HyperPerms.getApi();
 
 // Check permissions
 User user = api.getUserManager().getUser(uuid).join();
 boolean canBuild = user.hasPermission("world.build");
 
-// Add permission with context
+// Add contextual permission
 Node node = Node.builder("world.build")
     .value(true)
     .withContext("world", "creative")
@@ -255,86 +144,28 @@ Group admin = Group.builder("admin")
     .addPermission(Node.builder("*").build())
     .build();
 api.getGroupManager().createGroup(admin);
-
-// Track-based promotion
-Track staffTrack = api.getTrackManager().getTrack("staff").join();
-api.getTrackManager().promote(user, staffTrack);
 ```
 
----
+</details>
 
-## Architecture
+<details>
+<summary><strong>Building from Source</strong></summary>
 
-```
-com.hyperperms
-├── api/                 # Public API interfaces
-│   ├── context/         # Context system
-│   └── events/          # Event bus and events
-├── analytics/           # Permission analytics system
-├── cache/               # LRU permission cache
-├── config/              # Configuration handling
-├── manager/             # User, Group, Track managers
-├── migration/           # LuckPerms migration support
-│   └── luckperms/       # LuckPerms storage readers
-├── model/               # Core data models
-├── resolver/            # Permission resolution engine
-├── storage/             # Storage providers
-│   ├── json/            # JSON storage implementation
-│   └── sqlite/          # SQLite storage implementation
-├── task/                # Background tasks
-├── templates/           # Permission templates
-├── util/                # Utility classes
-└── webeditor/           # Web editor integration
-```
-
----
-
-## Building from Source
-
-### Requirements
-
-- Java 25 (Temurin recommended)
-- Gradle 9.3+
-- Shadow Plugin 9.3.1+ (for Java 25 ASM support)
+**Requirements:** Java 25, Gradle 9.3+
 
 ```bash
-# Build the plugin
-./gradlew build
-
-# Build shadow JAR (fat JAR with relocated dependencies)
 ./gradlew shadowJar
-
-# Clean build
-./gradlew clean shadowJar
+# Output: build/libs/HyperPerms-2.7.7.jar
 ```
 
-The output JAR will be in `build/libs/`.
+</details>
 
-### Troubleshooting
+## Links
 
-If you see `Unsupported class file major version 69`:
-- Ensure Shadow plugin is 9.3.1+ (includes ASM with Java 25/26 support)
-- Ensure Gradle is 9.0+ (required for Shadow 9.x)
-
----
-
-## Support
-
-- **Discord:** https://discord.gg/SNPjyfkYPc
-- **GitHub Issues:** https://github.com/HyperSystemsDev/HyperPerms/issues
+- [Discord](https://discord.gg/SNPjyfkYPc) - Support & community
+- [Issues](https://github.com/HyperSystemsDev/HyperPerms/issues) - Bug reports & features
+- [Releases](https://github.com/HyperSystemsDev/HyperPerms/releases) - Downloads
 
 ---
 
-## Credits
-
-Developed by **HyperSystemsDev**
-
-Part of the **HyperSystems** plugin suite:
-- [HyperPerms](https://github.com/HyperSystemsDev/HyperPerms) - Advanced permissions
-- [HyperHomes](https://github.com/HyperSystemsDev/HyperHomes) - Home teleportation
-- [HyperFactions](https://github.com/HyperSystemsDev/HyperFactions) - Faction management
-- [HyperWarp](https://github.com/HyperSystemsDev/HyperWarp) - Warps, spawns, TPA
-
----
-
-*HyperPerms - Control Everything*
+Part of the **HyperSystems** suite: [HyperPerms](https://github.com/HyperSystemsDev/HyperPerms) | [HyperHomes](https://github.com/HyperSystemsDev/HyperHomes) | [HyperFactions](https://github.com/HyperSystemsDev/HyperFactions) | [HyperWarp](https://github.com/HyperSystemsDev/HyperWarp)

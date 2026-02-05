@@ -57,6 +57,13 @@ public class ApplySubCommand extends AbstractCommand {
                     List<Change> changes = result.getChanges();
                     if (changes == null || changes.isEmpty()) {
                         ctx.sender().sendMessage(Message.raw("No changes found for this session."));
+                        ctx.sender().sendMessage(Message.raw(""));
+                        ctx.sender().sendMessage(Message.raw("This can happen if:"));
+                        ctx.sender().sendMessage(Message.raw("  - No edits were made in the web editor"));
+                        ctx.sender().sendMessage(Message.raw("  - The session expired (sessions last 24 hours)"));
+                        ctx.sender().sendMessage(Message.raw("  - The session ID was copied incorrectly"));
+                        ctx.sender().sendMessage(Message.raw(""));
+                        ctx.sender().sendMessage(Message.raw("Check server logs for 'Changes API response' for details."));
                         return;
                     }
 

@@ -228,7 +228,20 @@ public final class WebEditorService {
                                     if (change != null) changes.add(change);
                                 }
                             }
-                            
+
+                            // Diagnostic logging for empty changes
+                            if (changes.isEmpty()) {
+                                Logger.warn("Session " + sessionId + " returned 0 changes. This may indicate:");
+                                Logger.warn("  - No edits were made in the web editor");
+                                Logger.warn("  - Session expired or was never saved");
+                                Logger.warn("  - API response format mismatch");
+
+                                // Check if 'changes' key was missing entirely
+                                if (!obj.has("changes") || obj.get("changes").isJsonNull()) {
+                                    Logger.warn("API response missing 'changes' key entirely - possible API issue");
+                                }
+                            }
+
                             return new FetchChangesResult(changes, null);
                         } catch (Exception e) {
                             Logger.warn("Failed to parse changes response: " + e.getMessage());

@@ -359,39 +359,67 @@ public class PrefixSuffixResolver {
     /**
      * Finds the best prefix from a list of groups.
      * Selection criteria:
-     * 1. Highest prefixPriority
+     * 1. Highest effective prefix priority (prefixPriority if set, otherwise weight)
      * 2. If tie, highest group weight
      * 3. If still tie, alphabetical group name
+     *
+     * <p>Note: When prefixPriority is 0 (default/not set), the group's weight is used
+     * as the effective priority. This allows weight to determine prefix ordering by
+     * default, while still allowing explicit prefixPriority overrides.
      */
     @Nullable
     private GroupPrefixSuffix findBestPrefix(@NotNull List<Group> groups) {
         return groups.stream()
             .filter(g -> g.getPrefix() != null && !g.getPrefix().isEmpty())
             .max(Comparator
-                .comparingInt(Group::getPrefixPriority)
+                .comparingInt((Group g) -> getEffectivePrefixPriority(g))
                 .thenComparingInt(Group::getWeight)
                 .thenComparing(Group::getName))
             .map(g -> new GroupPrefixSuffix(g, g.getPrefix()))
             .orElse(null);
     }
-    
+
     /**
      * Finds the best suffix from a list of groups.
      * Selection criteria:
-     * 1. Highest suffixPriority
+     * 1. Highest effective suffix priority (suffixPriority if set, otherwise weight)
      * 2. If tie, highest group weight
      * 3. If still tie, alphabetical group name
+     *
+     * <p>Note: When suffixPriority is 0 (default/not set), the group's weight is used
+     * as the effective priority. This allows weight to determine suffix ordering by
+     * default, while still allowing explicit suffixPriority overrides.
      */
     @Nullable
     private GroupPrefixSuffix findBestSuffix(@NotNull List<Group> groups) {
         return groups.stream()
             .filter(g -> g.getSuffix() != null && !g.getSuffix().isEmpty())
             .max(Comparator
-                .comparingInt(Group::getSuffixPriority)
+                .comparingInt((Group g) -> getEffectiveSuffixPriority(g))
                 .thenComparingInt(Group::getWeight)
                 .thenComparing(Group::getName))
             .map(g -> new GroupPrefixSuffix(g, g.getSuffix()))
             .orElse(null);
+    }
+
+    /**
+     * Gets the effective prefix priority for a group.
+     * If prefixPriority is explicitly set (non-zero), use it.
+     * Otherwise, fall back to the group's weight.
+     */
+    private int getEffectivePrefixPriority(@NotNull Group group) {
+        int priority = group.getPrefixPriority();
+        return priority != 0 ? priority : group.getWeight();
+    }
+
+    /**
+     * Gets the effective suffix priority for a group.
+     * If suffixPriority is explicitly set (non-zero), use it.
+     * Otherwise, fall back to the group's weight.
+     */
+    private int getEffectiveSuffixPriority(@NotNull Group group) {
+        int priority = group.getSuffixPriority();
+        return priority != 0 ? priority : group.getWeight();
     }
     
     /**

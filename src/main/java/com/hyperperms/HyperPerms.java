@@ -400,26 +400,28 @@ public final class HyperPerms implements HyperPermsAPI {
             placeholderApiIntegration.unregister();
         }
 
-        // Stop analytics manager
-        if (analyticsManager != null) {
-            analyticsManager.stop();
-        }
-
-        // Stop backup manager
-        if (backupManager != null) {
-            backupManager.shutdown();
-        }
-
-        // Stop scheduled tasks
+        // Stop scheduled tasks FIRST to prevent new storage executor submissions
         if (expiryTask != null) {
-            expiryTask.cancel(false);
+            expiryTask.cancel(true);
         }
         if (scheduler != null) {
             scheduler.shutdown();
             try {
-                scheduler.awaitTermination(5, TimeUnit.SECONDS);
+                if (!scheduler.awaitTermination(3, TimeUnit.SECONDS)) {
+                    scheduler.shutdownNow();
+                }
             } catch (InterruptedException e) {
+                scheduler.shutdownNow();
                 Thread.currentThread().interrupt();
+            }
+        }
+
+        // Save all user data while storage executor is still clean
+        if (userManager != null) {
+            try {
+                userManager.saveAll().get(10, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                Logger.warn("Failed to save users on shutdown: %s", e.getMessage());
             }
         }
 
@@ -432,13 +434,14 @@ public final class HyperPerms implements HyperPermsAPI {
             }
         }
 
-        // Save all data
-        if (userManager != null) {
-            try {
-                userManager.saveAll().get(10, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                Logger.warn("Failed to save users on shutdown");
-            }
+        // Stop analytics manager
+        if (analyticsManager != null) {
+            analyticsManager.stop();
+        }
+
+        // Stop backup manager
+        if (backupManager != null) {
+            backupManager.shutdown();
         }
 
         // Shutdown storage
@@ -446,7 +449,7 @@ public final class HyperPerms implements HyperPermsAPI {
             try {
                 storage.shutdown().get(5, TimeUnit.SECONDS);
             } catch (Exception e) {
-                Logger.warn("Failed to shutdown storage cleanly");
+                Logger.warn("Failed to shutdown storage cleanly: %s", e.getMessage());
             }
         }
 

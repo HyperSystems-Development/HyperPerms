@@ -291,21 +291,123 @@ public final class FactionIntegration {
 
         FactionData data = getFactionData(playerUuid);
         if (data == null || data.factionName() == null) {
+            // No faction — use HyperFactions' noFactionTag if available, otherwise HyperPerms' default
+            if (useHyperFactionsConfig()) {
+                String noTag = provider.getNoFactionTag();
+                if (noTag.isEmpty()) {
+                    return "";
+                }
+                String color = provider.getNoFactionTagColor();
+                return "&#" + color.substring(1) + noTag + "&r";
+            }
             return "";
         }
 
-        String factionName = data.factionName();
+        // When HyperFactions is detected, use its chat.json config directly
+        if (useHyperFactionsConfig()) {
+            return formatWithHyperFactionsConfig(data);
+        }
+
+        // Legacy path for HyFactions or manual config
+        return formatWithLocalConfig(data);
+    }
+
+    // Uses HyperFactions' chat.json tagDisplay + tagFormat settings
+    @NotNull
+    private String formatWithHyperFactionsConfig(@NotNull FactionData data) {
+        String tagDisplayMode = provider.getTagDisplayMode();
+        String displayText = switch (tagDisplayMode) {
+            case "tag" -> {
+                String tag = data.tag();
+                if (tag != null && !tag.isEmpty()) {
+                    yield tag;
+                }
+                String name = data.factionName();
+                yield name.substring(0, Math.min(3, name.length())).toUpperCase();
+            }
+            case "none" -> null;
+            default -> data.factionName();
+        };
+
+        if (displayText == null || displayText.isEmpty()) {
+            return "";
+        }
+
+        // Apply HyperFactions' tagFormat (e.g. "[{tag}] ")
+        String result = provider.getTagFormat()
+                .replace("{tag}", displayText);
+
+        // Support rank placeholder if present in the format
+        String rank = data.rank() != null ? data.rank() : "Member";
+        result = result.replace("{rank}", rank);
+
+        // Apply faction color to the tag
+        String colorHex = toHexColor(data.color());
+        if (colorHex != null) {
+            result = "&#" + colorHex.substring(1) + result + "&r";
+        }
+
+        return result;
+    }
+
+    // Converts a faction color to hex format.
+    // Handles both legacy single-char codes ("4", "b") and hex strings ("#FF5555").
+    @Nullable
+    private static String toHexColor(@Nullable String color) {
+        if (color == null || color.isEmpty()) {
+            return null;
+        }
+
+        // Already hex format
+        if (color.startsWith("#") && color.length() == 7) {
+            return color;
+        }
+
+        // Legacy Minecraft color code (single char) -> hex
+        if (color.length() == 1) {
+            return switch (color.charAt(0)) {
+                case '0' -> "#000000"; // Black
+                case '1' -> "#0000AA"; // Dark Blue
+                case '2' -> "#00AA00"; // Dark Green
+                case '3' -> "#00AAAA"; // Dark Aqua
+                case '4' -> "#AA0000"; // Dark Red
+                case '5' -> "#AA00AA"; // Dark Purple
+                case '6' -> "#FFAA00"; // Gold
+                case '7' -> "#AAAAAA"; // Gray
+                case '8' -> "#555555"; // Dark Gray
+                case '9' -> "#5555FF"; // Blue
+                case 'a' -> "#55FF55"; // Green
+                case 'b' -> "#55FFFF"; // Aqua
+                case 'c' -> "#FF5555"; // Red
+                case 'd' -> "#FF55FF"; // Light Purple
+                case 'e' -> "#FFFF55"; // Yellow
+                case 'f' -> "#FFFFFF"; // White
+                default -> null;
+            };
+        }
+
+        return null;
+    }
+
+    // Uses HyperPerms' own factions config section
+    @NotNull
+    private String formatWithLocalConfig(@NotNull FactionData data) {
+        String displayText = data.factionName();
+
         String rank = data.rank() != null ? data.rank() : "Member";
 
         if (showRank) {
-            // Use format with rank: "&7[&b%s&7|&e%r&7] "
             return prefixWithRankFormat
-                    .replace("%s", factionName)
+                    .replace("%s", displayText)
                     .replace("%r", rank);
         } else {
-            // Use simple format: "&7[&b%s&7] "
-            return prefixFormat.replace("%s", factionName);
+            return prefixFormat.replace("%s", displayText);
         }
+    }
+
+    // Returns true when HyperFactions is detected (not legacy HyFactions)
+    private boolean useHyperFactionsConfig() {
+        return "HyperFactions".equals(detectedPlugin) && provider != null;
     }
 
     /**
@@ -379,6 +481,7 @@ public final class FactionIntegration {
     public record FactionData(
             @Nullable String factionName,
             @Nullable String tag,
+            @Nullable String color,
             @Nullable String rank,
             boolean isOwner,
             boolean isOfficer
@@ -402,6 +505,33 @@ public final class FactionIntegration {
     private interface FactionProvider {
         @Nullable
         FactionData getFactionData(@NotNull UUID playerUuid);
+
+        /**
+         * Gets the tag display mode from the faction plugin's config.
+         * Returns "tag", "name", or "none". Defaults to "name" if not available.
+         */
+        @NotNull
+        default String getTagDisplayMode() {
+            return "name";
+        }
+
+        // Gets the tag format template (e.g. "[{tag}] "). Defaults to "[{tag}] ".
+        @NotNull
+        default String getTagFormat() {
+            return "[{tag}] ";
+        }
+
+        // Gets the text shown for players without a faction. Defaults to "".
+        @NotNull
+        default String getNoFactionTag() {
+            return "";
+        }
+
+        // Gets the color for the no-faction tag. Defaults to "#555555" (dark gray).
+        @NotNull
+        default String getNoFactionTagColor() {
+            return "#555555";
+        }
     }
 
     /**
@@ -418,9 +548,17 @@ public final class FactionIntegration {
         private final Method getPlayerFactionMethod;
         private final Method factionNameMethod;
         private final Method factionTagMethod;
+        private final Method factionColorMethod;
         private final Method factionGetMemberMethod;
         private final Method memberRoleMethod;
         private final Method roleGetDisplayNameMethod;
+
+        // ConfigManager reflection for chat config
+        private final Method configManagerGetMethod;
+        private final Method getChatTagDisplayMethod;
+        private final Method getChatTagFormatMethod;
+        private final Method getChatNoFactionTagMethod;
+        private final Method getChatNoFactionTagColorMethod;
 
         ReflectiveHyperFactionsProvider() throws Exception {
             // Load HyperFactions classes via reflection
@@ -434,9 +572,18 @@ public final class FactionIntegration {
             getPlayerFactionMethod = apiClass.getMethod("getPlayerFaction", UUID.class);
             factionNameMethod = factionClass.getMethod("name");
             factionTagMethod = factionClass.getMethod("tag");
+            factionColorMethod = factionClass.getMethod("color");
             factionGetMemberMethod = factionClass.getMethod("getMember", UUID.class);
             memberRoleMethod = factionMemberClass.getMethod("role");
             roleGetDisplayNameMethod = factionRoleClass.getMethod("getDisplayName");
+
+            // ConfigManager.get() chat config methods
+            Class<?> configManagerClass = Class.forName("com.hyperfactions.config.ConfigManager");
+            configManagerGetMethod = configManagerClass.getMethod("get");
+            getChatTagDisplayMethod = configManagerClass.getMethod("getChatTagDisplay");
+            getChatTagFormatMethod = configManagerClass.getMethod("getChatTagFormat");
+            getChatNoFactionTagMethod = configManagerClass.getMethod("getChatNoFactionTag");
+            getChatNoFactionTagColorMethod = configManagerClass.getMethod("getChatNoFactionTagColor");
         }
 
         @Override
@@ -458,6 +605,7 @@ public final class FactionIntegration {
                 // Extract faction data using reflection
                 String factionName = (String) factionNameMethod.invoke(faction);
                 String tag = (String) factionTagMethod.invoke(faction);
+                String color = (String) factionColorMethod.invoke(faction);
 
                 // Get member info
                 Object member = factionGetMemberMethod.invoke(faction, playerUuid);
@@ -473,12 +621,52 @@ public final class FactionIntegration {
                 boolean isOwner = "LEADER".equals(roleName);
                 boolean isOfficer = "OFFICER".equals(roleName);
 
-                return new FactionData(factionName, tag, rankDisplayName, isOwner, isOfficer);
+                return new FactionData(factionName, tag, color, rankDisplayName, isOwner, isOfficer);
 
             } catch (Exception e) {
                 // Fail gracefully - return null if anything goes wrong
                 return null;
             }
+        }
+
+        @Override
+        @NotNull
+        public String getTagDisplayMode() {
+            return getConfigString(getChatTagDisplayMethod, "name");
+        }
+
+        @Override
+        @NotNull
+        public String getTagFormat() {
+            return getConfigString(getChatTagFormatMethod, "[{tag}] ");
+        }
+
+        @Override
+        @NotNull
+        public String getNoFactionTag() {
+            return getConfigString(getChatNoFactionTagMethod, "");
+        }
+
+        @Override
+        @NotNull
+        public String getNoFactionTagColor() {
+            return getConfigString(getChatNoFactionTagColorMethod, "#555555");
+        }
+
+        @NotNull
+        private String getConfigString(@NotNull Method method, @NotNull String fallback) {
+            try {
+                Object configManager = configManagerGetMethod.invoke(null);
+                if (configManager != null) {
+                    String value = (String) method.invoke(configManager);
+                    if (value != null) {
+                        return value;
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fall back to default
+            }
+            return fallback;
         }
     }
 
@@ -533,7 +721,7 @@ public final class FactionIntegration {
                 boolean isOfficer = (Boolean) isOfficerMethod.invoke(factionInfo, playerUuid);
                 String rank = determineRank(factionInfo, playerUuid, isOwner, isOfficer);
 
-                return new FactionData(factionName, tag, rank, isOwner, isOfficer);
+                return new FactionData(factionName, tag, null, rank, isOwner, isOfficer);
 
             } catch (Exception e) {
                 // Fail gracefully - return null if anything goes wrong

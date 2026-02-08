@@ -78,10 +78,9 @@ public final class PlaceholderAPIIntegration {
         try {
             placeholderApiClass = Class.forName("at.helpch.placeholderapi.PlaceholderAPI");
 
-            // Find the setPlaceholders method - PlaceholderAPI.setPlaceholders(String, PlayerRef)
-            // The Hytale version uses PlayerRef instead of OfflinePlayer
+            // Find the setPlaceholders method - PlaceholderAPI.setPlaceholders(PlayerRef, String)
             Class<?> playerRefClass = Class.forName("com.hypixel.hytale.server.core.universe.PlayerRef");
-            setPlaceholdersMethod = placeholderApiClass.getMethod("setPlaceholders", String.class, playerRefClass);
+            setPlaceholdersMethod = placeholderApiClass.getMethod("setPlaceholders", playerRefClass, String.class);
 
             Logger.debug("PlaceholderAPI reflection initialized successfully");
         } catch (Exception e) {
@@ -187,8 +186,8 @@ public final class PlaceholderAPIIntegration {
                 return text;
             }
 
-            // Call PlaceholderAPI.setPlaceholders(String, PlayerRef)
-            Object result = setPlaceholdersMethod.invoke(null, text, playerRef);
+            // Call PlaceholderAPI.setPlaceholders(PlayerRef, String)
+            Object result = setPlaceholdersMethod.invoke(null, playerRef, text);
             return result != null ? (String) result : text;
         } catch (Exception e) {
             Logger.debug("PAPI placeholder parsing failed: %s", e.getMessage());

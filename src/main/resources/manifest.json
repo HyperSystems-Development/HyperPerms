@@ -7,6 +7,7 @@
   "Main": "com.hyperperms.platform.HyperPermsPlugin",
   "ServerVersion": "*",
   "OptionalDependencies": {
-    "TheNewEconomy:VaultUnlocked": "*"
+    "TheNewEconomy:VaultUnlocked": "*",
+    "HelpChat:PlaceholderAPI": ">= 1.0.2"
   }
 }

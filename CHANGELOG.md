@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+*No changes yet*
+
+## [2.8.0] - 2026-02-07
+
+### Added
+
+- **HyperPerms API v2 Foundation** - Completely overhauled developer API
+  - New event system: GroupCreateEvent, GroupDeleteEvent, GroupModifyEvent, UserGroupChangeEvent, UserLoadEvent, UserUnloadEvent, DataReloadEvent, TrackPromotionEvent, TrackDemotionEvent
+  - Cancellable events with EventPriority (LOWEST through MONITOR)
+  - Async permission methods: `hasPermissionAsync()`, `getPermissionValueAsync()`, fluent `checkAsync()` builder
+  - Permission query API for bulk operations and complex permission lookups
+  - Metrics tracking for permission operations
+- **PlaceholderAPI Integration** - Native support for PlaceholderAPI on Hytale
+  - Faction placeholders, group/rank placeholders, and prefix/suffix placeholders
+  - Works with PlaceholderAPI and WiFlow PlaceholderAPI
+- **Permission Templates System** - 11 pre-built server configurations
+  - Templates: factions, survival, creative, minigames, smp, skyblock, prison, rpg, towny, vanilla, staff
+  - `/hp template list`, `/hp template preview`, `/hp template apply`, `/hp template export`
+  - Custom templates via JSON files in `templates/` folder
+- **Analytics & Auditing System** - Track permission usage (requires SQLite)
+  - `/hp analytics summary` - Overview of permission health
+  - `/hp analytics hotspots` - Most frequently checked permissions
+  - Change history audit trail
+- **Cloudflare Workers API** - Split architecture for better performance and cost
+  - Game server API routed through `api.hyperperms.com` (Cloudflare Workers)
+  - Web editor UI served from `www.hyperperms.com` (Vercel)
+  - New `apiUrl` config option with automatic migration
+- **LuckPerms H2 Migration** - Complete H2 database reader support
+  - Dynamically loads H2 driver from LuckPerms `libs/` folder
+  - Handles locked databases by creating temporary copies
+  - Support for various LuckPerms folder naming conventions
+- **Console Improvements** - Clickable hyperlinks in supported terminals
+- **Expanded HyperFactions Integration** - Improved faction permission interop
+
+### Changed
+
+- **Optional SQLite Driver** - JAR size reduced from ~15MB to ~2.4MB
+  - SQLite JDBC driver no longer bundled; users download separately if needed
+  - H2 driver fallback removed for CurseForge compliance
+
+### Fixed
+
+- **Async Threading** - Fixed threading issue in permission checks
+- **Permission Cache Bypass** - Fixed `HyperPermsPermissionSet.contains()` bypassing Caffeine cache, reducing CPU usage by 90%+
+- **Group Weight Priority** - Group weight now used as default prefix/suffix priority
+- **Web Editor Error Messaging** - Improved error messaging for empty web editor changes
+- **Windows H2 File Lock** - Better error message for Windows H2 file lock issue
+
 ## [2.7.0] - 2026-02-02
 
 ### Added

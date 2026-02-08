@@ -703,13 +703,16 @@ public class HyperPermsCommand extends AbstractCommand {
             if (permCount == 0) {
                 parts.add(Message.raw("    (none)\n").color(GRAY));
             } else {
-                for (Node node : group.getNodes()) {
-                    if (!node.isGroupNode()) {
-                        String prefix = node.getValue() ? "+" : "-";
-                        java.awt.Color permColor = node.getValue() ? GREEN : RED;
-                        parts.add(Message.raw("    " + prefix + " " + node.getPermission() + "\n").color(permColor));
-                    }
-                }
+                group.getNodes().stream()
+                    .filter(n -> !n.isGroupNode())
+                    .sorted(java.util.Comparator.comparing(Node::getBasePermission, String.CASE_INSENSITIVE_ORDER))
+                    .forEach(node -> {
+                        boolean granted = node.getValue() && !node.isNegated();
+                        String prefix = granted ? "+" : "-";
+                        String displayPerm = node.getBasePermission();
+                        java.awt.Color permColor = granted ? GREEN : RED;
+                        parts.add(Message.raw("    " + prefix + " " + displayPerm + "\n").color(permColor));
+                    });
             }
 
             parts.add(Message.raw("-".repeat(width)).color(GRAY));
@@ -813,6 +816,12 @@ public class HyperPermsCommand extends AbstractCommand {
 
             boolean value = valueStr == null || !valueStr.equalsIgnoreCase("false");
 
+            // Normalize negation: -prefix always uses value=true
+            // The - prefix already encodes "deny", value=false would double-negate
+            if (permission.startsWith("-")) {
+                value = true;
+            }
+
             Node node = Node.builder(permission).value(value).build();
             group.setNode(node);
             hyperPerms.getGroupManager().saveGroup(group);
@@ -820,7 +829,13 @@ public class HyperPermsCommand extends AbstractCommand {
             // Invalidate caches for users in this group
             hyperPerms.getCache().invalidateAll();
 
-            ctx.sender().sendMessage(Message.raw("Set " + permission + " = " + value + " on group " + groupName));
+            String displayPerm = node.getBasePermission();
+            boolean granted = node.getValue() && !node.isNegated();
+            if (granted) {
+                ctx.sender().sendMessage(Message.raw("Granted " + displayPerm + " on group " + groupName));
+            } else {
+                ctx.sender().sendMessage(Message.raw("Denied " + displayPerm + " on group " + groupName));
+            }
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -1273,13 +1288,16 @@ public class HyperPermsCommand extends AbstractCommand {
             if (permCount == 0) {
                 parts.add(Message.raw("    (none)\n").color(GRAY));
             } else {
-                for (Node node : user.getNodes()) {
-                    if (!node.isGroupNode()) {
-                        String prefix = node.getValue() ? "+" : "-";
-                        java.awt.Color permColor = node.getValue() ? GREEN : RED;
-                        parts.add(Message.raw("    " + prefix + " " + node.getPermission() + "\n").color(permColor));
-                    }
-                }
+                user.getNodes().stream()
+                    .filter(n -> !n.isGroupNode())
+                    .sorted(java.util.Comparator.comparing(Node::getBasePermission, String.CASE_INSENSITIVE_ORDER))
+                    .forEach(node -> {
+                        boolean granted = node.getValue() && !node.isNegated();
+                        String prefix = granted ? "+" : "-";
+                        String displayPerm = node.getBasePermission();
+                        java.awt.Color permColor = granted ? GREEN : RED;
+                        parts.add(Message.raw("    " + prefix + " " + displayPerm + "\n").color(permColor));
+                    });
             }
 
             parts.add(Message.raw("-".repeat(width)).color(GRAY));
@@ -1318,6 +1336,12 @@ public class HyperPermsCommand extends AbstractCommand {
 
             boolean value = valueStr == null || !valueStr.equalsIgnoreCase("false");
 
+            // Normalize negation: -prefix always uses value=true
+            // The - prefix already encodes "deny", value=false would double-negate
+            if (permission.startsWith("-")) {
+                value = true;
+            }
+
             Node node = Node.builder(permission).value(value).build();
             user.setNode(node);
             hyperPerms.getUserManager().saveUser(user).join();
@@ -1325,7 +1349,13 @@ public class HyperPermsCommand extends AbstractCommand {
             // Invalidate cache for this user
             hyperPerms.getCache().invalidate(user.getUuid());
 
-            ctx.sender().sendMessage(Message.raw("Set " + permission + " = " + value + " on user " + user.getFriendlyName()));
+            String displayPerm = node.getBasePermission();
+            boolean granted = node.getValue() && !node.isNegated();
+            if (granted) {
+                ctx.sender().sendMessage(Message.raw("Granted " + displayPerm + " on user " + user.getFriendlyName()));
+            } else {
+                ctx.sender().sendMessage(Message.raw("Denied " + displayPerm + " on user " + user.getFriendlyName()));
+            }
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -2564,8 +2594,9 @@ public class HyperPermsCommand extends AbstractCommand {
                 ctx.sender().sendMessage(Message.raw("  (none)"));
             } else {
                 for (var node : directPerms) {
-                    String prefix = node.getValue() ? "  + " : "  - ";
-                    ctx.sender().sendMessage(Message.raw(prefix + node.getPermission() + formatContext(node)));
+                    boolean granted = node.getValue() && !node.isNegated();
+                    String prefix = granted ? "  + " : "  - ";
+                    ctx.sender().sendMessage(Message.raw(prefix + node.getBasePermission() + formatContext(node)));
                 }
             }
 
@@ -2601,8 +2632,9 @@ public class HyperPermsCommand extends AbstractCommand {
             
             // Show permissions
             for (var node : group.getNodes()) {
-                String prefix = node.getValue() ? indent + "  + " : indent + "  - ";
-                ctx.sender().sendMessage(Message.raw(prefix + node.getPermission() + formatContext(node)));
+                boolean granted = node.getValue() && !node.isNegated();
+                String prefix = granted ? indent + "  + " : indent + "  - ";
+                ctx.sender().sendMessage(Message.raw(prefix + node.getBasePermission() + formatContext(node)));
             }
 
             // Show parent groups

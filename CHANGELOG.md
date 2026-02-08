@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.8.1] - 2026-02-08
+
+### Fixed
+
+- **Permission Negation Bug** - Fixed critical bug where negated permissions set via web editor were granted instead of denied
+  - Web editor sent conflicting data (`-permission` prefix with `value: false`), causing double negation in the permission resolver
+  - Backend `ChangeApplier` now normalizes `-` prefix permissions to always use `value: true`
+  - Frontend `toBackendNode` now sends correct value for negated permissions
+- **Permission Display** - Fixed `/hp group info` and `/hp user info` showing raw internal format for negated permissions
+  - Was showing `+ -hytale.command.spawn` or `- -hytale.command.spawn`
+  - Now correctly shows `- hytale.command.spawn` with red color
+  - Also fixed in `/hp user tree` inheritance display
+- **Command Feedback** - Fixed setperm commands showing "Granted" for denied permissions
+  - `/hp group setperm group perm false` now correctly says "Denied perm on group"
+  - `/hp group setperm group -perm` now correctly says "Denied perm on group"
+- **Permission List Sorting** - Group and user info commands now display permissions in alphabetical order
+
+### Changed
+
+- **Build System** - Fixed Shadow JAR clobbering in multi-project Gradle builds
+  - Added `jar { archiveClassifier = 'plain' }` to prevent the plain JAR task from overwriting the fat JAR
+
 ## [2.8.0] - 2026-02-07
 
 ### Added

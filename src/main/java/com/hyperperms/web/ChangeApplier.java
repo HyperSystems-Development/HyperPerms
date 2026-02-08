@@ -426,8 +426,18 @@ public final class ChangeApplier {
     }
 
     private Node buildNode(String permission, Boolean value, Map<String, String> contexts) {
+        // Normalize negation: -prefix format always uses value=true
+        // The - prefix already encodes "deny", so value must be true to avoid double negation
+        // (PermissionResolver strips - and flips value: -perm/true → perm/false = DENIED)
+        boolean effectiveValue;
+        if (permission.startsWith("-")) {
+            effectiveValue = true;
+        } else {
+            effectiveValue = value != null ? value : true;
+        }
+
         var builder = Node.builder(permission)
-                .value(value != null ? value : true);
+                .value(effectiveValue);
 
         if (contexts != null) {
             for (var entry : contexts.entrySet()) {

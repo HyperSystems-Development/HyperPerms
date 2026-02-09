@@ -5,6 +5,7 @@ import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
 import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
+import com.hyperperms.util.TimeUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -12,6 +13,8 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalAr
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -585,6 +588,7 @@ public class HyperPermsCommand extends AbstractCommand {
             addSubCommand(new GroupDeleteSubCommand(hyperPerms));
             addSubCommand(new GroupSetPermSubCommand(hyperPerms));
             addSubCommand(new GroupUnsetPermSubCommand(hyperPerms));
+            addSubCommand(new GroupSetExpirySubCommand(hyperPerms));
             addSubCommand(new GroupSetWeightSubCommand(hyperPerms));
             addSubCommand(new GroupSetPrefixSubCommand(hyperPerms));
             addSubCommand(new GroupSetSuffixSubCommand(hyperPerms));
@@ -698,6 +702,7 @@ public class HyperPermsCommand extends AbstractCommand {
 
             // Permissions
             java.awt.Color RED = new java.awt.Color(255, 85, 85);
+            java.awt.Color AMBER = new java.awt.Color(255, 200, 0);
             long permCount = group.getNodes().stream().filter(n -> !n.isGroupNode()).count();
             parts.add(Message.raw("\n  Permissions (" + permCount + "):\n").color(GOLD));
             if (permCount == 0) {
@@ -711,7 +716,15 @@ public class HyperPermsCommand extends AbstractCommand {
                         String prefix = granted ? "+" : "-";
                         String displayPerm = node.getBasePermission();
                         java.awt.Color permColor = granted ? GREEN : RED;
-                        parts.add(Message.raw("    " + prefix + " " + displayPerm + "\n").color(permColor));
+                        parts.add(Message.raw("    " + prefix + " " + displayPerm).color(permColor));
+                        if (node.isTemporary()) {
+                            if (node.isExpired()) {
+                                parts.add(Message.raw(" (EXPIRED)").color(GRAY));
+                            } else {
+                                parts.add(Message.raw(" (" + TimeUtil.formatExpiry(node.getExpiry()) + ")").color(AMBER));
+                            }
+                        }
+                        parts.add(Message.raw("\n").color(WHITE));
                     });
             }
 
@@ -793,6 +806,7 @@ public class HyperPermsCommand extends AbstractCommand {
         private final RequiredArg<String> groupArg;
         private final RequiredArg<String> permArg;
         private final OptionalArg<String> valueArg;
+        private final OptionalArg<String> durationArg;
 
         GroupSetPermSubCommand(HyperPerms hyperPerms) {
             super("setperm", "Set a permission on a group");
@@ -800,6 +814,7 @@ public class HyperPermsCommand extends AbstractCommand {
             this.groupArg = describeArg("group", "Group name", ArgTypes.STRING);
             this.permArg = describeArg("permission", "Permission node", ArgTypes.STRING);
             this.valueArg = describeOptionalArg("value", "true or false (default: true)", ArgTypes.STRING);
+            this.durationArg = describeOptionalArg("duration", "Duration (e.g. 1d2h30m, permanent)", ArgTypes.STRING);
         }
 
         @Override
@@ -807,6 +822,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String groupName = ctx.get(groupArg);
             String permission = ctx.get(permArg);
             String valueStr = ctx.get(valueArg);
+            String durationStr = ctx.get(durationArg);
 
             Group group = hyperPerms.getGroupManager().getGroup(groupName);
             if (group == null) {
@@ -822,7 +838,25 @@ public class HyperPermsCommand extends AbstractCommand {
                 value = true;
             }
 
-            Node node = Node.builder(permission).value(value).build();
+            // Parse optional duration
+            Instant expiry = null;
+            if (durationStr != null && !durationStr.isBlank()) {
+                Optional<Duration> duration = TimeUtil.parseDuration(durationStr);
+                if (duration.isEmpty() && !durationStr.equalsIgnoreCase("permanent")
+                        && !durationStr.equalsIgnoreCase("perm") && !durationStr.equalsIgnoreCase("forever")) {
+                    ctx.sender().sendMessage(Message.raw("Invalid duration: " + durationStr + ". Use formats like 1d, 2h30m, 1w"));
+                    return CompletableFuture.completedFuture(null);
+                }
+                if (duration.isPresent()) {
+                    expiry = TimeUtil.expiryFromDuration(duration.get());
+                }
+            }
+
+            var builder = Node.builder(permission).value(value);
+            if (expiry != null) {
+                builder.expiry(expiry);
+            }
+            Node node = builder.build();
             group.setNode(node);
             hyperPerms.getGroupManager().saveGroup(group);
 
@@ -831,11 +865,9 @@ public class HyperPermsCommand extends AbstractCommand {
 
             String displayPerm = node.getBasePermission();
             boolean granted = node.getValue() && !node.isNegated();
-            if (granted) {
-                ctx.sender().sendMessage(Message.raw("Granted " + displayPerm + " on group " + groupName));
-            } else {
-                ctx.sender().sendMessage(Message.raw("Denied " + displayPerm + " on group " + groupName));
-            }
+            String action = granted ? "Granted" : "Denied";
+            String expiryMsg = node.isTemporary() ? " (" + TimeUtil.formatExpiry(node.getExpiry()) + ")" : "";
+            ctx.sender().sendMessage(Message.raw(action + " " + displayPerm + " on group " + groupName + expiryMsg));
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -871,6 +903,67 @@ public class HyperPermsCommand extends AbstractCommand {
             } else {
                 ctx.sender().sendMessage(Message.raw("Group " + groupName + " does not have permission " + permission));
             }
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    private static class GroupSetExpirySubCommand extends HpCommand {
+        private final HyperPerms hyperPerms;
+        private final RequiredArg<String> groupArg;
+        private final RequiredArg<String> permArg;
+        private final RequiredArg<String> durationArg;
+
+        GroupSetExpirySubCommand(HyperPerms hyperPerms) {
+            super("setexpiry", "Set or clear expiry on a group permission");
+            this.hyperPerms = hyperPerms;
+            this.groupArg = describeArg("group", "Group name", ArgTypes.STRING);
+            this.permArg = describeArg("permission", "Permission node", ArgTypes.STRING);
+            this.durationArg = describeArg("duration", "Duration (e.g. 1d2h30m) or 'permanent'", ArgTypes.STRING);
+        }
+
+        @Override
+        protected CompletableFuture<Void> execute(CommandContext ctx) {
+            String groupName = ctx.get(groupArg);
+            String permission = ctx.get(permArg).toLowerCase();
+            String durationStr = ctx.get(durationArg);
+
+            Group group = hyperPerms.getGroupManager().getGroup(groupName);
+            if (group == null) {
+                ctx.sender().sendMessage(Message.raw("Group not found: " + groupName));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Find existing node
+            Node existingNode = group.getNodes().stream()
+                    .filter(n -> n.getPermission().equals(permission))
+                    .findFirst()
+                    .orElse(null);
+
+            if (existingNode == null) {
+                ctx.sender().sendMessage(Message.raw("Permission " + permission + " not found on group " + groupName));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Parse duration
+            Instant newExpiry = null;
+            if (!durationStr.equalsIgnoreCase("permanent") && !durationStr.equalsIgnoreCase("perm")
+                    && !durationStr.equalsIgnoreCase("forever")) {
+                Optional<Duration> duration = TimeUtil.parseDuration(durationStr);
+                if (duration.isEmpty()) {
+                    ctx.sender().sendMessage(Message.raw("Invalid duration: " + durationStr + ". Use formats like 1d, 2h30m, 1w, or 'permanent'"));
+                    return CompletableFuture.completedFuture(null);
+                }
+                newExpiry = TimeUtil.expiryFromDuration(duration.get());
+            }
+
+            // Replace with updated expiry
+            Node newNode = existingNode.withExpiry(newExpiry);
+            group.setNode(newNode);
+            hyperPerms.getGroupManager().saveGroup(group);
+            hyperPerms.getCache().invalidateAll();
+
+            String expiryDisplay = newExpiry != null ? TimeUtil.formatExpiry(newExpiry) : "permanent";
+            ctx.sender().sendMessage(Message.raw("Set expiry on " + permission + " in group " + groupName + " to " + expiryDisplay));
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -1126,18 +1219,21 @@ public class HyperPermsCommand extends AbstractCommand {
         private final HyperPerms hyperPerms;
         private final RequiredArg<String> groupArg;
         private final RequiredArg<String> parentArg;
+        private final OptionalArg<String> durationArg;
 
         GroupParentAddSubCommand(HyperPerms hyperPerms) {
             super("add", "Add a parent group");
             this.hyperPerms = hyperPerms;
             this.groupArg = describeArg("group", "Group name", ArgTypes.STRING);
             this.parentArg = describeArg("parent", "Parent group name", ArgTypes.STRING);
+            this.durationArg = describeOptionalArg("duration", "Duration (e.g. 1d2h30m, permanent)", ArgTypes.STRING);
         }
 
         @Override
         protected CompletableFuture<Void> execute(CommandContext ctx) {
             String groupName = ctx.get(groupArg);
             String parentName = ctx.get(parentArg);
+            String durationStr = ctx.get(durationArg);
 
             Group group = hyperPerms.getGroupManager().getGroup(groupName);
             if (group == null) {
@@ -1156,14 +1252,25 @@ public class HyperPermsCommand extends AbstractCommand {
                 return CompletableFuture.completedFuture(null);
             }
 
-            var result = group.addParent(parentName);
-            if (result == com.hyperperms.api.PermissionHolder.DataMutateResult.SUCCESS) {
-                hyperPerms.getGroupManager().saveGroup(group);
-                hyperPerms.getCache().invalidateAll();
-                ctx.sender().sendMessage(Message.raw("Group " + groupName + " now inherits from " + parentName));
-            } else {
-                ctx.sender().sendMessage(Message.raw("Group " + groupName + " already inherits from " + parentName));
+            // Parse optional duration
+            Instant expiry = null;
+            if (durationStr != null && !durationStr.isBlank()) {
+                Optional<Duration> duration = TimeUtil.parseDuration(durationStr);
+                if (duration.isEmpty() && !durationStr.equalsIgnoreCase("permanent")
+                        && !durationStr.equalsIgnoreCase("perm") && !durationStr.equalsIgnoreCase("forever")) {
+                    ctx.sender().sendMessage(Message.raw("Invalid duration: " + durationStr + ". Use formats like 1d, 2h30m, 1w"));
+                    return CompletableFuture.completedFuture(null);
+                }
+                if (duration.isPresent()) {
+                    expiry = TimeUtil.expiryFromDuration(duration.get());
+                }
             }
+
+            group.addParent(parentName, expiry);
+            hyperPerms.getGroupManager().saveGroup(group);
+            hyperPerms.getCache().invalidateAll();
+            String expiryMsg = expiry != null ? " (" + TimeUtil.formatExpiry(expiry) + ")" : "";
+            ctx.sender().sendMessage(Message.raw("Group " + groupName + " now inherits from " + parentName + expiryMsg));
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -1211,6 +1318,7 @@ public class HyperPermsCommand extends AbstractCommand {
             addSubCommand(new UserInfoSubCommand(hyperPerms));
             addSubCommand(new UserSetPermSubCommand(hyperPerms));
             addSubCommand(new UserUnsetPermSubCommand(hyperPerms));
+            addSubCommand(new UserSetExpirySubCommand(hyperPerms));
             addSubCommand(new UserAddGroupSubCommand(hyperPerms));
             addSubCommand(new UserRemoveGroupSubCommand(hyperPerms));
             addSubCommand(new UserSetPrimaryGroupSubCommand(hyperPerms));
@@ -1238,6 +1346,7 @@ public class HyperPermsCommand extends AbstractCommand {
             java.awt.Color GOLD = new java.awt.Color(255, 170, 0);
             java.awt.Color GREEN = new java.awt.Color(85, 255, 85);
             java.awt.Color RED = new java.awt.Color(255, 85, 85);
+            java.awt.Color AMBER = new java.awt.Color(255, 200, 0);
             java.awt.Color GRAY = java.awt.Color.GRAY;
             java.awt.Color WHITE = java.awt.Color.WHITE;
 
@@ -1277,10 +1386,34 @@ public class HyperPermsCommand extends AbstractCommand {
             parts.add(Message.raw("  Custom Suffix: ").color(GOLD));
             parts.add(Message.raw((user.getCustomSuffix() != null ? "\"" + user.getCustomSuffix() + "\"" : "(none)") + "\n").color(WHITE));
 
-            // Groups
-            var groups = user.getInheritedGroups();
+            // Groups (with expiry info for temporary group nodes)
             parts.add(Message.raw("  Groups: ").color(GOLD));
-            parts.add(Message.raw((!groups.isEmpty() ? String.join(", ", groups) : "(none)") + "\n").color(GREEN));
+            var groupNodes = user.getNodes().stream()
+                    .filter(Node::isGroupNode)
+                    .filter(n -> !n.isExpired())
+                    .sorted(java.util.Comparator.comparing(n -> n.getGroupName() != null ? n.getGroupName() : "", String.CASE_INSENSITIVE_ORDER))
+                    .toList();
+            if (groupNodes.isEmpty() && (user.getPrimaryGroup() == null || user.getPrimaryGroup().equals("default"))) {
+                parts.add(Message.raw("(none)\n").color(GRAY));
+            } else {
+                boolean first = true;
+                // Show primary group first
+                if (user.getPrimaryGroup() != null && !user.getPrimaryGroup().isEmpty()) {
+                    parts.add(Message.raw(user.getPrimaryGroup()).color(GREEN));
+                    first = false;
+                }
+                for (Node gNode : groupNodes) {
+                    String gName = gNode.getGroupName();
+                    if (gName == null || gName.equalsIgnoreCase(user.getPrimaryGroup())) continue;
+                    if (!first) parts.add(Message.raw(", ").color(GRAY));
+                    parts.add(Message.raw(gName).color(GREEN));
+                    if (gNode.isTemporary()) {
+                        parts.add(Message.raw(" (" + TimeUtil.formatExpiry(gNode.getExpiry()) + ")").color(AMBER));
+                    }
+                    first = false;
+                }
+                parts.add(Message.raw("\n").color(WHITE));
+            }
 
             // Direct permissions
             long permCount = user.getNodes().stream().filter(n -> !n.isGroupNode()).count();
@@ -1296,7 +1429,15 @@ public class HyperPermsCommand extends AbstractCommand {
                         String prefix = granted ? "+" : "-";
                         String displayPerm = node.getBasePermission();
                         java.awt.Color permColor = granted ? GREEN : RED;
-                        parts.add(Message.raw("    " + prefix + " " + displayPerm + "\n").color(permColor));
+                        parts.add(Message.raw("    " + prefix + " " + displayPerm).color(permColor));
+                        if (node.isTemporary()) {
+                            if (node.isExpired()) {
+                                parts.add(Message.raw(" (EXPIRED)").color(GRAY));
+                            } else {
+                                parts.add(Message.raw(" (" + TimeUtil.formatExpiry(node.getExpiry()) + ")").color(AMBER));
+                            }
+                        }
+                        parts.add(Message.raw("\n").color(WHITE));
                     });
             }
 
@@ -1311,6 +1452,7 @@ public class HyperPermsCommand extends AbstractCommand {
         private final RequiredArg<String> playerArg;
         private final RequiredArg<String> permArg;
         private final OptionalArg<String> valueArg;
+        private final OptionalArg<String> durationArg;
 
         UserSetPermSubCommand(HyperPerms hyperPerms) {
             super("setperm", "Set a permission on a user");
@@ -1318,6 +1460,7 @@ public class HyperPermsCommand extends AbstractCommand {
             this.playerArg = describeArg("player", "Player name or UUID", ArgTypes.STRING);
             this.permArg = describeArg("permission", "Permission node", ArgTypes.STRING);
             this.valueArg = describeOptionalArg("value", "true or false (default: true)", ArgTypes.STRING);
+            this.durationArg = describeOptionalArg("duration", "Duration (e.g. 1d2h30m, permanent)", ArgTypes.STRING);
         }
 
         @Override
@@ -1325,6 +1468,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String identifier = ctx.get(playerArg);
             String permission = ctx.get(permArg);
             String valueStr = ctx.get(valueArg);
+            String durationStr = ctx.get(durationArg);
 
             // Use resolveOrCreateUser to support offline players (e.g., from Tebex)
             User user = resolveOrCreateUser(hyperPerms, identifier);
@@ -1342,7 +1486,25 @@ public class HyperPermsCommand extends AbstractCommand {
                 value = true;
             }
 
-            Node node = Node.builder(permission).value(value).build();
+            // Parse optional duration
+            Instant expiry = null;
+            if (durationStr != null && !durationStr.isBlank()) {
+                Optional<Duration> duration = TimeUtil.parseDuration(durationStr);
+                if (duration.isEmpty() && !durationStr.equalsIgnoreCase("permanent")
+                        && !durationStr.equalsIgnoreCase("perm") && !durationStr.equalsIgnoreCase("forever")) {
+                    ctx.sender().sendMessage(Message.raw("Invalid duration: " + durationStr + ". Use formats like 1d, 2h30m, 1w"));
+                    return CompletableFuture.completedFuture(null);
+                }
+                if (duration.isPresent()) {
+                    expiry = TimeUtil.expiryFromDuration(duration.get());
+                }
+            }
+
+            var builder = Node.builder(permission).value(value);
+            if (expiry != null) {
+                builder.expiry(expiry);
+            }
+            Node node = builder.build();
             user.setNode(node);
             hyperPerms.getUserManager().saveUser(user).join();
 
@@ -1351,11 +1513,9 @@ public class HyperPermsCommand extends AbstractCommand {
 
             String displayPerm = node.getBasePermission();
             boolean granted = node.getValue() && !node.isNegated();
-            if (granted) {
-                ctx.sender().sendMessage(Message.raw("Granted " + displayPerm + " on user " + user.getFriendlyName()));
-            } else {
-                ctx.sender().sendMessage(Message.raw("Denied " + displayPerm + " on user " + user.getFriendlyName()));
-            }
+            String action = granted ? "Granted" : "Denied";
+            String expiryMsg = node.isTemporary() ? " (" + TimeUtil.formatExpiry(node.getExpiry()) + ")" : "";
+            ctx.sender().sendMessage(Message.raw(action + " " + displayPerm + " on user " + user.getFriendlyName() + expiryMsg));
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -1395,22 +1555,86 @@ public class HyperPermsCommand extends AbstractCommand {
         }
     }
 
+    private static class UserSetExpirySubCommand extends HpCommand {
+        private final HyperPerms hyperPerms;
+        private final RequiredArg<String> playerArg;
+        private final RequiredArg<String> permArg;
+        private final RequiredArg<String> durationArg;
+
+        UserSetExpirySubCommand(HyperPerms hyperPerms) {
+            super("setexpiry", "Set or clear expiry on a user permission");
+            this.hyperPerms = hyperPerms;
+            this.playerArg = describeArg("player", "Player name or UUID", ArgTypes.STRING);
+            this.permArg = describeArg("permission", "Permission node", ArgTypes.STRING);
+            this.durationArg = describeArg("duration", "Duration (e.g. 1d2h30m) or 'permanent'", ArgTypes.STRING);
+        }
+
+        @Override
+        protected CompletableFuture<Void> execute(CommandContext ctx) {
+            String identifier = ctx.get(playerArg);
+            String permission = ctx.get(permArg).toLowerCase();
+            String durationStr = ctx.get(durationArg);
+
+            User user = resolveUser(hyperPerms, identifier);
+            if (user == null) {
+                ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Find existing node
+            Node existingNode = user.getNodes().stream()
+                    .filter(n -> n.getPermission().equals(permission))
+                    .findFirst()
+                    .orElse(null);
+
+            if (existingNode == null) {
+                ctx.sender().sendMessage(Message.raw("Permission " + permission + " not found on user " + user.getFriendlyName()));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // Parse duration
+            Instant newExpiry = null;
+            if (!durationStr.equalsIgnoreCase("permanent") && !durationStr.equalsIgnoreCase("perm")
+                    && !durationStr.equalsIgnoreCase("forever")) {
+                Optional<Duration> duration = TimeUtil.parseDuration(durationStr);
+                if (duration.isEmpty()) {
+                    ctx.sender().sendMessage(Message.raw("Invalid duration: " + durationStr + ". Use formats like 1d, 2h30m, 1w, or 'permanent'"));
+                    return CompletableFuture.completedFuture(null);
+                }
+                newExpiry = TimeUtil.expiryFromDuration(duration.get());
+            }
+
+            // Replace with updated expiry
+            Node newNode = existingNode.withExpiry(newExpiry);
+            user.setNode(newNode);
+            hyperPerms.getUserManager().saveUser(user).join();
+            hyperPerms.getCache().invalidate(user.getUuid());
+
+            String expiryDisplay = newExpiry != null ? TimeUtil.formatExpiry(newExpiry) : "permanent";
+            ctx.sender().sendMessage(Message.raw("Set expiry on " + permission + " for user " + user.getFriendlyName() + " to " + expiryDisplay));
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
     private static class UserAddGroupSubCommand extends HpCommand {
         private final HyperPerms hyperPerms;
         private final RequiredArg<String> playerArg;
         private final RequiredArg<String> groupArg;
+        private final OptionalArg<String> durationArg;
 
         UserAddGroupSubCommand(HyperPerms hyperPerms) {
             super("addgroup", "Add a user to a group");
             this.hyperPerms = hyperPerms;
             this.playerArg = describeArg("player", "Player name or UUID", ArgTypes.STRING);
             this.groupArg = describeArg("group", "Group name", ArgTypes.STRING);
+            this.durationArg = describeOptionalArg("duration", "Duration (e.g. 1d2h30m, permanent)", ArgTypes.STRING);
         }
 
         @Override
         protected CompletableFuture<Void> execute(CommandContext ctx) {
             String identifier = ctx.get(playerArg);
             String groupName = ctx.get(groupArg);
+            String durationStr = ctx.get(durationArg);
 
             Group group = hyperPerms.getGroupManager().getGroup(groupName);
             if (group == null) {
@@ -1426,14 +1650,25 @@ public class HyperPermsCommand extends AbstractCommand {
                 return CompletableFuture.completedFuture(null);
             }
 
-            var result = user.addGroup(groupName);
-            if (result == com.hyperperms.api.PermissionHolder.DataMutateResult.SUCCESS) {
-                hyperPerms.getUserManager().saveUser(user).join();
-                hyperPerms.getCache().invalidate(user.getUuid());
-                ctx.sender().sendMessage(Message.raw("Added user " + user.getFriendlyName() + " to group " + groupName));
-            } else {
-                ctx.sender().sendMessage(Message.raw("User " + user.getFriendlyName() + " is already in group " + groupName));
+            // Parse optional duration
+            Instant expiry = null;
+            if (durationStr != null && !durationStr.isBlank()) {
+                Optional<Duration> duration = TimeUtil.parseDuration(durationStr);
+                if (duration.isEmpty() && !durationStr.equalsIgnoreCase("permanent")
+                        && !durationStr.equalsIgnoreCase("perm") && !durationStr.equalsIgnoreCase("forever")) {
+                    ctx.sender().sendMessage(Message.raw("Invalid duration: " + durationStr + ". Use formats like 1d, 2h30m, 1w"));
+                    return CompletableFuture.completedFuture(null);
+                }
+                if (duration.isPresent()) {
+                    expiry = TimeUtil.expiryFromDuration(duration.get());
+                }
             }
+
+            user.addGroup(groupName, expiry);
+            hyperPerms.getUserManager().saveUser(user).join();
+            hyperPerms.getCache().invalidate(user.getUuid());
+            String expiryMsg = expiry != null ? " (" + TimeUtil.formatExpiry(expiry) + ")" : "";
+            ctx.sender().sendMessage(Message.raw("Added user " + user.getFriendlyName() + " to group " + groupName + expiryMsg));
             return CompletableFuture.completedFuture(null);
         }
     }

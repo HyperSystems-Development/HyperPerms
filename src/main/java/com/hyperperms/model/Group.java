@@ -6,6 +6,7 @@ import com.hyperperms.api.context.ContextSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -335,13 +336,27 @@ public final class Group implements PermissionHolder {
     @Override
     @NotNull
     public DataMutateResult addGroup(@NotNull String groupName) {
-        Node groupNode = Node.group(groupName);
-        if (nodes.add(groupNode)) {
-            listener.onGroupAdded(this, groupName, DataMutateResult.SUCCESS);
-            return DataMutateResult.SUCCESS;
-        }
-        listener.onGroupAdded(this, groupName, DataMutateResult.ALREADY_EXISTS);
-        return DataMutateResult.ALREADY_EXISTS;
+        return addGroup(groupName, null);
+    }
+
+    /**
+     * Adds a group inheritance with optional expiry.
+     *
+     * @param groupName the group name
+     * @param expiry    the expiry time, or null for permanent
+     * @return the result
+     */
+    @NotNull
+    public DataMutateResult addGroup(@NotNull String groupName, @Nullable Instant expiry) {
+        Node groupNode = Node.builder(Node.GROUP_PREFIX + groupName.toLowerCase())
+                .value(true)
+                .expiry(expiry)
+                .build();
+        // Remove existing group node (ignoring expiry) and add new one
+        nodes.removeIf(existing -> existing.equalsIgnoringExpiry(groupNode));
+        nodes.add(groupNode);
+        listener.onGroupAdded(this, groupName, DataMutateResult.SUCCESS);
+        return DataMutateResult.SUCCESS;
     }
 
     @Override
@@ -377,7 +392,19 @@ public final class Group implements PermissionHolder {
      */
     @NotNull
     public DataMutateResult addParent(@NotNull String parentName) {
-        return addGroup(parentName);
+        return addGroup(parentName, null);
+    }
+
+    /**
+     * Adds a parent group to inherit from with optional expiry.
+     *
+     * @param parentName the parent group name
+     * @param expiry     the expiry time, or null for permanent
+     * @return the result
+     */
+    @NotNull
+    public DataMutateResult addParent(@NotNull String parentName, @Nullable Instant expiry) {
+        return addGroup(parentName, expiry);
     }
 
     /**

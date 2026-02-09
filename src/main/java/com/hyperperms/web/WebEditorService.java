@@ -352,7 +352,10 @@ public final class WebEditorService {
                 Map<String, String> contexts = permObj.has("contexts") && !permObj.get("contexts").isJsonNull()
                         ? parseContexts(permObj.getAsJsonObject("contexts"))
                         : Collections.emptyMap();
-                permissions.add(new Change.PermissionNode(node, value, contexts));
+                Long expiry = permObj.has("expiry") && !permObj.get("expiry").isJsonNull()
+                        ? permObj.get("expiry").getAsLong()
+                        : null;
+                permissions.add(new Change.PermissionNode(node, value, contexts, expiry));
             }
         }
 
@@ -436,7 +439,10 @@ public final class WebEditorService {
                 Map<String, String> contexts = permObj.has("contexts") && !permObj.get("contexts").isJsonNull()
                         ? parseContexts(permObj.getAsJsonObject("contexts"))
                         : Collections.emptyMap();
-                permissions.add(new Change.PermissionNode(node, value, contexts));
+                Long expiry = permObj.has("expiry") && !permObj.get("expiry").isJsonNull()
+                        ? permObj.get("expiry").getAsLong()
+                        : null;
+                permissions.add(new Change.PermissionNode(node, value, contexts, expiry));
             }
         }
         return permissions;
@@ -534,6 +540,7 @@ public final class WebEditorService {
                 .node(perm.getNode())
                 .value(perm.getValue())
                 .contexts(perm.getContexts())
+                .expiry(perm.getExpiry())
                 .build());
         }
 
@@ -637,6 +644,9 @@ public final class WebEditorService {
         }
         if (obj.has("contexts") && !obj.get("contexts").isJsonNull() && obj.get("contexts").isJsonObject()) {
             builder.contexts(parseContexts(obj.getAsJsonObject("contexts")));
+        }
+        if (obj.has("expiry") && !obj.get("expiry").isJsonNull()) {
+            builder.expiry(obj.get("expiry").getAsLong());
         }
 
         // Group fields
@@ -759,7 +769,10 @@ public final class WebEditorService {
                 Map<String, String> contexts = permObj.has("contexts") && !permObj.get("contexts").isJsonNull()
                         ? parseContexts(permObj.getAsJsonObject("contexts"))
                         : Collections.emptyMap();
-                permissions.add(new Change.PermissionNode(node, value, contexts));
+                Long expiry = permObj.has("expiry") && !permObj.get("expiry").isJsonNull()
+                        ? permObj.get("expiry").getAsLong()
+                        : null;
+                permissions.add(new Change.PermissionNode(node, value, contexts, expiry));
             }
         }
 

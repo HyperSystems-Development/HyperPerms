@@ -9,6 +9,7 @@ import com.hyperperms.util.Logger;
 import com.hyperperms.web.dto.Change;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -115,7 +116,7 @@ public final class ChangeApplier {
     }
 
     private boolean applyPermissionAdded(Change change) {
-        Node node = buildNode(change.getNode(), change.getValue(), change.getContexts());
+        Node node = buildNode(change.getNode(), change.getValue(), change.getContexts(), change.getExpiry());
         
         if ("group".equalsIgnoreCase(change.getTargetType())) {
             Group group = hyperPerms.getGroupManager().getGroup(change.getTarget());
@@ -152,7 +153,7 @@ public final class ChangeApplier {
 
     private boolean applyPermissionModified(Change change) {
         // For modified, we remove the old and add the new
-        Node node = buildNode(change.getNode(), change.getNewValue(), change.getContexts());
+        Node node = buildNode(change.getNode(), change.getNewValue(), change.getContexts(), change.getExpiry());
         
         if ("group".equalsIgnoreCase(change.getTargetType())) {
             Group group = hyperPerms.getGroupManager().getGroup(change.getTarget());
@@ -203,7 +204,7 @@ public final class ChangeApplier {
 
         // Add permissions
         for (Change.PermissionNode perm : data.getPermissions()) {
-            Node node = buildNode(perm.getNode(), perm.getValue(), perm.getContexts());
+            Node node = buildNode(perm.getNode(), perm.getValue(), perm.getContexts(), perm.getExpiry());
             group.setNode(node);
         }
 
@@ -425,7 +426,7 @@ public final class ChangeApplier {
         return true;
     }
 
-    private Node buildNode(String permission, Boolean value, Map<String, String> contexts) {
+    private Node buildNode(String permission, Boolean value, Map<String, String> contexts, Long expiry) {
         // Normalize negation: -prefix format always uses value=true
         // The - prefix already encodes "deny", so value must be true to avoid double negation
         // (PermissionResolver strips - and flips value: -perm/true → perm/false = DENIED)
@@ -443,6 +444,10 @@ public final class ChangeApplier {
             for (var entry : contexts.entrySet()) {
                 builder.context(entry.getKey(), entry.getValue());
             }
+        }
+
+        if (expiry != null) {
+            builder.expiry(Instant.ofEpochMilli(expiry));
         }
 
         return builder.build();

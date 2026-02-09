@@ -65,12 +65,12 @@ public class HyperPermsExpansion extends PlaceholderExpansion {
     @Nullable
     public String onPlaceholderRequest(@Nullable PlayerRef player, @NotNull String params) {
         if (player == null) {
-            return "";
+            return null;
         }
 
         UUID uuid = player.getUuid();
         if (uuid == null) {
-            return "";
+            return null;
         }
 
         String lowerParams = params.toLowerCase();
@@ -90,7 +90,7 @@ public class HyperPermsExpansion extends PlaceholderExpansion {
     /**
      * Handles dynamic placeholders with parameters.
      */
-    @NotNull
+    @Nullable
     private String handleDynamicPlaceholder(@NotNull UUID uuid, @NotNull String params) {
         // %hyperperms_has_<permission>%
         if (params.startsWith("has_")) {
@@ -105,7 +105,7 @@ public class HyperPermsExpansion extends PlaceholderExpansion {
         }
 
         // Unknown placeholder
-        return "";
+        return null;
     }
 
     /**

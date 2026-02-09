@@ -41,6 +41,7 @@ public final class Change {
     private final Boolean oldValue;
     private final Boolean newValue;
     private final Map<String, String> contexts;
+    private final Long expiry; // epoch millis, null = permanent
 
     // Group creation/deletion fields
     private final GroupData group;
@@ -73,6 +74,7 @@ public final class Change {
         this.oldValue = builder.oldValue;
         this.newValue = builder.newValue;
         this.contexts = builder.contexts;
+        this.expiry = builder.expiry;
         this.group = builder.group;
         this.groupName = builder.groupName;
         this.parent = builder.parent;
@@ -125,6 +127,11 @@ public final class Change {
     @Nullable
     public Map<String, String> getContexts() {
         return contexts;
+    }
+
+    @Nullable
+    public Long getExpiry() {
+        return expiry;
     }
 
     @Nullable
@@ -294,17 +301,23 @@ public final class Change {
     }
 
     /**
-     * Permission node with contexts.
+     * Permission node with contexts and optional expiry.
      */
     public static final class PermissionNode {
         private final String node;
         private final boolean value;
         private final Map<String, String> contexts;
+        private final Long expiry; // epoch millis, null = permanent
 
-        public PermissionNode(@NotNull String node, boolean value, @NotNull Map<String, String> contexts) {
+        public PermissionNode(@NotNull String node, boolean value, @NotNull Map<String, String> contexts, @Nullable Long expiry) {
             this.node = node;
             this.value = value;
             this.contexts = contexts;
+            this.expiry = expiry;
+        }
+
+        public PermissionNode(@NotNull String node, boolean value, @NotNull Map<String, String> contexts) {
+            this(node, value, contexts, null);
         }
 
         @NotNull
@@ -320,6 +333,11 @@ public final class Change {
         public Map<String, String> getContexts() {
             return contexts;
         }
+
+        @Nullable
+        public Long getExpiry() {
+            return expiry;
+        }
     }
 
     public static final class Builder {
@@ -331,6 +349,7 @@ public final class Change {
         private Boolean oldValue;
         private Boolean newValue;
         private Map<String, String> contexts;
+        private Long expiry;
         private GroupData group;
         private String groupName;
         private String parent;
@@ -380,6 +399,11 @@ public final class Change {
 
         public Builder contexts(Map<String, String> contexts) {
             this.contexts = contexts;
+            return this;
+        }
+
+        public Builder expiry(Long expiry) {
+            this.expiry = expiry;
             return this;
         }
 

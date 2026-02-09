@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No changes yet*
+### Added
+
+- **Temporary Permissions** - Duration/expiry support for permissions and group membership
+  - `/hp user setperm <player> <perm> [value] [duration]` - Set permissions with optional expiry (e.g. `1d`, `2h30m`, `1w`)
+  - `/hp group setperm <group> <perm> [value] [duration]` - Same for groups
+  - `/hp user setexpiry <player> <perm> <duration|permanent>` - Modify expiry on existing permissions
+  - `/hp group setexpiry <group> <perm> <duration|permanent>` - Same for groups
+  - `/hp group parent add <group> <parent> [duration]` - Temporary group inheritance
+  - `/hp user addgroup <player> <group> [duration]` - Temporary group membership
+  - All duration arguments are optional, defaulting to permanent (backwards compatible)
+  - `/hp user info` and `/hp group info` now display expiry in amber for temporary permissions
+  - Uses existing `TimeUtil` duration parsing (`30s`, `5m`, `2h`, `1d`, `1w`, combos, `permanent`)
+
+### Fixed
+
+- **Web Editor Expiry Pipeline** - Fixed web editor silently dropping expiry data when applying changes
+  - `Change.java` now carries expiry field through the DTO pipeline
+  - `WebEditorService` reads expiry from JSON in all parsing paths
+  - `ChangeApplier.buildNode()` applies expiry when building permission nodes
+  - Web editor UI already supported expiry — only the Java-side pipeline was broken
 
 ## [2.8.1] - 2026-02-08
 

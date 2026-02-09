@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.hyperperms'
-version = '2.8.1'
+version = '2.8.2'
 
 // Shared version property avoids accessing project at execution time
 def buildVersion = objects.property(String).convention(version)

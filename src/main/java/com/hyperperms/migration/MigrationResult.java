@@ -8,79 +8,39 @@ import java.util.List;
 
 /**
  * Result of a migration operation.
+ *
+ * @param success              whether the migration was successful
+ * @param backupName           name of the backup created before migration, or null if migration failed before backup
+ * @param groupsImported       number of groups imported
+ * @param groupsMerged         number of groups merged (conflicts resolved with MERGE)
+ * @param groupsSkipped        number of groups skipped
+ * @param usersImported        number of users imported
+ * @param usersMerged          number of users merged
+ * @param usersSkipped         number of users skipped
+ * @param tracksImported       number of tracks imported
+ * @param permissionsImported  total permissions imported
+ * @param duration             duration of the migration
+ * @param errorMessage         error message if migration failed
+ * @param warnings             warnings encountered during migration
+ * @param rolledBack           whether a rollback was performed
  */
 public record MigrationResult(
-    /**
-     * Whether the migration was successful.
-     */
     boolean success,
-    
-    /**
-     * Name of the backup created before migration, or null if migration failed before backup.
-     */
     @Nullable String backupName,
-    
-    /**
-     * Number of groups imported.
-     */
     int groupsImported,
-    
-    /**
-     * Number of groups merged (conflicts resolved with MERGE).
-     */
     int groupsMerged,
-    
-    /**
-     * Number of groups skipped.
-     */
     int groupsSkipped,
-    
-    /**
-     * Number of users imported.
-     */
     int usersImported,
-    
-    /**
-     * Number of users merged.
-     */
     int usersMerged,
-    
-    /**
-     * Number of users skipped.
-     */
     int usersSkipped,
-    
-    /**
-     * Number of tracks imported.
-     */
     int tracksImported,
-    
-    /**
-     * Total permissions imported.
-     */
     int permissionsImported,
-    
-    /**
-     * Duration of the migration.
-     */
     @NotNull Duration duration,
-    
-    /**
-     * Error message if migration failed.
-     */
     @Nullable String errorMessage,
-    
-    /**
-     * Warnings encountered during migration.
-     */
     @NotNull List<String> warnings,
-    
-    /**
-     * Whether a rollback was performed.
-     */
     boolean rolledBack
 ) {
-    
+
     /**
      * Creates a successful result.
      */
@@ -99,7 +59,7 @@ public record MigrationResult(
             duration, null, warnings, false
         );
     }
-    
+
     /**
      * Creates a failed result.
      */
@@ -117,16 +77,16 @@ public record MigrationResult(
             Duration.ZERO, errorMessage, warnings, rolledBack
         );
     }
-    
+
     /**
      * Generates a formatted result string for display.
      */
     public String toDisplayString() {
         StringBuilder sb = new StringBuilder();
-        
+
         if (success) {
             sb.append("§a=== Migration Completed Successfully ===§r\n\n");
-            
+
             sb.append("§eGroups:§r\n");
             sb.append("  §a✓ ").append(groupsImported).append(" imported\n");
             if (groupsMerged > 0) {
@@ -135,7 +95,7 @@ public record MigrationResult(
             if (groupsSkipped > 0) {
                 sb.append("  §7○ ").append(groupsSkipped).append(" skipped\n");
             }
-            
+
             sb.append("\n§eUsers:§r\n");
             sb.append("  §a✓ ").append(usersImported).append(" imported\n");
             if (usersMerged > 0) {
@@ -144,24 +104,24 @@ public record MigrationResult(
             if (usersSkipped > 0) {
                 sb.append("  §7○ ").append(usersSkipped).append(" skipped\n");
             }
-            
+
             if (tracksImported > 0) {
                 sb.append("\n§eTracks:§r\n");
                 sb.append("  §a✓ ").append(tracksImported).append(" imported\n");
             }
-            
+
             sb.append("\n§ePermissions:§r\n");
             sb.append("  §a✓ ").append(permissionsImported).append(" total\n");
-            
+
             sb.append("\n§7Duration: ").append(formatDuration(duration)).append("\n");
-            
+
             if (backupName != null) {
                 sb.append("§7Backup created: ").append(backupName).append("\n");
             }
         } else {
             sb.append("§c=== Migration Failed ===§r\n\n");
             sb.append("§cError: ").append(errorMessage).append("\n");
-            
+
             if (rolledBack) {
                 sb.append("\n§aRollback performed - no changes were made.§r\n");
                 if (backupName != null) {
@@ -171,17 +131,17 @@ public record MigrationResult(
                 sb.append("\n§c⚠ Rollback was not possible - manual recovery may be needed.§r\n");
             }
         }
-        
+
         if (!warnings.isEmpty()) {
             sb.append("\n§eWarnings:§r\n");
             for (String warning : warnings) {
                 sb.append("  §e⚠ ").append(warning).append("\n");
             }
         }
-        
+
         return sb.toString();
     }
-    
+
     private String formatDuration(Duration duration) {
         long seconds = duration.getSeconds();
         if (seconds < 60) {

@@ -266,7 +266,7 @@ public final class SQLiteAnalyticsStorage implements AnalyticsStorage {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String sql = """
-                    SELECT 
+                    SELECT
                         SUM(check_count) as total_checks,
                         SUM(grant_count) as total_grants,
                         SUM(deny_count) as total_denies,
@@ -342,7 +342,7 @@ public final class SQLiteAnalyticsStorage implements AnalyticsStorage {
             List<AnalyticsSummary.AuditEntry> result = new ArrayList<>();
             try {
                 String sql = """
-                    SELECT * FROM analytics_audit_log 
+                    SELECT * FROM analytics_audit_log
                     WHERE holder_type = ? AND holder_id = ?
                     ORDER BY timestamp DESC LIMIT ?
                 """;
@@ -390,7 +390,7 @@ public final class SQLiteAnalyticsStorage implements AnalyticsStorage {
             List<AnalyticsSummary.AuditEntry> result = new ArrayList<>();
             try {
                 String sql = """
-                    SELECT * FROM analytics_audit_log 
+                    SELECT * FROM analytics_audit_log
                     WHERE timestamp >= ? AND timestamp < ?
                     ORDER BY timestamp DESC LIMIT ?
                 """;

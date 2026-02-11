@@ -11,56 +11,40 @@ import java.util.StringJoiner;
  * <p>
  * Contains all information about what would be migrated without actually
  * making any changes.
+ *
+ * @param sourceName         name of the source system (e.g., "LuckPerms")
+ * @param storageDescription description of the storage being migrated from
+ * @param groups             groups that would be imported
+ * @param userStats          user statistics for the migration
+ * @param permissionStats    permission statistics
+ * @param tracks             tracks that would be imported
+ * @param conflicts          detected conflicts with existing HyperPerms data
+ * @param warnings           warnings about potential issues
+ * @param backupPath         path where backup will be created
  */
 public record MigrationPreview(
-    /**
-     * Name of the source system (e.g., "LuckPerms").
-     */
     @NotNull String sourceName,
-    
-    /**
-     * Description of the storage being migrated from.
-     */
     @NotNull String storageDescription,
-    
-    /**
-     * Groups that would be imported.
-     */
     @NotNull List<GroupPreview> groups,
-    
-    /**
-     * Users that would be imported.
-     */
     @NotNull UserStats userStats,
-    
-    /**
-     * Permission statistics.
-     */
     @NotNull PermissionStats permissionStats,
-    
-    /**
-     * Tracks that would be imported.
-     */
     @NotNull List<TrackPreview> tracks,
-    
-    /**
-     * Detected conflicts with existing HyperPerms data.
-     */
     @NotNull List<Conflict> conflicts,
-    
-    /**
-     * Warnings about potential issues.
-     */
     @NotNull List<String> warnings,
-    
-    /**
-     * Path where backup will be created.
-     */
     @NotNull String backupPath
 ) {
-    
+
     /**
      * Preview information for a group.
+     *
+     * @param name            the group name
+     * @param weight          the group weight
+     * @param permissionCount number of permissions in this group
+     * @param prefix          the group prefix, or null
+     * @param suffix          the group suffix, or null
+     * @param parents         parent groups this group inherits from
+     * @param hasConflict     whether this group conflicts with existing data
+     * @param conflictDetails details about the conflict, or null
      */
     public record GroupPreview(
         @NotNull String name,
@@ -81,69 +65,47 @@ public record MigrationPreview(
             this(name, weight, permissionCount, prefix, suffix, parents, false, null);
         }
     }
-    
+
     /**
      * Statistics about users to be migrated.
+     *
+     * @param totalUsers                 total number of users to import
+     * @param usersWithCustomPermissions users with custom permissions (beyond group membership)
+     * @param usersWithGroupsOnly        users with only group assignments
+     * @param skippedUsers               users that will be skipped (e.g., already exist with SKIP conflict resolution)
      */
     public record UserStats(
-        /**
-         * Total number of users to import.
-         */
         int totalUsers,
-        
-        /**
-         * Users with custom permissions (beyond group membership).
-         */
         int usersWithCustomPermissions,
-        
-        /**
-         * Users with only group assignments.
-         */
         int usersWithGroupsOnly,
-        
-        /**
-         * Users that will be skipped (e.g., already exist with SKIP conflict resolution).
-         */
         int skippedUsers
     ) {}
-    
+
     /**
      * Statistics about permissions.
+     *
+     * @param totalPermissions total permission entries
+     * @param grants           granted permissions (value = true)
+     * @param denials          denied permissions (value = false, negations)
+     * @param temporary        temporary permissions with expiry
+     * @param contextual       permissions with context restrictions
+     * @param expiredSkipped   expired permissions that will be skipped
      */
     public record PermissionStats(
-        /**
-         * Total permission entries.
-         */
         int totalPermissions,
-        
-        /**
-         * Granted permissions (value = true).
-         */
         int grants,
-        
-        /**
-         * Denied permissions (value = false, negations).
-         */
         int denials,
-        
-        /**
-         * Temporary permissions with expiry.
-         */
         int temporary,
-        
-        /**
-         * Permissions with context restrictions.
-         */
         int contextual,
-        
-        /**
-         * Expired permissions that will be skipped.
-         */
         int expiredSkipped
     ) {}
-    
+
     /**
      * Preview information for a track.
+     *
+     * @param name        the track name
+     * @param groups      ordered list of groups in the track
+     * @param hasConflict whether this track conflicts with existing data
      */
     public record TrackPreview(
         @NotNull String name,
@@ -154,9 +116,15 @@ public record MigrationPreview(
             return String.join(" → ", groups);
         }
     }
-    
+
     /**
      * Information about a detected conflict.
+     *
+     * @param type              the type of conflict
+     * @param itemName          the name of the conflicting item
+     * @param sourceDetails     details about the source item
+     * @param existingDetails   details about the existing item
+     * @param recommendedAction the recommended action to resolve the conflict
      */
     public record Conflict(
         @NotNull ConflictType type,
@@ -165,7 +133,7 @@ public record MigrationPreview(
         @NotNull String existingDetails,
         @NotNull String recommendedAction
     ) {}
-    
+
     /**
      * Type of conflict.
      */
@@ -174,16 +142,16 @@ public record MigrationPreview(
         USER,
         TRACK
     }
-    
+
     /**
      * Generates a formatted preview string for display.
      */
     public String toDisplayString(boolean verbose) {
         StringBuilder sb = new StringBuilder();
-        
+
         sb.append("§6=== ").append(sourceName).append(" Migration Preview ===§r\n");
         sb.append("§7Source: §f").append(storageDescription).append("\n\n");
-        
+
         // Groups section
         sb.append("§eGroups to import: §f").append(groups.size()).append("\n");
         for (GroupPreview group : groups) {
@@ -201,7 +169,7 @@ public record MigrationPreview(
             sb.append("\n");
         }
         sb.append("\n");
-        
+
         // Users section
         sb.append("§eUsers to import: §f").append(userStats.totalUsers).append("\n");
         sb.append("  §7- ").append(userStats.usersWithCustomPermissions)
@@ -212,7 +180,7 @@ public record MigrationPreview(
             sb.append("  §7- ").append(userStats.skippedUsers).append(" will be skipped\n");
         }
         sb.append("\n");
-        
+
         // Permissions section
         sb.append("§ePermissions: §f").append(permissionStats.totalPermissions).append(" total\n");
         sb.append("  §7- §a").append(permissionStats.grants).append(" grants §7(value: true)\n");
@@ -228,7 +196,7 @@ public record MigrationPreview(
               .append(" expired (will be skipped)\n");
         }
         sb.append("\n");
-        
+
         // Tracks section
         if (!tracks.isEmpty()) {
             sb.append("§eTracks: §f").append(tracks.size()).append("\n");
@@ -239,7 +207,7 @@ public record MigrationPreview(
             }
             sb.append("\n");
         }
-        
+
         // Conflicts section
         if (!conflicts.isEmpty()) {
             sb.append("§cConflicts: §f").append(conflicts.size()).append("\n");
@@ -254,7 +222,7 @@ public record MigrationPreview(
             }
             sb.append("\n");
         }
-        
+
         // Warnings section
         if (!warnings.isEmpty()) {
             sb.append("§eWarnings: §f").append(warnings.size()).append("\n");
@@ -263,14 +231,14 @@ public record MigrationPreview(
             }
             sb.append("\n");
         }
-        
+
         // Backup info
         sb.append("§7Backup will be created at: §f").append(backupPath).append("\n\n");
-        
+
         // Instructions
         sb.append("§7Add §f-confirm§7 to apply migration (e.g., /hp migrate luckperms-confirm)\n");
         sb.append("§7Add §f-verbose§7 for full permission listing.\n");
-        
+
         return sb.toString();
     }
 }

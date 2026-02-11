@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -211,11 +212,11 @@ public final class AsyncPermissionCheckBuilder {
             return CompletableFuture.completedFuture(false);
         }
         ContextSet ctx = buildContexts();
-        CompletableFuture<Boolean>[] futures = Arrays.stream(permissions)
+        List<CompletableFuture<Boolean>> futures = Arrays.stream(permissions)
                 .map(perm -> api.hasPermissionAsync(uuid, perm, ctx))
-                .toArray(CompletableFuture[]::new);
+                .toList();
 
-        return CompletableFuture.allOf(futures).thenApply(v -> {
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).thenApply(v -> {
             for (CompletableFuture<Boolean> future : futures) {
                 if (future.join()) {
                     return true;
@@ -237,11 +238,11 @@ public final class AsyncPermissionCheckBuilder {
             return CompletableFuture.completedFuture(true);
         }
         ContextSet ctx = buildContexts();
-        CompletableFuture<Boolean>[] futures = Arrays.stream(permissions)
+        List<CompletableFuture<Boolean>> futures = Arrays.stream(permissions)
                 .map(perm -> api.hasPermissionAsync(uuid, perm, ctx))
-                .toArray(CompletableFuture[]::new);
+                .toList();
 
-        return CompletableFuture.allOf(futures).thenApply(v -> {
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).thenApply(v -> {
             for (CompletableFuture<Boolean> future : futures) {
                 if (!future.join()) {
                     return false;

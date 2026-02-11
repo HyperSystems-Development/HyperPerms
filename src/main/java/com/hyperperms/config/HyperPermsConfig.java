@@ -125,6 +125,18 @@ public final class HyperPermsConfig {
             migrated = true;
         }
 
+        // Migration: Add MysticNameTags integration settings if missing
+        if (!config.has("mysticnametags")) {
+            JsonObject mysticnametags = new JsonObject();
+            mysticnametags.addProperty("enabled", true);
+            mysticnametags.addProperty("refreshOnPermissionChange", true);
+            mysticnametags.addProperty("refreshOnGroupChange", true);
+            mysticnametags.addProperty("tagPermissionPrefix", "mysticnametags.tag.");
+            config.add("mysticnametags", mysticnametags);
+            Logger.info("Config migration: Added MysticNameTags integration settings");
+            migrated = true;
+        }
+
         // Update config version if migration occurred or version is outdated
         if (migrated || compareVersions(configVersion, CURRENT_CONFIG_VERSION) < 0) {
             config.addProperty("configVersion", CURRENT_CONFIG_VERSION);
@@ -323,6 +335,14 @@ public final class HyperPermsConfig {
         placeholderapi.addProperty("enabled", true);
         placeholderapi.addProperty("parseExternal", true);
         root.add("placeholderapi", placeholderapi);
+
+        // MysticNameTags integration settings
+        JsonObject mysticnametags = new JsonObject();
+        mysticnametags.addProperty("enabled", true);
+        mysticnametags.addProperty("refreshOnPermissionChange", true);
+        mysticnametags.addProperty("refreshOnGroupChange", true);
+        mysticnametags.addProperty("tagPermissionPrefix", "mysticnametags.tag.");
+        root.add("mysticnametags", mysticnametags);
 
         return root;
     }
@@ -853,6 +873,47 @@ public final class HyperPermsConfig {
      */
     public boolean isPlaceholderAPIParseExternal() {
         return getNestedBoolean("placeholderapi", "parseExternal", true);
+    }
+
+    // ==================== MysticNameTags Integration Settings ====================
+
+    /**
+     * Checks if MysticNameTags integration is enabled.
+     * When enabled, HyperPerms will sync tag caches when permissions change.
+     *
+     * @return true if MysticNameTags integration is enabled
+     */
+    public boolean isMysticNameTagsEnabled() {
+        return getNestedBoolean("mysticnametags", "enabled", true);
+    }
+
+    /**
+     * Checks if tag caches should be refreshed when permissions change.
+     *
+     * @return true if refresh on permission change is enabled
+     */
+    public boolean isMysticNameTagsRefreshOnPermissionChange() {
+        return getNestedBoolean("mysticnametags", "refreshOnPermissionChange", true);
+    }
+
+    /**
+     * Checks if tag caches should be refreshed when group membership changes.
+     *
+     * @return true if refresh on group change is enabled
+     */
+    public boolean isMysticNameTagsRefreshOnGroupChange() {
+        return getNestedBoolean("mysticnametags", "refreshOnGroupChange", true);
+    }
+
+    /**
+     * Gets the permission prefix used to identify tag permissions.
+     * Tags in MysticNameTags typically use permissions like "mysticnametags.tag.vip".
+     *
+     * @return the tag permission prefix
+     */
+    @NotNull
+    public String getMysticNameTagsPermissionPrefix() {
+        return getNestedString("mysticnametags", "tagPermissionPrefix", "mysticnametags.tag.");
     }
 
     // ==================== Helper Methods ====================

@@ -3,6 +3,7 @@ package com.hyperperms.integration.papi;
 import at.helpch.placeholderapi.expansion.PlaceholderExpansion;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.chat.PrefixSuffixResolver;
+import com.hyperperms.integration.MysticNameTagsIntegration;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.User;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -26,6 +27,11 @@ import java.util.UUID;
  *   <li>%hyperperms_weight% - Primary group weight</li>
  *   <li>%hyperperms_has_&lt;permission&gt;% - Check permission (true/false)</li>
  *   <li>%hyperperms_in_group_&lt;name&gt;% - Check group membership (true/false)</li>
+ *   <li>%hyperperms_tag% - Active MysticNameTags tag ID</li>
+ *   <li>%hyperperms_tag_display% - Active tag display text (colored)</li>
+ *   <li>%hyperperms_tag_count% - Number of available tags</li>
+ *   <li>%hyperperms_tags% - All available tag IDs (comma-separated)</li>
+ *   <li>%hyperperms_has_tag_&lt;name&gt;% - Check if player can use tag (true/false)</li>
  * </ul>
  */
 public class HyperPermsExpansion extends PlaceholderExpansion {
@@ -83,6 +89,10 @@ public class HyperPermsExpansion extends PlaceholderExpansion {
             case "groups" -> getAllGroups(uuid);
             case "group_count" -> getGroupCount(uuid);
             case "weight" -> getWeight(uuid);
+            case "tag" -> getActiveTag(uuid);
+            case "tag_display" -> getActiveTagDisplay(uuid);
+            case "tag_count" -> getTagCount(uuid);
+            case "tags" -> getAllTags(uuid);
             default -> handleDynamicPlaceholder(uuid, lowerParams);
         };
     }
@@ -92,6 +102,12 @@ public class HyperPermsExpansion extends PlaceholderExpansion {
      */
     @Nullable
     private String handleDynamicPlaceholder(@NotNull UUID uuid, @NotNull String params) {
+        // %hyperperms_has_tag_<name>%
+        if (params.startsWith("has_tag_")) {
+            String tagName = params.substring(8);
+            return checkTagPermission(uuid, tagName);
+        }
+
         // %hyperperms_has_<permission>%
         if (params.startsWith("has_")) {
             String permission = params.substring(4);
@@ -252,5 +268,64 @@ public class HyperPermsExpansion extends PlaceholderExpansion {
         boolean inGroup = groups.stream()
                 .anyMatch(g -> g.equalsIgnoreCase(groupName));
         return String.valueOf(inGroup);
+    }
+
+    // ==================== MysticNameTags Tag Placeholders ====================
+
+    /**
+     * Gets the player's active tag ID.
+     */
+    @NotNull
+    private String getActiveTag(@NotNull UUID uuid) {
+        MysticNameTagsIntegration integration = plugin.getMysticNameTagsIntegration();
+        if (integration == null || !integration.isAvailable()) return "";
+        String tagId = integration.getActiveTagId(uuid);
+        return tagId != null ? tagId : "";
+    }
+
+    /**
+     * Gets the player's active tag display text (colored).
+     */
+    @NotNull
+    private String getActiveTagDisplay(@NotNull UUID uuid) {
+        MysticNameTagsIntegration integration = plugin.getMysticNameTagsIntegration();
+        if (integration == null || !integration.isAvailable()) return "";
+        String display = integration.getActiveTagDisplay(uuid);
+        return display != null ? display : "";
+    }
+
+    /**
+     * Gets the number of tags available to the player.
+     */
+    @NotNull
+    private String getTagCount(@NotNull UUID uuid) {
+        MysticNameTagsIntegration integration = plugin.getMysticNameTagsIntegration();
+        if (integration == null || !integration.isAvailable()) return "0";
+        return String.valueOf(integration.getAvailableTagCount(uuid));
+    }
+
+    /**
+     * Gets all available tag IDs for the player (comma-separated).
+     */
+    @NotNull
+    private String getAllTags(@NotNull UUID uuid) {
+        MysticNameTagsIntegration integration = plugin.getMysticNameTagsIntegration();
+        if (integration == null || !integration.isAvailable()) return "";
+        java.util.List<String> tags = integration.getAvailableTagIds(uuid);
+        return String.join(", ", tags);
+    }
+
+    /**
+     * Checks if the player has permission to use a specific tag.
+     */
+    @NotNull
+    private String checkTagPermission(@NotNull UUID uuid, @NotNull String tagName) {
+        MysticNameTagsIntegration integration = plugin.getMysticNameTagsIntegration();
+        if (integration == null || !integration.isAvailable()) {
+            // Fallback: check HyperPerms permission directly
+            String prefix = plugin.getConfig().getMysticNameTagsPermissionPrefix();
+            return String.valueOf(plugin.hasPermission(uuid, prefix + tagName));
+        }
+        return String.valueOf(integration.hasTagPermission(uuid, tagName));
     }
 }

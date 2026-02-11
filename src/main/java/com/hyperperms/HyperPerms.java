@@ -24,6 +24,7 @@ import com.hyperperms.context.calculators.ServerContextCalculator;
 import com.hyperperms.context.calculators.TimeContextCalculator;
 import com.hyperperms.context.calculators.WorldContextCalculator;
 import com.hyperperms.integration.FactionIntegration;
+import com.hyperperms.integration.MysticNameTagsIntegration;
 import com.hyperperms.integration.PlaceholderAPIIntegration;
 import com.hyperperms.integration.VaultUnlockedIntegration;
 import com.hyperperms.integration.WerChatIntegration;
@@ -95,6 +96,10 @@ public final class HyperPerms implements HyperPermsAPI {
     // PlaceholderAPI integration (optional - soft dependency on PlaceholderAPI)
     @Nullable
     private PlaceholderAPIIntegration placeholderApiIntegration;
+
+    // MysticNameTags integration (optional - soft dependency on MysticNameTags)
+    @Nullable
+    private MysticNameTagsIntegration mysticNameTagsIntegration;
 
     // Web editor
     private com.hyperperms.web.WebEditorService webEditorService;
@@ -290,6 +295,16 @@ public final class HyperPerms implements HyperPermsAPI {
                 Logger.info("PlaceholderAPI integration enabled - placeholders available");
             }
 
+            // Initialize MysticNameTags integration (soft dependency on MysticNameTags)
+            mysticNameTagsIntegration = new MysticNameTagsIntegration(this);
+            mysticNameTagsIntegration.setEnabled(config.isMysticNameTagsEnabled());
+            mysticNameTagsIntegration.setRefreshOnPermissionChange(config.isMysticNameTagsRefreshOnPermissionChange());
+            mysticNameTagsIntegration.setRefreshOnGroupChange(config.isMysticNameTagsRefreshOnGroupChange());
+            mysticNameTagsIntegration.setTagPermissionPrefix(config.getMysticNameTagsPermissionPrefix());
+            if (mysticNameTagsIntegration.isAvailable()) {
+                Logger.info("MysticNameTags integration enabled - tag permission sync active");
+            }
+
             // Initialize VaultUnlocked integration (soft dependency)
             if (config.isVaultIntegrationEnabled()) {
                 VaultUnlockedIntegration.init(this);
@@ -394,6 +409,11 @@ public final class HyperPerms implements HyperPermsAPI {
 
         // Shutdown VaultUnlocked integration
         VaultUnlockedIntegration.shutdown();
+
+        // Unregister MysticNameTags integration
+        if (mysticNameTagsIntegration != null) {
+            mysticNameTagsIntegration.unregister();
+        }
 
         // Unregister PlaceholderAPI expansion
         if (placeholderApiIntegration != null) {
@@ -984,6 +1004,20 @@ public final class HyperPerms implements HyperPermsAPI {
     @Nullable
     public PlaceholderAPIIntegration getPlaceholderAPIIntegration() {
         return placeholderApiIntegration;
+    }
+
+    /**
+     * Gets the MysticNameTags integration.
+     * <p>
+     * The MysticNameTags integration provides tag cache invalidation when
+     * permissions or groups change, ensuring tag availability updates immediately.
+     * Returns null if MysticNameTags is not installed.
+     *
+     * @return the MysticNameTags integration, or null if not available
+     */
+    @Nullable
+    public MysticNameTagsIntegration getMysticNameTagsIntegration() {
+        return mysticNameTagsIntegration;
     }
 
     /**

@@ -2,10 +2,12 @@ package com.hyperperms.model;
 
 import com.hyperperms.api.PermissionHolder;
 import com.hyperperms.api.PermissionHolderListener;
+import com.hyperperms.api.TemporaryPermissionInfo;
 import com.hyperperms.api.context.ContextSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.List;
@@ -336,16 +338,10 @@ public final class Group implements PermissionHolder {
     @Override
     @NotNull
     public DataMutateResult addGroup(@NotNull String groupName) {
-        return addGroup(groupName, null);
+        return addGroup(groupName, (Instant) null);
     }
 
-    /**
-     * Adds a group inheritance with optional expiry.
-     *
-     * @param groupName the group name
-     * @param expiry    the expiry time, or null for permanent
-     * @return the result
-     */
+    @Override
     @NotNull
     public DataMutateResult addGroup(@NotNull String groupName, @Nullable Instant expiry) {
         Node groupNode = Node.builder(Node.GROUP_PREFIX + groupName.toLowerCase())
@@ -378,6 +374,95 @@ public final class Group implements PermissionHolder {
     }
 
     @Override
+    @NotNull
+    public DataMutateResult setPermission(@NotNull String permission, boolean value, @NotNull Duration duration) {
+        Objects.requireNonNull(duration, "duration cannot be null");
+        return setPermission(permission, value, Instant.now().plus(duration));
+    }
+
+    @Override
+    @NotNull
+    public DataMutateResult setPermission(@NotNull String permission, boolean value, @NotNull Instant expiry) {
+        Objects.requireNonNull(permission, "permission cannot be null");
+        Objects.requireNonNull(expiry, "expiry cannot be null");
+        Node node = Node.builder(permission)
+                .value(value)
+                .expiry(expiry)
+                .build();
+        return setNode(node);
+    }
+
+    @Override
+    public boolean isTemporaryPermission(@NotNull String permission) {
+        String lowerPerm = permission.toLowerCase();
+        return nodes.stream()
+                .filter(node -> node.getPermission().equals(lowerPerm))
+                .filter(node -> !node.isExpired())
+                .anyMatch(Node::isTemporary);
+    }
+
+    @Override
+    @Nullable
+    public Instant getPermissionExpiry(@NotNull String permission) {
+        String lowerPerm = permission.toLowerCase();
+        return nodes.stream()
+                .filter(node -> node.getPermission().equals(lowerPerm))
+                .filter(node -> !node.isExpired())
+                .filter(Node::isTemporary)
+                .map(Node::getExpiry)
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    @NotNull
+    public DataMutateResult setPermissionExpiry(@NotNull String permission, @Nullable Instant expiry) {
+        String lowerPerm = permission.toLowerCase();
+        Optional<Node> existing = nodes.stream()
+                .filter(node -> node.getPermission().equals(lowerPerm))
+                .filter(node -> !node.isExpired())
+                .findFirst();
+        if (existing.isEmpty()) {
+            return DataMutateResult.DOES_NOT_EXIST;
+        }
+        return setNode(existing.get().withExpiry(expiry));
+    }
+
+    @Override
+    @NotNull
+    public DataMutateResult adjustPermissionExpiry(@NotNull String permission, @NotNull Duration adjustment) {
+        Objects.requireNonNull(adjustment, "adjustment cannot be null");
+        String lowerPerm = permission.toLowerCase();
+        Optional<Node> existing = nodes.stream()
+                .filter(node -> node.getPermission().equals(lowerPerm))
+                .filter(node -> !node.isExpired())
+                .findFirst();
+        if (existing.isEmpty()) {
+            return DataMutateResult.DOES_NOT_EXIST;
+        }
+        Node node = existing.get();
+        Instant newExpiry = node.isTemporary()
+                ? node.getExpiry().plus(adjustment)
+                : Instant.now().plus(adjustment);
+        return setNode(node.withExpiry(newExpiry));
+    }
+
+    @Override
+    @NotNull
+    public Set<TemporaryPermissionInfo> getTemporaryPermissions() {
+        return nodes.stream()
+                .filter(Node::isTemporary)
+                .filter(node -> !node.isExpired())
+                .map(node -> new TemporaryPermissionInfo(
+                        node.getPermission(),
+                        node.getValue(),
+                        node.getExpiry(),
+                        node.getContexts()
+                ))
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    @Override
     public int cleanupExpired() {
         int before = nodes.size();
         nodes.removeIf(Node::isExpired);
@@ -392,7 +477,7 @@ public final class Group implements PermissionHolder {
      */
     @NotNull
     public DataMutateResult addParent(@NotNull String parentName) {
-        return addGroup(parentName, null);
+        return addGroup(parentName, (Instant) null);
     }
 
     /**

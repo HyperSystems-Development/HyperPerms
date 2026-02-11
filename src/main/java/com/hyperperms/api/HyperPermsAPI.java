@@ -8,7 +8,9 @@ import com.hyperperms.model.User;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -147,6 +149,81 @@ public interface HyperPermsAPI {
      */
     @NotNull
     Executor getSyncExecutor();
+
+    // ==================== Temporary Permissions ====================
+
+    /**
+     * Grants a temporary permission to a user.
+     *
+     * @param uuid       the user UUID
+     * @param permission the permission to grant
+     * @param duration   the duration until expiry
+     * @return a future that completes when saved
+     */
+    @NotNull
+    default CompletableFuture<Void> setTemporaryPermission(@NotNull UUID uuid, @NotNull String permission, @NotNull Duration duration) {
+        return getUserManager().modifyUser(uuid, user -> user.setPermission(permission, true, duration));
+    }
+
+    /**
+     * Sets a temporary permission (grant or deny) on a user.
+     *
+     * @param uuid       the user UUID
+     * @param permission the permission to set
+     * @param value      true to grant, false to deny
+     * @param duration   the duration until expiry
+     * @return a future that completes when saved
+     */
+    @NotNull
+    default CompletableFuture<Void> setTemporaryPermission(@NotNull UUID uuid, @NotNull String permission, boolean value, @NotNull Duration duration) {
+        return getUserManager().modifyUser(uuid, user -> user.setPermission(permission, value, duration));
+    }
+
+    /**
+     * Gets all non-expired temporary permissions for a user.
+     *
+     * @param uuid the user UUID
+     * @return the set of temporary permissions, or empty if user not found
+     */
+    @NotNull
+    default Set<TemporaryPermissionInfo> getTemporaryPermissions(@NotNull UUID uuid) {
+        User user = getUserManager().getUser(uuid);
+        if (user == null) {
+            return Collections.emptySet();
+        }
+        return user.getTemporaryPermissions();
+    }
+
+    /**
+     * Checks if a user's permission is temporary.
+     *
+     * @param uuid       the user UUID
+     * @param permission the permission to check
+     * @return true if the permission is temporary, false if permanent or not found
+     */
+    default boolean isTemporaryPermission(@NotNull UUID uuid, @NotNull String permission) {
+        User user = getUserManager().getUser(uuid);
+        if (user == null) {
+            return false;
+        }
+        return user.isTemporaryPermission(permission);
+    }
+
+    /**
+     * Gets the remaining duration for a user's temporary permission.
+     *
+     * @param uuid       the user UUID
+     * @param permission the permission to check
+     * @return the remaining duration, or null if user not found or permission is not temporary
+     */
+    @Nullable
+    default Duration getPermissionRemaining(@NotNull UUID uuid, @NotNull String permission) {
+        User user = getUserManager().getUser(uuid);
+        if (user == null) {
+            return null;
+        }
+        return user.getPermissionRemaining(permission);
+    }
 
     // ==================== User Management ====================
 

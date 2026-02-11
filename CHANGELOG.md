@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.8.3] - 2026-02-11
+
+### Fixed
+
+- **EssentialsPlus Compatibility** - Fixed parameterized permission queries failing silently
+  - Plugins like EssentialsPlus use `getFirstPermissionProvider().getGroupPermissions()` to enumerate permissions for prefix scanning (e.g. `essentialsplus.sethome.limit.[n]`, `essentialsplus.home.reduce.cooldown.30s`)
+  - HyperPerms was being registered last in the provider chain, so the native Hytale provider (which doesn't understand HyperPerms' virtual user groups) was returned first, yielding empty results
+  - Provider registration now reorders the chain to ensure HyperPerms is the primary (first) provider
+
+### Added
+
+- **Permission Enumeration API** - `HyperPermsAPI.getResolvedPermissions(UUID)` returns all granted permission strings for a user
+  - Includes permissions from direct nodes and group inheritance, resolved against current contexts
+  - Enables any plugin to scan permissions by prefix without depending on the native provider chain
+
 ## [2.8.2] - 2026-02-08
 
 ### Added

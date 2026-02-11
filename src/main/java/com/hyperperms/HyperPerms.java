@@ -48,6 +48,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.Executor;
@@ -688,6 +689,23 @@ public final class HyperPerms implements HyperPermsAPI {
     @NotNull
     public ContextSet getContexts(@NotNull UUID uuid) {
         return contextManager.getContexts(uuid);
+    }
+
+    @Override
+    @NotNull
+    public Set<String> getResolvedPermissions(@NotNull UUID uuid) {
+        User user = userManager.getUser(uuid);
+        if (user == null) {
+            var loadResult = userManager.loadUser(uuid).join();
+            if (loadResult.isPresent()) {
+                user = loadResult.get();
+            } else {
+                user = userManager.getOrCreateUser(uuid);
+            }
+        }
+        ContextSet contexts = contextManager.getContexts(uuid);
+        var resolved = resolver.resolve(user, contexts);
+        return resolved.getGrantedPermissions();
     }
 
     @Override

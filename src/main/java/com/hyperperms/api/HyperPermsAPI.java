@@ -184,6 +184,21 @@ public interface HyperPermsAPI {
     @NotNull
     EventBus getEventBus();
 
+    // ==================== Permission Enumeration ====================
+
+    /**
+     * Gets all resolved, granted permission strings for a user.
+     * <p>
+     * Includes permissions from direct nodes and group inheritance.
+     * Useful for plugins that need to scan permissions matching a prefix
+     * (e.g., {@code "essentialsplus.sethome.limit."} to find numeric limits).
+     *
+     * @param uuid the user UUID
+     * @return the set of granted permission strings
+     */
+    @NotNull
+    Set<String> getResolvedPermissions(@NotNull UUID uuid);
+
     // ==================== Context ====================
 
     /**

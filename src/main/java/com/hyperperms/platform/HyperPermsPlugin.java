@@ -144,17 +144,56 @@ public class HyperPermsPlugin extends JavaPlugin {
      */
     private void registerPermissionProvider() {
         try {
-            getLogger().at(Level.INFO).log("Attempting to register HyperPerms permission provider...");
-            getLogger().at(Level.INFO).log("PermissionsModule instance: %s", PermissionsModule.get());
+            PermissionsModule module = PermissionsModule.get();
+            module.addProvider(permissionProvider);
 
-            PermissionsModule.get().addProvider(permissionProvider);
+            // Ensure HyperPerms is the FIRST provider.
+            // Plugins like EssentialsPlus call getFirstPermissionProvider().getGroupPermissions()
+            // to enumerate permissions. If HyperPerms isn't first, the native provider
+            // won't understand our virtual user groups and returns empty.
+            ensureFirstProvider(module);
 
-            getLogger().at(Level.INFO).log("Registered HyperPerms as permission provider: %s", permissionProvider.getName());
-
-            // Log all registered providers to see what's in the chain
-            getLogger().at(Level.INFO).log("Provider registered successfully. HyperPerms provider name: %s", permissionProvider.getName());
+            Logger.info("Registered HyperPerms as permission provider");
         } catch (Exception e) {
             getLogger().at(Level.SEVERE).withCause(e).log("Failed to register permission provider");
+        }
+    }
+
+    /**
+     * Ensures HyperPerms is the first permission provider in the chain.
+     * <p>
+     * This is critical for compatibility with plugins like EssentialsPlus that call
+     * {@code getFirstPermissionProvider().getGroupPermissions()} to enumerate permissions.
+     * If the native Hytale provider is first, it won't understand HyperPerms' virtual
+     * user groups and returns empty results.
+     *
+     * @param module the permissions module
+     */
+    private void ensureFirstProvider(PermissionsModule module) {
+        try {
+            var providers = new java.util.ArrayList<>(module.getProviders());
+
+            // Already first? Nothing to do
+            if (!providers.isEmpty() && providers.getFirst() == permissionProvider) {
+                Logger.debug("HyperPerms is already the first permission provider");
+                return;
+            }
+
+            // Remove all providers, then re-add with HyperPerms first
+            for (var p : providers) {
+                module.removeProvider(p);
+            }
+            module.addProvider(permissionProvider);
+            for (var p : providers) {
+                if (p != permissionProvider) {
+                    module.addProvider(p);
+                }
+            }
+
+            Logger.info("Reordered permission providers - HyperPerms is now the primary provider");
+        } catch (Exception e) {
+            Logger.warn("Could not reorder permission providers: %s", e.getMessage());
+            Logger.warn("Some plugins may not be able to enumerate permissions via the native API");
         }
     }
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+*No changes yet*
+
+## [2.8.4] - 2026-02-14
+
 ### Changed
 
 - **HyperFactions permission registry overhaul**: Reorganized all HyperFactions permissions into a proper hierarchical structure with category wildcards (`hyperfactions.faction.*`, `hyperfactions.member.*`, `hyperfactions.territory.*`, etc.) and better descriptions

@@ -891,69 +891,94 @@ public final class PermissionRegistry {
      * "com.hyperfactions.hyperfactions.command.faction" instead of "hyperfactions.faction"
      */
     private void registerHyperFactionsPermissions() {
-        // ==================== Standard HyperFactions permissions ====================
-        // Wildcards
+        // ==================== Category Wildcards ====================
         register("hyperfactions.*", "Full access to all HyperFactions features", "hyperfactions", "HyperFactions");
-
-        // Core permissions
-        register("hyperfactions.use", "Basic access to HyperFactions", "hyperfactions", "HyperFactions");
-        register("hyperfactions.create", "Create a new faction", "hyperfactions", "HyperFactions");
-        register("hyperfactions.invite", "Invite players to faction", "hyperfactions", "HyperFactions");
-        register("hyperfactions.kick", "Kick members from faction", "hyperfactions", "HyperFactions");
-        register("hyperfactions.disband", "Dissolve faction", "hyperfactions", "HyperFactions");
-        register("hyperfactions.promote", "Promote faction members", "hyperfactions", "HyperFactions");
-        register("hyperfactions.demote", "Demote faction members", "hyperfactions", "HyperFactions");
-        register("hyperfactions.transfer", "Transfer faction leadership", "hyperfactions", "HyperFactions");
-
-        // Territory permissions
-        register("hyperfactions.claim", "Claim territory", "hyperfactions", "HyperFactions");
-        register("hyperfactions.unclaim", "Unclaim territory", "hyperfactions", "HyperFactions");
-        register("hyperfactions.overclaim", "Overclaim enemy territory", "hyperfactions", "HyperFactions");
-        register("hyperfactions.map", "View territory map", "hyperfactions", "HyperFactions");
-
-        // Home permissions
-        register("hyperfactions.home", "Teleport to faction home", "hyperfactions", "HyperFactions");
-        register("hyperfactions.sethome", "Set faction home", "hyperfactions", "HyperFactions");
-
-        // Management permissions
-        register("hyperfactions.rename", "Rename faction", "hyperfactions", "HyperFactions");
-        register("hyperfactions.desc", "Set faction description", "hyperfactions", "HyperFactions");
-        register("hyperfactions.color", "Set faction color", "hyperfactions", "HyperFactions");
-        register("hyperfactions.open", "Open faction to public", "hyperfactions", "HyperFactions");
-        register("hyperfactions.close", "Close faction to public", "hyperfactions", "HyperFactions");
-
-        // Relation permissions
-        register("hyperfactions.ally", "Manage alliances", "hyperfactions", "HyperFactions");
-        register("hyperfactions.enemy", "Declare enemies", "hyperfactions", "HyperFactions");
-        register("hyperfactions.neutral", "Set neutral relations", "hyperfactions", "HyperFactions");
-
-        // Chat permissions
-        register("hyperfactions.chat", "Access faction chat", "hyperfactions", "HyperFactions");
-        register("hyperfactions.chat.faction", "Use faction chat", "hyperfactions", "HyperFactions");
-        register("hyperfactions.chat.ally", "Use alliance chat", "hyperfactions", "HyperFactions");
-
-        // Admin permissions
-        register("hyperfactions.admin", "Full admin access", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.*", "All admin permissions", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.reload", "Reload configuration", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.bypass", "Toggle bypass mode", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.zones", "Manage zones", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.forcejoin", "Force join a faction", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.forceleave", "Force leave a faction", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.forcedisband", "Force disband a faction", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.setpower", "Set faction power", "hyperfactions", "HyperFactions");
-        register("hyperfactions.admin.setmaxpower", "Set faction max power", "hyperfactions", "HyperFactions");
-
-        // Bypass permissions
+        register("hyperfactions.faction.*", "All faction management permissions", "hyperfactions", "HyperFactions");
+        register("hyperfactions.member.*", "All membership management permissions", "hyperfactions", "HyperFactions");
+        register("hyperfactions.territory.*", "All territory claim permissions", "hyperfactions", "HyperFactions");
+        register("hyperfactions.teleport.*", "All teleportation permissions", "hyperfactions", "HyperFactions");
+        register("hyperfactions.relation.*", "All diplomatic relation permissions", "hyperfactions", "HyperFactions");
+        register("hyperfactions.chat.*", "All chat permissions", "hyperfactions", "HyperFactions");
+        register("hyperfactions.info.*", "All information viewing permissions", "hyperfactions", "HyperFactions");
         register("hyperfactions.bypass.*", "Bypass all protections", "hyperfactions", "HyperFactions");
-        register("hyperfactions.bypass.warmup", "Skip teleport warmup", "hyperfactions", "HyperFactions");
-        register("hyperfactions.bypass.cooldown", "Skip teleport cooldown", "hyperfactions", "HyperFactions");
-        register("hyperfactions.bypass.protection", "Bypass claim protection", "hyperfactions", "HyperFactions");
-        register("hyperfactions.bypass.build", "Bypass build protection", "hyperfactions", "HyperFactions");
-        register("hyperfactions.bypass.interact", "Bypass interact protection", "hyperfactions", "HyperFactions");
-        register("hyperfactions.bypass.container", "Bypass container protection", "hyperfactions", "HyperFactions");
-        register("hyperfactions.bypass.damage", "Bypass damage protection", "hyperfactions", "HyperFactions");
-        register("hyperfactions.bypass.use", "Bypass use protection", "hyperfactions", "HyperFactions");
+        register("hyperfactions.admin.*", "All admin permissions", "hyperfactions", "HyperFactions");
+
+        // ==================== Basic Access ====================
+        register("hyperfactions.use", "Basic faction access - required for GUI", "hyperfactions", "HyperFactions");
+
+        // ==================== Faction Management (hyperfactions.faction.*) ====================
+        register("hyperfactions.faction.create", "Create a new faction", "hyperfactions", "HyperFactions");
+        register("hyperfactions.faction.disband", "Disband your faction (leader only)", "hyperfactions", "HyperFactions");
+        register("hyperfactions.faction.rename", "Rename your faction", "hyperfactions", "HyperFactions");
+        register("hyperfactions.faction.description", "Set faction description", "hyperfactions", "HyperFactions");
+        register("hyperfactions.faction.tag", "Set faction tag", "hyperfactions", "HyperFactions");
+        register("hyperfactions.faction.color", "Set faction color", "hyperfactions", "HyperFactions");
+        register("hyperfactions.faction.open", "Make faction open (anyone can join)", "hyperfactions", "HyperFactions");
+        register("hyperfactions.faction.close", "Make faction closed (invite only)", "hyperfactions", "HyperFactions");
+        register("hyperfactions.faction.permissions", "Edit faction territory permissions", "hyperfactions", "HyperFactions");
+
+        // ==================== Membership (hyperfactions.member.*) ====================
+        register("hyperfactions.member.invite", "Invite players to your faction", "hyperfactions", "HyperFactions");
+        register("hyperfactions.member.join", "Accept faction invites / request to join", "hyperfactions", "HyperFactions");
+        register("hyperfactions.member.leave", "Leave your faction", "hyperfactions", "HyperFactions");
+        register("hyperfactions.member.kick", "Kick members from your faction", "hyperfactions", "HyperFactions");
+        register("hyperfactions.member.promote", "Promote faction members", "hyperfactions", "HyperFactions");
+        register("hyperfactions.member.demote", "Demote faction members", "hyperfactions", "HyperFactions");
+        register("hyperfactions.member.transfer", "Transfer faction leadership", "hyperfactions", "HyperFactions");
+
+        // ==================== Territory (hyperfactions.territory.*) ====================
+        register("hyperfactions.territory.claim", "Claim territory chunks", "hyperfactions", "HyperFactions");
+        register("hyperfactions.territory.unclaim", "Unclaim territory chunks", "hyperfactions", "HyperFactions");
+        register("hyperfactions.territory.overclaim", "Overclaim enemy territory", "hyperfactions", "HyperFactions");
+        register("hyperfactions.territory.map", "View faction territory map", "hyperfactions", "HyperFactions");
+
+        // ==================== Teleportation (hyperfactions.teleport.*) ====================
+        register("hyperfactions.teleport.home", "Teleport to faction home", "hyperfactions", "HyperFactions");
+        register("hyperfactions.teleport.sethome", "Set faction home location", "hyperfactions", "HyperFactions");
+        register("hyperfactions.teleport.delhome", "Delete faction home location", "hyperfactions", "HyperFactions");
+        register("hyperfactions.teleport.stuck", "Use the /f stuck command", "hyperfactions", "HyperFactions");
+
+        // ==================== Diplomacy (hyperfactions.relation.*) ====================
+        register("hyperfactions.relation.ally", "Request/accept ally relations", "hyperfactions", "HyperFactions");
+        register("hyperfactions.relation.enemy", "Declare enemy relations", "hyperfactions", "HyperFactions");
+        register("hyperfactions.relation.neutral", "Set neutral relations", "hyperfactions", "HyperFactions");
+        register("hyperfactions.relation.view", "View faction relations", "hyperfactions", "HyperFactions");
+
+        // ==================== Communication (hyperfactions.chat.*) ====================
+        register("hyperfactions.chat.faction", "Send faction chat messages", "hyperfactions", "HyperFactions");
+        register("hyperfactions.chat.ally", "Send ally chat messages", "hyperfactions", "HyperFactions");
+
+        // ==================== Information (hyperfactions.info.*) ====================
+        register("hyperfactions.info.faction", "View faction info", "hyperfactions", "HyperFactions");
+        register("hyperfactions.info.list", "View faction list", "hyperfactions", "HyperFactions");
+        register("hyperfactions.info.player", "View player info", "hyperfactions", "HyperFactions");
+        register("hyperfactions.info.power", "View power info", "hyperfactions", "HyperFactions");
+        register("hyperfactions.info.members", "View faction members", "hyperfactions", "HyperFactions");
+        register("hyperfactions.info.logs", "View faction activity logs", "hyperfactions", "HyperFactions");
+        register("hyperfactions.info.help", "View help", "hyperfactions", "HyperFactions");
+
+        // ==================== Bypass (hyperfactions.bypass.*) ====================
+        register("hyperfactions.bypass.build", "Bypass block placement/breaking protection", "hyperfactions", "HyperFactions");
+        register("hyperfactions.bypass.interact", "Bypass interaction protection (doors, buttons)", "hyperfactions", "HyperFactions");
+        register("hyperfactions.bypass.container", "Bypass container protection (chests)", "hyperfactions", "HyperFactions");
+        register("hyperfactions.bypass.damage", "Bypass entity damage protection", "hyperfactions", "HyperFactions");
+        register("hyperfactions.bypass.use", "Bypass item use protection", "hyperfactions", "HyperFactions");
+        register("hyperfactions.bypass.warmup", "Bypass home warmup delay", "hyperfactions", "HyperFactions");
+        register("hyperfactions.bypass.cooldown", "Bypass home cooldown timer", "hyperfactions", "HyperFactions");
+
+        // ==================== Admin (hyperfactions.admin.*) ====================
+        register("hyperfactions.admin.use", "Base admin access (opens admin GUI)", "hyperfactions", "HyperFactions");
+        register("hyperfactions.admin.reload", "Reload configuration", "hyperfactions", "HyperFactions");
+        register("hyperfactions.admin.debug", "Debug commands", "hyperfactions", "HyperFactions");
+        register("hyperfactions.admin.zones", "Manage safezones and warzones", "hyperfactions", "HyperFactions");
+        register("hyperfactions.admin.disband", "Force disband any faction", "hyperfactions", "HyperFactions");
+        register("hyperfactions.admin.modify", "Modify any faction", "hyperfactions", "HyperFactions");
+        register("hyperfactions.admin.bypass.limits", "Bypass claim limits", "hyperfactions", "HyperFactions");
+        register("hyperfactions.admin.backup", "Manage backups (create, restore, delete)", "hyperfactions", "HyperFactions");
+
+        // ==================== Limit Permissions ====================
+        register("hyperfactions.limit.claims.*", "Maximum claims limit (e.g., hyperfactions.limit.claims.50)", "hyperfactions", "HyperFactions");
+        register("hyperfactions.limit.power.*", "Maximum power limit (e.g., hyperfactions.limit.power.100)", "hyperfactions", "HyperFactions");
 
         // ==================== Hytale command path format ====================
         // Hytale uses full Java package path for plugin commands

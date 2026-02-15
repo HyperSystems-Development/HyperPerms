@@ -73,9 +73,9 @@ public final class RuntimePermissionDiscovery {
     /** Namespace -> plugin name mapping (built once at startup) */
     private final Map<String, String> namespaceToPlugin = new ConcurrentHashMap<>();
 
-    /** Set of built-in namespaces that should never be discovered */
+    /** Set of built-in namespaces that should never be discovered at runtime */
     private static final Set<String> BUILT_IN_NAMESPACES = Set.of(
-        "hyperperms", "hytale", "hyperhomes", "hyperwarps", "hyperfactions",
+        "hyperperms", "hytale",
         "com" // com.* packages are handled by built-in registrations
     );
 
@@ -483,7 +483,7 @@ public final class RuntimePermissionDiscovery {
                 String fileName = jarPath.getFileName().toString();
                 String pluginName = extractPluginNameFromJar(fileName.substring(0, fileName.length() - 4));
 
-                // Skip built-in plugins
+                // Skip built-in namespaces (HyperPerms itself, Hytale)
                 if (BUILT_IN_NAMESPACES.contains(pluginName.toLowerCase())) {
                     continue;
                 }
@@ -510,6 +510,7 @@ public final class RuntimePermissionDiscovery {
                 cacheChanged = true;
                 Set<String> foundPermissions = new HashSet<>();
                 String actualPluginName = pluginName;
+                String manifestGroup = null;
 
                 try (JarFile jar = new JarFile(jarPath.toFile())) {
                     // Read manifest.json if present
@@ -520,6 +521,9 @@ public final class RuntimePermissionDiscovery {
                             JsonObject manifest = JsonParser.parseString(content).getAsJsonObject();
                             if (manifest.has("Name")) {
                                 actualPluginName = manifest.get("Name").getAsString();
+                            }
+                            if (manifest.has("Group")) {
+                                manifestGroup = manifest.get("Group").getAsString();
                             }
                         } catch (Exception e) {
                             // Ignore manifest read errors
@@ -542,6 +546,38 @@ public final class RuntimePermissionDiscovery {
 
                 } catch (Exception e) {
                     Logger.debug("[Discovery] Failed to scan JAR %s: %s", fileName, e.getMessage());
+                }
+
+                // Build accepted namespaces from all available metadata
+                Set<String> acceptedNs = new HashSet<>();
+                // JAR filename-derived name (e.g., "PlaceholderAPI" -> "placeholderapi")
+                acceptedNs.add(pluginName.toLowerCase().replaceAll("[^a-z0-9]", ""));
+                // Manifest Name (e.g., "WiFlowPlaceholderAPI" -> "wiflowplaceholderapi")
+                String pluginNs = actualPluginName.toLowerCase().replaceAll("[^a-z0-9]", "");
+                acceptedNs.add(pluginNs);
+                // Manifest Group (e.g., "Ecotale" -> "ecotale")
+                if (manifestGroup != null) {
+                    String groupNs = manifestGroup.toLowerCase().replaceAll("[^a-z0-9]", "");
+                    if (groupNs.length() >= 3) { // skip tiny groups like "io", "com"
+                        acceptedNs.add(groupNs);
+                    }
+                }
+
+                // Filter: only keep permissions whose namespace matches an accepted namespace
+                // Uses prefix matching in both directions for family plugins (ecotale/ecotalecoins)
+                int beforeFilter = foundPermissions.size();
+                foundPermissions.removeIf(perm -> {
+                    String ns = extractNamespace(perm);
+                    for (String accepted : acceptedNs) {
+                        if (ns.equals(accepted) || accepted.startsWith(ns) || ns.startsWith(accepted)) {
+                            return false; // keep
+                        }
+                    }
+                    return true; // remove
+                });
+                if (beforeFilter != foundPermissions.size()) {
+                    Logger.debug("[Discovery] Namespace filter removed %d false positives from %s (accepted: %s)",
+                        beforeFilter - foundPermissions.size(), fileName, acceptedNs);
                 }
 
                 // Update namespace mappings
@@ -572,12 +608,13 @@ public final class RuntimePermissionDiscovery {
             saveJarCache(newCache);
         }
 
-        // Pre-register discovered permissions
+        // Pre-register discovered permissions (skip already built-in ones)
         int preRegistered = 0;
+        PermissionRegistry registry = PermissionRegistry.getInstance();
         for (Map.Entry<String, Set<String>> entry : jarPermissions.entrySet()) {
             String pluginName = entry.getKey();
             for (String perm : entry.getValue()) {
-                if (!discovered.containsKey(perm)) {
+                if (!discovered.containsKey(perm) && !registry.isBuiltIn(perm)) {
                     long now = System.currentTimeMillis();
                     String namespace = extractNamespace(perm);
                     discovered.put(perm, new DiscoveredPermission(perm, pluginName, namespace, now, now));

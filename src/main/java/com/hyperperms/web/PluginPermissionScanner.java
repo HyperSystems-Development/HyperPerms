@@ -27,9 +27,11 @@ public final class PluginPermissionScanner {
     public List<PluginPermissions> scanInstalledPlugins() {
         PermissionRegistry registry = hyperPerms.getPermissionRegistry();
 
-        // Group permissions by plugin name
+        // Group permissions by plugin name, excluding Hytale command path format (com.*)
+        // which are needed for wildcard resolution but not useful in the web UI
         Map<String, List<PermissionRegistry.PermissionInfo>> byPlugin =
             registry.getAll().stream()
+                .filter(p -> !p.getPermission().startsWith("com."))
                 .collect(Collectors.groupingBy(PermissionRegistry.PermissionInfo::getPlugin));
 
         List<PluginPermissions> result = new ArrayList<>();

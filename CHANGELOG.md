@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No changes yet*
+### Changed
+
+- **HyperFactions permission registry overhaul**: Reorganized all HyperFactions permissions into a proper hierarchical structure with category wildcards (`hyperfactions.faction.*`, `hyperfactions.member.*`, `hyperfactions.territory.*`, etc.) and better descriptions
+- **Runtime discovery namespace filtering**: Only keeps permissions whose namespace matches the plugin's JAR filename, manifest Name, or manifest Group — eliminates false positives from bundled/relocated dependencies
+
+### Fixed
+
+- **Web editor showing `com.*` command path permissions**: Hytale command path format permissions (e.g., `com.hyperfactions.hyperfactions.command.faction`) are now filtered from the web UI plugin permission scanner (still used internally for wildcard resolution)
+- **Runtime discovery no longer skips HyperSystems plugins**: Removed hardcoded exclusion of `hyperhomes`, `hyperwarps`, `hyperfactions` from discovery — these plugins register their own permissions via the built-in registry and discovery should not interfere
 
 ## [2.8.3] - 2026-02-11
 

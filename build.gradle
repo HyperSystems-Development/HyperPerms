@@ -31,7 +31,7 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided at runtime)
-    compileOnly files(rootProject.hytaleServerJarPrerelease)
+    compileOnly files(rootProject.hytaleServerJar)
 
     // Note: HyFactions is a soft dependency using pure reflection
     // No compile-time dependency needed - just runtime class detection

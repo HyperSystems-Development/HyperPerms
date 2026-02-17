@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+*No changes yet*
+
+## [2.8.5] - 2026-02-17
+
+**Server Version:** `2026.02.17-255364b8e`
+
 ### Fixed
 
 - **Server compatibility**: Compile against latest Hytale server JAR to resolve `NoSuchMethodError` on `PacketHandler.write()` (TabListListener crash)

@@ -5,7 +5,7 @@
   "Description": "A production-grade permissions management plugin for Hytale with contextual permissions, wildcard support, timed permissions, chat formatting, tab list formatting, prefix/suffix management, backup system, HyFactions integration, WerChat integration, and MysticNameTags integration.",
   "Website": "https://github.com/HyperSystemsDev/HyperPerms",
   "Main": "com.hyperperms.platform.HyperPermsPlugin",
-  "ServerVersion": "*",
+  "ServerVersion": "${serverVersion}",
   "OptionalDependencies": {
     "TheNewEconomy:VaultUnlocked": "*",
     "HelpChat:PlaceholderAPI": ">= 1.0.2",

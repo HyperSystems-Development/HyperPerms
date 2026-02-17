@@ -55,8 +55,11 @@ public final class UserManagerImpl implements UserManager {
         // Check cache first - if already loaded, return immediately
         User cached = loadedUsers.get(uuid);
         if (cached != null) {
+            Logger.debug("loadUser: %s already in loadedUsers (total: %d)", uuid, loadedUsers.size());
             return CompletableFuture.completedFuture(Optional.of(cached));
         }
+
+        Logger.debug("loadUser: loading %s from storage (not in loadedUsers, total: %d)", uuid, loadedUsers.size());
 
         return storage.loadUser(uuid).thenApply(opt -> {
             boolean isNew = opt.isEmpty();
@@ -64,24 +67,30 @@ public final class UserManagerImpl implements UserManager {
 
             if (opt.isPresent()) {
                 loaded = opt.get();
+                Logger.debug("loadUser: storage returned existing user for %s", uuid);
             } else {
                 // Create a new user with default settings
                 loaded = new User(uuid, null);
                 loaded.setPrimaryGroup(defaultGroup);
+                Logger.debug("loadUser: no storage entry for %s, created new user with group '%s'", uuid, defaultGroup);
             }
 
             // Set the listener on the user
             loaded.setListener(permissionListener);
 
-            // compute() is atomic - captures the result directly to avoid TOCTOU
+            // compute() is atomic - first writer wins to prevent race condition
+            // where a concurrent loadUser replaces a user whose username was
+            // already set by onPlayerConnect's thenAccept callback
             User result = loadedUsers.compute(uuid, (key, existing) -> {
-                if (existing == null || existing.getPrimaryGroup().equals(defaultGroup)) {
+                if (existing == null) {
                     return loaded;
                 }
                 return existing;
             });
 
             cache.invalidate(uuid);
+
+            Logger.debug("loadUser: %s now in loadedUsers (total: %d)", uuid, loadedUsers.size());
 
             // Fire user load event
             eventBus.fire(new UserLoadEvent(result, UserLoadEvent.LoadSource.STORAGE, isNew));

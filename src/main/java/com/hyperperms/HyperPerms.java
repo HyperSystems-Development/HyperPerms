@@ -847,6 +847,16 @@ public final class HyperPerms implements HyperPermsAPI {
      *
      * @param provider the player context provider
      */
+    /**
+     * Gets the player context provider.
+     *
+     * @return the player context provider
+     */
+    @NotNull
+    public PlayerContextProvider getPlayerContextProvider() {
+        return playerContextProvider;
+    }
+
     public void setPlayerContextProvider(@NotNull PlayerContextProvider provider) {
         this.playerContextProvider = provider;
         // Re-register calculators with new provider

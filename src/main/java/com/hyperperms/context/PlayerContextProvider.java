@@ -7,10 +7,10 @@ import java.util.UUID;
 
 /**
  * Provider interface for obtaining player contextual information.
- * <p>
+ *
  * This interface abstracts platform-specific player data retrieval.
  * Implementations should be provided by the platform adapter (e.g., HytalePlatform).
- * <p>
+ *
  * When the Hytale API becomes available, the implementation should query
  * the actual player state from the server.
  */
@@ -45,14 +45,12 @@ public interface PlayerContextProvider {
 
     /**
      * Gets the current time of day for the player's world.
-     * <p>
+     *
      * Time periods are based on the in-game day/night cycle:
-     * <ul>
-     *   <li>{@code dawn} - Early morning transition period</li>
-     *   <li>{@code day} - Full daylight period</li>
-     *   <li>{@code dusk} - Evening transition period</li>
-     *   <li>{@code night} - Full darkness period</li>
-     * </ul>
+     * - dawn: Early morning transition period
+     * - day: Full daylight period
+     * - dusk: Evening transition period
+     * - night: Full darkness period
      *
      * @param uuid the player's UUID
      * @return the time of day (day, night, dawn, dusk), or null if unavailable
@@ -75,7 +73,7 @@ public interface PlayerContextProvider {
 
     /**
      * Gets the name of the region/zone the player is currently in.
-     * <p>
+     *
      * Regions are typically defined by protection plugins or server configuration.
      *
      * @param uuid the player's UUID
@@ -83,6 +81,24 @@ public interface PlayerContextProvider {
      */
     @Nullable
     default String getRegion(@NotNull UUID uuid) {
+        return null;
+    }
+
+    /**
+     * Finds the UUID of an online player by username (case-insensitive).
+     *
+     * This exists as a safety net for a race condition: when a player connects,
+     * their User is loaded asynchronously via UserManager.loadUser(). If a
+     * command runs before that async load completes, the user won't be in the
+     * loaded-users map yet. This method checks the platform's online-player list
+     * directly so that PlayerResolver can still find and load the user
+     * synchronously.
+     *
+     * @param name the player username (case-insensitive)
+     * @return the player's UUID, or null if no online player matches
+     */
+    @Nullable
+    default UUID findOnlineUuidByName(@NotNull String name) {
         return null;
     }
 

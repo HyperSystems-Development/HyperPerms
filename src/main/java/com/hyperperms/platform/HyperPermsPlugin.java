@@ -16,13 +16,11 @@ import java.util.logging.Level;
 
 /**
  * Main Hytale plugin class for HyperPerms.
- * <p>
+ *
  * This class integrates HyperPerms with the Hytale server by:
- * <ul>
- *   <li>Registering as a permission provider</li>
- *   <li>Listening to player connect/disconnect events</li>
- *   <li>Tracking world and game mode changes for contexts</li>
- * </ul>
+ * - Registering as a permission provider
+ * - Listening to player connect/disconnect events
+ * - Tracking world and game mode changes for contexts
  */
 public class HyperPermsPlugin extends JavaPlugin {
 
@@ -161,9 +159,9 @@ public class HyperPermsPlugin extends JavaPlugin {
 
     /**
      * Ensures HyperPerms is the first permission provider in the chain.
-     * <p>
+     *
      * This is critical for compatibility with plugins like EssentialsPlus that call
-     * {@code getFirstPermissionProvider().getGroupPermissions()} to enumerate permissions.
+     * getFirstPermissionProvider().getGroupPermissions() to enumerate permissions.
      * If the native Hytale provider is first, it won't understand HyperPerms' virtual
      * user groups and returns empty results.
      *
@@ -312,7 +310,7 @@ public class HyperPermsPlugin extends JavaPlugin {
         String username = playerRef.getUsername();
         String worldName = event.getWorld() != null ? event.getWorld().getName() : null;
 
-        Logger.debug("Player connecting: %s (%s)", username, uuid);
+        Logger.info("Player connecting: %s (%s) world=%s", username, uuid, worldName);
 
         // Track the player in the adapter
         adapter.trackPlayer(playerRef, worldName);
@@ -326,7 +324,7 @@ public class HyperPermsPlugin extends JavaPlugin {
             // Save new users to persist their default group assignment
             if (isNewUser) {
                 hyperPerms.getUserManager().saveUser(user).thenRun(() -> {
-                    Logger.debug("Created and saved new user %s with default group: %s",
+                    Logger.info("Created and saved new user %s with default group: %s",
                         username, user.getPrimaryGroup());
                 }).exceptionally(e -> {
                     Logger.severe("Failed to save new user: " + username, e);
@@ -344,9 +342,11 @@ public class HyperPermsPlugin extends JavaPlugin {
             // This ensures negations are properly applied
             syncPermissionsToHytale(uuid, user);
 
-            Logger.debug("Loaded permissions for %s", username);
+            int loadedCount = hyperPerms.getUserManager().getLoadedUsers().size();
+            Logger.info("Loaded permissions for %s (%s), group=%s, loadedUsers=%d",
+                    username, uuid, user.getPrimaryGroup(), loadedCount);
         }).exceptionally(e -> {
-            Logger.severe("Failed to load permissions for %s", e, username);
+            Logger.severe("Failed to load permissions for " + username + " (" + uuid + ")", e);
             return null;
         });
     }
@@ -362,7 +362,7 @@ public class HyperPermsPlugin extends JavaPlugin {
         java.util.UUID uuid = playerRef.getUuid();
         String username = playerRef.getUsername();
 
-        Logger.debug("Player disconnecting: %s", username);
+        Logger.info("Player disconnecting: %s (%s)", username, uuid);
 
         // Save user data
         var user = hyperPerms.getUserManager().getUser(uuid);
@@ -371,15 +371,15 @@ public class HyperPermsPlugin extends JavaPlugin {
                 // During shutdown, save synchronously to avoid classloader teardown race
                 try {
                     hyperPerms.getUserManager().saveUser(user).join();
-                    Logger.debug("Saved permissions for %s (shutdown)", username);
+                    Logger.info("Saved permissions for %s (shutdown)", username);
                 } catch (Exception e) {
-                    Logger.severe("Failed to save permissions for %s", e, username);
+                    Logger.severe("Failed to save permissions for " + username, e);
                 }
             } else {
                 hyperPerms.getUserManager().saveUser(user).thenRun(() -> {
                     Logger.debug("Saved permissions for %s", username);
                 }).exceptionally(e -> {
-                    Logger.severe("Failed to save permissions for %s", e, username);
+                    Logger.severe("Failed to save permissions for " + username, e);
                     return null;
                 });
             }
@@ -439,7 +439,7 @@ public class HyperPermsPlugin extends JavaPlugin {
 
     /**
      * Syncs resolved permissions to Hytale's internal permission system.
-     * <p>
+     *
      * Since Hytale doesn't query our PermissionProvider for permission checks,
      * we must proactively push permission changes. Specifically:
      * - Remove negated permissions so Hytale's internal storage doesn't grant them
@@ -495,7 +495,7 @@ public class HyperPermsPlugin extends JavaPlugin {
 
             Logger.debug("Permission sync complete for %s", user.getUsername());
         } catch (Exception e) {
-            Logger.severe("Failed to sync permissions to Hytale for %s", e, user.getUsername());
+            Logger.severe("Failed to sync permissions to Hytale for " + user.getUsername(), e);
         }
     }
 

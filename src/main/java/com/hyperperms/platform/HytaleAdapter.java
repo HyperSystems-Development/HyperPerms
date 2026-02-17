@@ -97,6 +97,20 @@ public class HytaleAdapter implements PlayerContextProvider {
         return null;
     }
 
+    @Override
+    @Nullable
+    public UUID findOnlineUuidByName(@NotNull String name) {
+        for (PlayerData data : playerData.values()) {
+            if (data.playerRef != null) {
+                String username = data.playerRef.getUsername();
+                if (username != null && username.equalsIgnoreCase(name)) {
+                    return data.playerRef.getUuid();
+                }
+            }
+        }
+        return null;
+    }
+
     // ==================== Player Tracking ====================
 
     /**

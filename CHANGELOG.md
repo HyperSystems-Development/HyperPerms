@@ -10,11 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Server compatibility**: Compile against latest Hytale server JAR to resolve `NoSuchMethodError` on `PacketHandler.write()` (TabListListener crash)
+- **User load race condition**: `UserManagerImpl.loadUser()` now uses first-writer-wins to prevent concurrent loads from replacing a user whose username was already set by `onPlayerConnect`
+- **Server version warning**: Manifest now specifies target server version (prevents PluginManager "does not specify a target server version" warning)
 
 ### Added
 
 - **Offline player resolution**: `resolveUser()` now falls back to storage lookup and PlayerDB API when in-memory search fails, enabling commands like `/hp user <name> info` to work for offline players
 - **PlayerDB integration**: New `PlayerDBService` utility for looking up any Hytale player by username via the playerdb.co API (5-minute TTL cache)
+- **Online player safety net**: New `findOnlineUuidByName()` on `PlayerContextProvider` resolves players who are connected but whose async user load hasn't completed yet
+
+### Changed
+
+- **PlayerResolver extraction**: Moved inline `resolveUser()` logic from `HyperPermsCommand` to dedicated `PlayerResolver` utility with 5-step resolution chain (UUID parse → loaded users → online players → storage → PlayerDB)
+- **Improved logging**: Player connect/disconnect, user loading, and permission sync now use info level for better server diagnostics
 
 ## [2.8.4] - 2026-02-14
 

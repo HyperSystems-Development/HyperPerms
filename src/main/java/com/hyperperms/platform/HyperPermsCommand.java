@@ -6,7 +6,7 @@ import com.hyperperms.model.Node;
 import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
 import com.hyperperms.util.Logger;
-import com.hyperperms.util.PlayerDBService;
+import com.hyperperms.util.PlayerResolver;
 import com.hyperperms.util.TimeUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
@@ -175,130 +175,6 @@ public class HyperPermsCommand extends AbstractCommand {
         parts.add(Message.raw("-".repeat(width)).color(GRAY));
 
         return Message.join(parts.toArray(new Message[0]));
-    }
-
-    // ==================== Utility Methods ====================
-
-    /**
-     * Finds a user by name from loaded users.
-     * Returns the user if found by exact (case-insensitive) match.
-     */
-    private static User findUserByName(HyperPerms hyperPerms, String name) {
-        var loadedUsers = hyperPerms.getUserManager().getLoadedUsers();
-        Logger.debug("findUserByName: searching for '%s' among %d loaded users", name, loadedUsers.size());
-        for (User user : loadedUsers) {
-            String username = user.getUsername();
-            if (username == null) {
-                Logger.debug("findUserByName: user %s has NULL username", user.getUuid());
-                continue;
-            }
-            if (name.equalsIgnoreCase(username)) {
-                Logger.debug("findUserByName: matched '%s' -> %s (%s)", name, username, user.getUuid());
-                return user;
-            }
-        }
-        Logger.debug("findUserByName: no match for '%s'", name);
-        return null;
-    }
-
-    /**
-     * Tries to parse a string as UUID, returns empty if not a valid UUID.
-     */
-    private static Optional<UUID> parseUuid(String input) {
-        try {
-            return Optional.of(UUID.fromString(input));
-        } catch (IllegalArgumentException e) {
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Resolves a player identifier (name or UUID string) to a User.
-     * Loads from storage if necessary. Does not create new users.
-     */
-    private static User resolveUser(HyperPerms hyperPerms, String identifier) {
-        return resolveUser(hyperPerms, identifier, false);
-    }
-
-    /**
-     * Resolves a player identifier (name or UUID string) to a User.
-     * Loads from storage if necessary.
-     *
-     * @param hyperPerms the HyperPerms instance
-     * @param identifier player name or UUID string
-     * @param createIfNotExists if true and a UUID is provided, creates the user if not found
-     * @return the User, or null if not found (and createIfNotExists is false)
-     */
-    private static User resolveUser(HyperPerms hyperPerms, String identifier, boolean createIfNotExists) {
-        // Try as UUID first
-        Optional<UUID> uuidOpt = parseUuid(identifier);
-        if (uuidOpt.isPresent()) {
-            UUID uuid = uuidOpt.get();
-            User user = hyperPerms.getUserManager().getUser(uuid);
-            if (user != null) {
-                return user;
-            }
-            // Try to load from storage
-            Optional<User> loaded = hyperPerms.getUserManager().loadUser(uuid).join();
-            if (loaded.isPresent()) {
-                return loaded.get();
-            }
-            // Create if requested (useful for Tebex offline player support)
-            if (createIfNotExists) {
-                return hyperPerms.getUserManager().getOrCreateUser(uuid);
-            }
-            return null;
-        }
-
-        // Try as username — first check in-memory loaded users
-        User byName = findUserByName(hyperPerms, identifier);
-        if (byName != null) {
-            return byName;
-        }
-
-        // Fall back to storage lookup (previously connected players)
-        Logger.debug("resolveUser: name '%s' not in loaded users, trying storage lookup", identifier);
-        Optional<UUID> storedUuid = hyperPerms.getStorage().lookupUuid(identifier).join();
-        if (storedUuid.isPresent()) {
-            Logger.debug("resolveUser: storage found UUID %s for name '%s'", storedUuid.get(), identifier);
-            Optional<User> loaded = hyperPerms.getUserManager().loadUser(storedUuid.get()).join();
-            if (loaded.isPresent()) {
-                return loaded.get();
-            }
-        }
-
-        // Fall back to PlayerDB API (any Hytale player)
-        Logger.debug("resolveUser: trying PlayerDB API for '%s'", identifier);
-        var playerDbInfo = PlayerDBService.lookup(identifier).join();
-        if (playerDbInfo != null) {
-            Logger.debug("resolveUser: PlayerDB found %s (%s) for '%s'",
-                    playerDbInfo.username(), playerDbInfo.uuid(), identifier);
-            User user;
-            if (createIfNotExists) {
-                user = hyperPerms.getUserManager().getOrCreateUser(playerDbInfo.uuid());
-            } else {
-                Optional<User> loaded = hyperPerms.getUserManager().loadUser(playerDbInfo.uuid()).join();
-                user = loaded.orElse(null);
-            }
-            if (user != null) {
-                // Set the properly-cased username from PlayerDB
-                user.setUsername(playerDbInfo.username());
-                hyperPerms.getUserManager().saveUser(user);
-                return user;
-            }
-        }
-
-        Logger.debug("resolveUser: no match for '%s' in loaded users, storage, or PlayerDB", identifier);
-        return null;
-    }
-
-    /**
-     * Resolves a player identifier to a User, creating the user if a UUID is provided
-     * and the user doesn't exist. This is useful for Tebex integration where players
-     * may not have joined the server yet.
-     */
-    private static User resolveOrCreateUser(HyperPerms hyperPerms, String identifier) {
-        return resolveUser(hyperPerms, identifier, true);
     }
 
     // ==================== HpCommand Base Class ====================
@@ -1400,7 +1276,7 @@ public class HyperPermsCommand extends AbstractCommand {
             java.awt.Color WHITE = java.awt.Color.WHITE;
 
             String identifier = ctx.get(playerArg);
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
 
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
@@ -1520,7 +1396,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String durationStr = ctx.get(durationArg);
 
             // Use resolveOrCreateUser to support offline players (e.g., from Tebex)
-            User user = resolveOrCreateUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolveOrCreate(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 ctx.sender().sendMessage(Message.raw("Tip: Use UUID for offline players (e.g., from Tebex)"));
@@ -1586,7 +1462,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String identifier = ctx.get(playerArg);
             String permission = ctx.get(permArg);
 
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 return CompletableFuture.completedFuture(null);
@@ -1624,7 +1500,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String permission = ctx.get(permArg).toLowerCase();
             String durationStr = ctx.get(durationArg);
 
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 return CompletableFuture.completedFuture(null);
@@ -1692,7 +1568,7 @@ public class HyperPermsCommand extends AbstractCommand {
             }
 
             // Use resolveOrCreateUser to support offline players (e.g., from Tebex)
-            User user = resolveOrCreateUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolveOrCreate(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 ctx.sender().sendMessage(Message.raw("Tip: Use UUID for offline players (e.g., from Tebex)"));
@@ -1739,7 +1615,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String identifier = ctx.get(playerArg);
             String groupName = ctx.get(groupArg);
 
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 return CompletableFuture.completedFuture(null);
@@ -1781,7 +1657,7 @@ public class HyperPermsCommand extends AbstractCommand {
             }
 
             // Use resolveOrCreateUser to support offline players (e.g., from Tebex)
-            User user = resolveOrCreateUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolveOrCreate(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 ctx.sender().sendMessage(Message.raw("Tip: Use UUID for offline players (e.g., from Tebex)"));
@@ -1839,7 +1715,7 @@ public class HyperPermsCommand extends AbstractCommand {
             }
 
             // Find user
-            User user = resolveOrCreateUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolveOrCreate(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 ctx.sender().sendMessage(Message.raw("Tip: Use UUID for offline players (e.g., from Tebex)"));
@@ -1944,7 +1820,7 @@ public class HyperPermsCommand extends AbstractCommand {
             }
 
             // Find user
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 return CompletableFuture.completedFuture(null);
@@ -2025,7 +1901,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String identifier = ctx.get(playerArg);
             String prefix = stripQuotes(ctx.get(prefixArg));
 
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 return CompletableFuture.completedFuture(null);
@@ -2063,7 +1939,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String identifier = ctx.get(playerArg);
             String suffix = stripQuotes(ctx.get(suffixArg));
 
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 return CompletableFuture.completedFuture(null);
@@ -2098,7 +1974,7 @@ public class HyperPermsCommand extends AbstractCommand {
         protected CompletableFuture<Void> execute(CommandContext ctx) {
             String identifier = ctx.get(playerArg);
 
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 return CompletableFuture.completedFuture(null);
@@ -2158,13 +2034,13 @@ public class HyperPermsCommand extends AbstractCommand {
             String sourceId = ctx.get(sourceArg);
             String targetId = ctx.get(targetArg);
 
-            User source = resolveUser(hyperPerms, sourceId);
+            User source = PlayerResolver.resolve(hyperPerms, sourceId);
             if (source == null) {
                 ctx.sender().sendMessage(Message.raw("Source user not found: " + sourceId));
                 return CompletableFuture.completedFuture(null);
             }
 
-            User target = resolveUser(hyperPerms, targetId);
+            User target = PlayerResolver.resolve(hyperPerms, targetId);
             if (target == null) {
                 ctx.sender().sendMessage(Message.raw("Target user not found: " + targetId));
                 return CompletableFuture.completedFuture(null);
@@ -2223,7 +2099,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String identifier = ctx.get(playerArg);
             String permission = ctx.get(permArg);
 
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("✗ User not found: " + identifier).color(RED));
                 return CompletableFuture.completedFuture(null);
@@ -2862,7 +2738,7 @@ public class HyperPermsCommand extends AbstractCommand {
         @Override
         protected CompletableFuture<Void> execute(CommandContext ctx) {
             String identifier = ctx.get(userArg);
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
@@ -2961,7 +2837,7 @@ public class HyperPermsCommand extends AbstractCommand {
             String identifier = ctx.get(userArg);
             String permission = ctx.get(permArg);
             
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
                 return CompletableFuture.completedFuture(null);
@@ -3002,7 +2878,7 @@ public class HyperPermsCommand extends AbstractCommand {
         @Override
         protected CompletableFuture<Void> execute(CommandContext ctx) {
             String identifier = ctx.get(userArg);
-            User user = resolveUser(hyperPerms, identifier);
+            User user = PlayerResolver.resolve(hyperPerms, identifier);
             
             if (user == null) {
                 ctx.sender().sendMessage(Message.raw("User not found: " + identifier));

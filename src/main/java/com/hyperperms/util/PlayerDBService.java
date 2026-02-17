@@ -59,7 +59,7 @@ public final class PlayerDBService {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Logger.debug("PlayerDB: looking up '%s'", name);
+                Logger.info("PlayerDB: looking up '%s' via external API", name);
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(API_URL + name))

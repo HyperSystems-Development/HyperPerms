@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **PlayerResolver extraction**: Moved inline `resolveUser()` logic from `HyperPermsCommand` to dedicated `PlayerResolver` utility with 5-step resolution chain (UUID parse → loaded users → online players → storage → PlayerDB)
 - **Improved logging**: Player connect/disconnect, user loading, and permission sync now use info level for better server diagnostics
+- **Target-aware build**: Compile against release or prerelease server JAR via `-PhytaleTarget` Gradle flag
 
 ## [2.8.4] - 2026-02-14
 

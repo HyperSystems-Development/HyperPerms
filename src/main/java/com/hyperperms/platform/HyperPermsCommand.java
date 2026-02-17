@@ -5,6 +5,8 @@ import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
 import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
+import com.hyperperms.util.Logger;
+import com.hyperperms.util.PlayerDBService;
 import com.hyperperms.util.TimeUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
@@ -182,11 +184,20 @@ public class HyperPermsCommand extends AbstractCommand {
      * Returns the user if found by exact (case-insensitive) match.
      */
     private static User findUserByName(HyperPerms hyperPerms, String name) {
-        for (User user : hyperPerms.getUserManager().getLoadedUsers()) {
-            if (name.equalsIgnoreCase(user.getUsername())) {
+        var loadedUsers = hyperPerms.getUserManager().getLoadedUsers();
+        Logger.debug("findUserByName: searching for '%s' among %d loaded users", name, loadedUsers.size());
+        for (User user : loadedUsers) {
+            String username = user.getUsername();
+            if (username == null) {
+                Logger.debug("findUserByName: user %s has NULL username", user.getUuid());
+                continue;
+            }
+            if (name.equalsIgnoreCase(username)) {
+                Logger.debug("findUserByName: matched '%s' -> %s (%s)", name, username, user.getUuid());
                 return user;
             }
         }
+        Logger.debug("findUserByName: no match for '%s'", name);
         return null;
     }
 
@@ -239,8 +250,46 @@ public class HyperPermsCommand extends AbstractCommand {
             return null;
         }
 
-        // Try as username
-        return findUserByName(hyperPerms, identifier);
+        // Try as username — first check in-memory loaded users
+        User byName = findUserByName(hyperPerms, identifier);
+        if (byName != null) {
+            return byName;
+        }
+
+        // Fall back to storage lookup (previously connected players)
+        Logger.debug("resolveUser: name '%s' not in loaded users, trying storage lookup", identifier);
+        Optional<UUID> storedUuid = hyperPerms.getStorage().lookupUuid(identifier).join();
+        if (storedUuid.isPresent()) {
+            Logger.debug("resolveUser: storage found UUID %s for name '%s'", storedUuid.get(), identifier);
+            Optional<User> loaded = hyperPerms.getUserManager().loadUser(storedUuid.get()).join();
+            if (loaded.isPresent()) {
+                return loaded.get();
+            }
+        }
+
+        // Fall back to PlayerDB API (any Hytale player)
+        Logger.debug("resolveUser: trying PlayerDB API for '%s'", identifier);
+        var playerDbInfo = PlayerDBService.lookup(identifier).join();
+        if (playerDbInfo != null) {
+            Logger.debug("resolveUser: PlayerDB found %s (%s) for '%s'",
+                    playerDbInfo.username(), playerDbInfo.uuid(), identifier);
+            User user;
+            if (createIfNotExists) {
+                user = hyperPerms.getUserManager().getOrCreateUser(playerDbInfo.uuid());
+            } else {
+                Optional<User> loaded = hyperPerms.getUserManager().loadUser(playerDbInfo.uuid()).join();
+                user = loaded.orElse(null);
+            }
+            if (user != null) {
+                // Set the properly-cased username from PlayerDB
+                user.setUsername(playerDbInfo.username());
+                hyperPerms.getUserManager().saveUser(user);
+                return user;
+            }
+        }
+
+        Logger.debug("resolveUser: no match for '%s' in loaded users, storage, or PlayerDB", identifier);
+        return null;
     }
 
     /**

@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No changes yet*
+### Fixed
+
+- **Server compatibility**: Compile against latest Hytale server JAR to resolve `NoSuchMethodError` on `PacketHandler.write()` (TabListListener crash)
+
+### Added
+
+- **Offline player resolution**: `resolveUser()` now falls back to storage lookup and PlayerDB API when in-memory search fails, enabling commands like `/hp user <name> info` to work for offline players
+- **PlayerDB integration**: New `PlayerDBService` utility for looking up any Hytale player by username via the playerdb.co API (5-minute TTL cache)
 
 ## [2.8.4] - 2026-02-14
 

@@ -31,7 +31,7 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided at runtime)
-    compileOnly files('libs/HytaleServer.jar')
+    compileOnly files(rootProject.hytaleServerJarPrerelease)
 
     // Note: HyFactions is a soft dependency using pure reflection
     // No compile-time dependency needed - just runtime class detection
@@ -63,7 +63,7 @@ dependencies {
     compileOnly 'org.jetbrains:annotations:26.0.1'
 
     // VaultUnlocked API (soft dependency - compileOnly)
-    compileOnly files('libs/VaultUnlocked-Hytale-2.18.3.jar')
+    compileOnly files('libs/VaultUnlocked-Hytale-2.19.0.jar')
 
     // PlaceholderAPI Hytale (soft dependency - compileOnly)
     compileOnly 'at.helpch:placeholderapi-hytale:1.0.4'

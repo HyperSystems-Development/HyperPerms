@@ -164,14 +164,21 @@ public class PrefixSuffixResolver {
     
     /**
      * Resolves prefix/suffix from user's groups.
-     * Prioritizes the user's primary group for prefix/suffix, then falls back to weight-based resolution.
+     * Uses prefix/suffix priority to determine which group's prefix/suffix to use.
+     * Primary group is only used as a fallback if no group has a prefix/suffix set.
      */
     private CompletableFuture<ResolveResult> resolveFromGroups(
             @NotNull User user,
             @Nullable String customPrefix,
             @Nullable String customSuffix) {
-        
-        Set<String> groupNames = user.getInheritedGroups();
+
+        // Collect all group names including primary group (same as PermissionResolver)
+        Set<String> groupNames = new HashSet<>(user.getInheritedGroups());
+        String primaryGroupName = user.getPrimaryGroup();
+        if (primaryGroupName != null && !primaryGroupName.isEmpty()) {
+            groupNames.add(primaryGroupName);
+        }
+
         if (groupNames.isEmpty()) {
             // No groups - use defaults or custom values
             String prefix = customPrefix != null ? customPrefix : defaultPrefix;
@@ -184,13 +191,10 @@ public class PrefixSuffixResolver {
                 )
             );
         }
-        
-        // Get the user's explicit primary group name
-        String primaryGroupName = user.getPrimaryGroup();
-        
-        // Load all groups
+
+        // Load all groups from GroupManager (uses in-memory cache with latest changes)
         List<CompletableFuture<Optional<Group>>> groupFutures = groupNames.stream()
-            .map(name -> plugin.getStorage().loadGroup(name))
+            .map(name -> plugin.getGroupManager().loadGroup(name))
             .collect(Collectors.toList());
         
         return CompletableFuture.allOf(groupFutures.toArray(new CompletableFuture<?>[0]))
@@ -264,9 +268,9 @@ public class PrefixSuffixResolver {
             return CompletableFuture.completedFuture(accumulated);
         }
         
-        // Load parent groups
+        // Load parent groups from GroupManager (uses in-memory cache)
         List<CompletableFuture<Optional<Group>>> parentFutures = parentNames.stream()
-            .map(name -> plugin.getStorage().loadGroup(name))
+            .map(name -> plugin.getGroupManager().loadGroup(name))
             .collect(Collectors.toList());
         
         return CompletableFuture.allOf(parentFutures.toArray(new CompletableFuture<?>[0]))
@@ -468,18 +472,18 @@ public class PrefixSuffixResolver {
         // First, check if user has an explicit primary group set
         String explicitPrimary = user.getPrimaryGroup();
         if (explicitPrimary != null && !explicitPrimary.isEmpty()) {
-            return plugin.getStorage().loadGroup(explicitPrimary)
+            return plugin.getGroupManager().loadGroup(explicitPrimary)
                 .thenApply(opt -> opt.orElse(null));
         }
-        
+
         // Fallback: find highest weight group from inherited groups
         Set<String> groupNames = user.getInheritedGroups();
         if (groupNames.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
-        
+
         List<CompletableFuture<Optional<Group>>> futures = groupNames.stream()
-            .map(name -> plugin.getStorage().loadGroup(name))
+            .map(name -> plugin.getGroupManager().loadGroup(name))
             .collect(Collectors.toList());
         
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))

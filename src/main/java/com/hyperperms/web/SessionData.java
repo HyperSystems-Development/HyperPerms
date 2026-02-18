@@ -104,6 +104,8 @@ public final class SessionData {
         private final String prefix;
         private final String suffix;
         private final int weight;
+        private final int prefixPriority;
+        private final int suffixPriority;
         private final List<PermissionDto> permissions;
         private final List<String> parents;
 
@@ -113,6 +115,8 @@ public final class SessionData {
                 String prefix,
                 String suffix,
                 int weight,
+                int prefixPriority,
+                int suffixPriority,
                 @NotNull List<PermissionDto> permissions,
                 @NotNull List<String> parents
         ) {
@@ -121,6 +125,8 @@ public final class SessionData {
             this.prefix = prefix;
             this.suffix = suffix;
             this.weight = weight;
+            this.prefixPriority = prefixPriority;
+            this.suffixPriority = suffixPriority;
             this.permissions = permissions;
             this.parents = parents;
         }
@@ -139,6 +145,8 @@ public final class SessionData {
                     group.getPrefix(),
                     group.getSuffix(),
                     group.getWeight(),
+                    group.getPrefixPriority(),
+                    group.getSuffixPriority(),
                     permissions,
                     new ArrayList<>(group.getParentGroups())
             );
@@ -162,6 +170,14 @@ public final class SessionData {
 
         public int getWeight() {
             return weight;
+        }
+
+        public int getPrefixPriority() {
+            return prefixPriority;
+        }
+
+        public int getSuffixPriority() {
+            return suffixPriority;
         }
 
         public List<PermissionDto> getPermissions() {

@@ -20,6 +20,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -175,6 +177,11 @@ public class TabListListener {
                     serverListPlayers[i] = futures.get(i).join();
                 }
 
+                // Sort by group weight if enabled (descending — highest weight first)
+                if (tabListManager.isSortByWeight()) {
+                    sortByWeight(serverListPlayers);
+                }
+
                 // Send full list to the joining player
                 AddToServerPlayerList fullListPacket = new AddToServerPlayerList(serverListPlayers);
                 joiningPlayer.getPacketHandler().write(fullListPacket);
@@ -302,6 +309,11 @@ public class TabListListener {
                     serverListPlayers[i] = futures.get(i).join();
                 }
 
+                // Sort by group weight if enabled (descending — highest weight first)
+                if (tabListManager.isSortByWeight()) {
+                    sortByWeight(serverListPlayers);
+                }
+
                 // Send to all players
                 AddToServerPlayerList fullListPacket = new AddToServerPlayerList(serverListPlayers);
                 for (PlayerRef player : allPlayers) {
@@ -323,6 +335,18 @@ public class TabListListener {
      */
     public int getTrackedPlayerCount() {
         return trackedPlayers.size();
+    }
+
+    /**
+     * Sorts a ServerPlayerListPlayer array by group weight (descending — highest weight first).
+     * Players within the same weight are sorted alphabetically by username.
+     *
+     * @param players the array to sort in-place
+     */
+    private void sortByWeight(@NotNull ServerPlayerListPlayer[] players) {
+        Arrays.sort(players, Comparator
+            .<ServerPlayerListPlayer>comparingInt(p -> -tabListManager.getWeight(p.uuid))
+            .thenComparing(p -> p.username != null ? p.username : ""));
     }
 
     /**

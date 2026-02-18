@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No changes yet*
+### Fixed
+
+- **Tab list sort by weight not working**: `TabListListener` never actually sorted entries by group weight — players were sent in arbitrary order and the client sorted alphabetically. Now sorts the `ServerPlayerListPlayer[]` array by group weight (descending) before sending packets
+- **Prefix/suffix priority resetting to 0**: `SessionData.GroupDto` was missing `prefixPriority` and `suffixPriority` fields, so web editor sessions sent groups without priority data. Saving from the editor reset priorities to 0
+- **Prefix priority resolution using stale data**: `PrefixSuffixResolver` loaded groups from raw storage instead of the GroupManager cache, meaning prefix priority changes via commands could be ignored until the async storage save completed. Now uses `GroupManager.loadGroup()` for all group lookups
+- **Primary group missing from prefix priority comparison**: `PrefixSuffixResolver` only used `user.getInheritedGroups()` (group nodes), not the user's primary group field. If the primary group wasn't also an inherited group node, it wouldn't participate in prefix priority comparison at all. Now includes the primary group consistently with how `PermissionResolver` handles it
 
 ## [2.8.5] - 2026-02-17
 

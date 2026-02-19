@@ -1,11 +1,9 @@
 package com.hyperperms.context.calculators;
 
-import com.hyperperms.api.context.ContextSet;
-import com.hyperperms.context.ContextCalculator;
 import com.hyperperms.context.PlayerContextProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -18,14 +16,12 @@ import java.util.UUID;
  * /hp user Player permission set some.permission world=nether
  * </pre>
  */
-public final class WorldContextCalculator implements ContextCalculator {
+public final class WorldContextCalculator extends SimpleContextCalculator {
 
     /**
      * The context key for world contexts.
      */
     public static final String KEY = "world";
-
-    private final PlayerContextProvider provider;
 
     /**
      * Creates a new world context calculator.
@@ -33,14 +29,12 @@ public final class WorldContextCalculator implements ContextCalculator {
      * @param provider the player context provider
      */
     public WorldContextCalculator(@NotNull PlayerContextProvider provider) {
-        this.provider = Objects.requireNonNull(provider, "provider cannot be null");
+        super(KEY, provider);
     }
 
     @Override
-    public void calculate(@NotNull UUID uuid, @NotNull ContextSet.Builder builder) {
-        String world = provider.getWorld(uuid);
-        if (world != null && !world.isEmpty()) {
-            builder.add(KEY, world.toLowerCase());
-        }
+    @Nullable
+    protected String computeValue(@NotNull UUID uuid) {
+        return provider.getWorld(uuid);
     }
 }

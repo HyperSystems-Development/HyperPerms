@@ -2,6 +2,7 @@ package com.hyperperms.context.calculators;
 
 import com.hyperperms.api.context.ContextSet;
 import com.hyperperms.context.ContextCalculator;
+import com.hyperperms.util.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -43,6 +44,7 @@ public final class ServerContextCalculator implements ContextCalculator {
     public void calculate(@NotNull UUID uuid, @NotNull ContextSet.Builder builder) {
         if (!serverName.isEmpty()) {
             builder.add(KEY, serverName);
+            Logger.debugContext("Calculated context %s=%s for %s", KEY, serverName, uuid);
         }
     }
 

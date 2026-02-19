@@ -9,10 +9,11 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.Color;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.*;
+
+import static com.hyperperms.command.util.CommandUtil.*;
 
 /**
  * Listens for player connect events and notifies operators about available updates.
@@ -22,18 +23,13 @@ import java.util.concurrent.*;
  */
 public final class UpdateNotificationListener {
 
-    private static final Color GOLD = new Color(255, 170, 0);
-    private static final Color GRAY = Color.GRAY;
-    private static final Color GREEN = new Color(85, 255, 85);
-    private static final Color WHITE = Color.WHITE;
-
     /** Delay before sending notification to avoid join message spam */
     private static final long NOTIFICATION_DELAY_MS = 1500;
 
     /** Permissions that allow receiving update notifications */
-    private static final String PERMISSION_WILDCARD = "hyperperms.*";
-    private static final String PERMISSION_ADMIN = "hyperperms.admin";
-    private static final String PERMISSION_NOTIFY = "hyperperms.updates.notify";
+    private static final String PERMISSION_WILDCARD = com.hyperperms.util.Permissions.ADMIN;
+    private static final String PERMISSION_ADMIN = com.hyperperms.util.Permissions.ADMIN;
+    private static final String PERMISSION_NOTIFY = com.hyperperms.util.Permissions.UPDATES_NOTIFY;
 
     private final HyperPerms hyperPerms;
     private final ScheduledExecutorService scheduler;

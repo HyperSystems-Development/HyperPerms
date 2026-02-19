@@ -8,9 +8,10 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.hyperperms.command.util.CommandUtil.*;
 
 /**
  * Base class for HyperPerms commands that need proper argument registration.
@@ -20,17 +21,13 @@ import java.util.List;
  * <p>
  * Use {@link #describeArg} instead of {@code withRequiredArg} and
  * {@link #describeOptionalArg} instead of {@code withOptionalArg}.
+ *
+ * @deprecated Use {@link com.hyperperms.command.HpSubCommand} instead.
  */
+@Deprecated
 public abstract class HpCommand extends AbstractCommand {
 
     private final List<ArgDescriptor> argDescriptors = new ArrayList<>();
-
-    private static final Color GOLD = new Color(255, 170, 0);
-    private static final Color GREEN = new Color(85, 255, 85);
-    private static final Color RED = new Color(255, 85, 85);
-    private static final Color DARK_GRAY = new Color(100, 100, 100);
-    private static final Color GRAY = Color.GRAY;
-    private static final Color WHITE = Color.WHITE;
 
     protected HpCommand(String name, String description) {
         super(name, description);
@@ -74,13 +71,7 @@ public abstract class HpCommand extends AbstractCommand {
         String name = getFullyQualifiedName();
 
         // Header bar
-        int width = 42;
-        int padding = width - name.length() - 2;
-        int left = 3;
-        int right = Math.max(3, padding - left);
-        parts.add(Message.raw("-".repeat(left) + " ").color(GRAY));
-        parts.add(Message.raw(name).color(GOLD));
-        parts.add(Message.raw(" " + "-".repeat(right) + "\n").color(GRAY));
+        parts.add(header(name));
 
         // Description
         parts.add(Message.raw("  ").color(WHITE));
@@ -136,9 +127,9 @@ public abstract class HpCommand extends AbstractCommand {
         }
 
         // Footer bar
-        parts.add(Message.raw("-".repeat(42)).color(GRAY));
+        parts.add(footer());
 
-        return Message.join(parts.toArray(new Message[0]));
+        return join(parts);
     }
 
     @Override
@@ -180,7 +171,7 @@ public abstract class HpCommand extends AbstractCommand {
             }
         }
 
-        return Message.join(parts.toArray(new Message[0]));
+        return join(parts);
     }
 
     private static String getTypeName(ArgumentType<?> type) {

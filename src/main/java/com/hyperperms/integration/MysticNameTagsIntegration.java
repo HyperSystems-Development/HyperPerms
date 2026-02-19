@@ -8,6 +8,7 @@ import com.hyperperms.api.events.UserGroupChangeEvent;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.User;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.ReflectionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,8 +75,13 @@ public final class MysticNameTagsIntegration {
     public MysticNameTagsIntegration(@NotNull HyperPerms plugin) {
         this.plugin = plugin;
 
+        Logger.debugIntegration("Checking for MysticNameTags availability...");
+
         // Detect LuckPerms (will take priority in MysticNameTags' IntegrationManager)
         this.luckPermsDetected = detectLuckPerms();
+        if (luckPermsDetected) {
+            Logger.debugIntegration("LuckPerms detected on classpath");
+        }
 
         // Detect MysticNameTags plugin
         boolean pluginFound = false;
@@ -96,11 +102,11 @@ public final class MysticNameTagsIntegration {
         Method tmpTagViewGetDisplayColored = null;
         Method tmpTagViewGetPermission = null;
 
-        try {
-            Class.forName("com.mystichorizons.mysticnametags.MysticNameTagsPlugin");
-            pluginFound = true;
-        } catch (ClassNotFoundException ignored) {
-            // MysticNameTags not installed
+        pluginFound = ReflectionUtil.isClassAvailable("com.mystichorizons.mysticnametags.MysticNameTagsPlugin");
+        if (pluginFound) {
+            Logger.debugIntegration("MysticNameTags plugin class found");
+        } else {
+            Logger.debugIntegration("MysticNameTags not detected");
         }
 
         if (pluginFound) {
@@ -170,12 +176,7 @@ public final class MysticNameTagsIntegration {
      * Checks if LuckPerms is present on the server.
      */
     private boolean detectLuckPerms() {
-        try {
-            Class.forName("net.luckperms.api.LuckPermsProvider");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return ReflectionUtil.isClassAvailable("net.luckperms.api.LuckPermsProvider");
     }
 
     // ==================== Event Listeners ====================

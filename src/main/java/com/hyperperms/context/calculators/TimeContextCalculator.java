@@ -1,11 +1,9 @@
 package com.hyperperms.context.calculators;
 
-import com.hyperperms.api.context.ContextSet;
-import com.hyperperms.context.ContextCalculator;
 import com.hyperperms.context.PlayerContextProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -27,7 +25,7 @@ import java.util.UUID;
  * /hp group Vampire permission set combat.damage.bonus time=night
  * </pre>
  */
-public final class TimeContextCalculator implements ContextCalculator {
+public final class TimeContextCalculator extends SimpleContextCalculator {
 
     /**
      * The context key for time contexts.
@@ -54,22 +52,18 @@ public final class TimeContextCalculator implements ContextCalculator {
      */
     public static final String NIGHT = "night";
 
-    private final PlayerContextProvider provider;
-
     /**
      * Creates a new time context calculator.
      *
      * @param provider the player context provider
      */
     public TimeContextCalculator(@NotNull PlayerContextProvider provider) {
-        this.provider = Objects.requireNonNull(provider, "provider cannot be null");
+        super(KEY, provider);
     }
 
     @Override
-    public void calculate(@NotNull UUID uuid, @NotNull ContextSet.Builder builder) {
-        String timeOfDay = provider.getTimeOfDay(uuid);
-        if (timeOfDay != null && !timeOfDay.isEmpty()) {
-            builder.add(KEY, timeOfDay.toLowerCase());
-        }
+    @Nullable
+    protected String computeValue(@NotNull UUID uuid) {
+        return provider.getTimeOfDay(uuid);
     }
 }

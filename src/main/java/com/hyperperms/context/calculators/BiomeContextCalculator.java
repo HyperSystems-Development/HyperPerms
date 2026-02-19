@@ -1,11 +1,9 @@
 package com.hyperperms.context.calculators;
 
-import com.hyperperms.api.context.ContextSet;
-import com.hyperperms.context.ContextCalculator;
 import com.hyperperms.context.PlayerContextProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -26,14 +24,12 @@ import java.util.UUID;
  * Biome names are normalized to lowercase with spaces replaced by underscores
  * for consistent matching (e.g., "Deep Ocean" becomes "deep_ocean").
  */
-public final class BiomeContextCalculator implements ContextCalculator {
+public final class BiomeContextCalculator extends SimpleContextCalculator {
 
     /**
      * The context key for biome contexts.
      */
     public static final String KEY = "biome";
-
-    private final PlayerContextProvider provider;
 
     /**
      * Creates a new biome context calculator.
@@ -41,16 +37,19 @@ public final class BiomeContextCalculator implements ContextCalculator {
      * @param provider the player context provider
      */
     public BiomeContextCalculator(@NotNull PlayerContextProvider provider) {
-        this.provider = Objects.requireNonNull(provider, "provider cannot be null");
+        super(KEY, provider);
     }
 
     @Override
-    public void calculate(@NotNull UUID uuid, @NotNull ContextSet.Builder builder) {
-        String biome = provider.getBiome(uuid);
-        if (biome != null && !biome.isEmpty()) {
-            // Normalize biome name: lowercase and replace spaces with underscores
-            String normalizedBiome = biome.toLowerCase().replace(' ', '_');
-            builder.add(KEY, normalizedBiome);
-        }
+    @Nullable
+    protected String computeValue(@NotNull UUID uuid) {
+        return provider.getBiome(uuid);
+    }
+
+    @Override
+    @NotNull
+    protected String normalize(@NotNull String value) {
+        // Normalize biome name: lowercase and replace spaces with underscores
+        return value.toLowerCase().replace(' ', '_');
     }
 }

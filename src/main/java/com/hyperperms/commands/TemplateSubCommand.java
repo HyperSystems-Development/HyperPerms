@@ -10,23 +10,16 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalAr
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 
-import java.awt.Color;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+
+import static com.hyperperms.command.util.CommandUtil.*;
 
 /**
  * Container command for template management: /hp template
  */
 public class TemplateSubCommand extends AbstractCommand {
-
-    private static final Color GOLD = new Color(255, 170, 0);
-    private static final Color GREEN = new Color(85, 255, 85);
-    private static final Color RED = new Color(255, 85, 85);
-    private static final Color GRAY = Color.GRAY;
-    private static final Color WHITE = Color.WHITE;
-    private static final Color AQUA = new Color(85, 255, 255);
-    private static final Color YELLOW = new Color(255, 255, 85);
 
     private final HyperPerms hyperPerms;
     private final TemplateLoader templateLoader;
@@ -139,7 +132,7 @@ public class TemplateSubCommand extends AbstractCommand {
             parts.add(Message.raw("---------------------------\n").color(GRAY));
             parts.add(Message.raw("Use /hp template preview <name> for details").color(GRAY));
 
-            ctx.sender().sendMessage(Message.join(parts.toArray(new Message[0])));
+            ctx.sender().sendMessage(join(parts));
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -216,7 +209,7 @@ public class TemplateSubCommand extends AbstractCommand {
 
             parts.add(Message.raw("----------------------------------------").color(GRAY));
 
-            ctx.sender().sendMessage(Message.join(parts.toArray(new Message[0])));
+            ctx.sender().sendMessage(join(parts));
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -281,7 +274,7 @@ public class TemplateSubCommand extends AbstractCommand {
                                 parts.add(Message.raw("  Backup: ").color(GRAY)
                                         .insert(Message.raw(result.backupName() + "\n").color(AQUA)));
                             }
-                            ctx.sender().sendMessage(Message.join(parts.toArray(new Message[0])));
+                            ctx.sender().sendMessage(join(parts));
                         } else {
                             ctx.sender().sendMessage(Message.raw("Failed to apply template: " + result.message()).color(RED));
                         }

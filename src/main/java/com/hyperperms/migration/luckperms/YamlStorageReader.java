@@ -63,13 +63,14 @@ public final class YamlStorageReader implements LuckPermsStorageReader {
     @Override
     @NotNull
     public Map<String, LPGroup> readGroups() throws IOException {
+        Logger.debugMigration("Reading groups from %s", getStorageDescription());
         Path groupsDir = storageDir.resolve("groups");
         if (!Files.isDirectory(groupsDir)) {
             return Collections.emptyMap();
         }
-        
+
         Map<String, LPGroup> groups = new LinkedHashMap<>();
-        
+
         try (Stream<Path> files = Files.list(groupsDir)) {
             files.filter(p -> p.toString().endsWith(".yml"))
                 .forEach(file -> {
@@ -83,20 +84,22 @@ public final class YamlStorageReader implements LuckPermsStorageReader {
                     }
                 });
         }
-        
+
+        Logger.debugMigration("Read %d groups from %s", groups.size(), getStorageDescription());
         return groups;
     }
     
     @Override
     @NotNull
     public Map<UUID, LPUser> readUsers() throws IOException {
+        Logger.debugMigration("Reading users from %s", getStorageDescription());
         Path usersDir = storageDir.resolve("users");
         if (!Files.isDirectory(usersDir)) {
             return Collections.emptyMap();
         }
-        
+
         Map<UUID, LPUser> users = new LinkedHashMap<>();
-        
+
         try (Stream<Path> files = Files.list(usersDir)) {
             files.filter(p -> p.toString().endsWith(".yml"))
                 .forEach(file -> {
@@ -110,20 +113,22 @@ public final class YamlStorageReader implements LuckPermsStorageReader {
                     }
                 });
         }
-        
+
+        Logger.debugMigration("Read %d users from %s", users.size(), getStorageDescription());
         return users;
     }
     
     @Override
     @NotNull
     public Map<String, LPTrack> readTracks() throws IOException {
+        Logger.debugMigration("Reading tracks from %s", getStorageDescription());
         Path tracksDir = storageDir.resolve("tracks");
         if (!Files.isDirectory(tracksDir)) {
             return Collections.emptyMap();
         }
-        
+
         Map<String, LPTrack> tracks = new LinkedHashMap<>();
-        
+
         try (Stream<Path> files = Files.list(tracksDir)) {
             files.filter(p -> p.toString().endsWith(".yml"))
                 .forEach(file -> {
@@ -137,7 +142,8 @@ public final class YamlStorageReader implements LuckPermsStorageReader {
                     }
                 });
         }
-        
+
+        Logger.debugMigration("Read %d tracks from %s", tracks.size(), getStorageDescription());
         return tracks;
     }
     

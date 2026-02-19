@@ -269,6 +269,7 @@ public final class HyperPerms implements HyperPermsAPI {
             tabListManager.loadConfig();
 
             // Initialize faction integration (soft dependency on HyFactions)
+            Logger.debugIntegration("Initializing faction integration...");
             factionIntegration = new FactionIntegration(this);
             factionIntegration.setEnabled(config.isFactionIntegrationEnabled());
             factionIntegration.setNoFactionDefault(config.getFactionNoFactionDefault());
@@ -281,6 +282,7 @@ public final class HyperPerms implements HyperPermsAPI {
             chatManager.setFactionIntegration(factionIntegration);
             
             // Initialize WerChat integration (soft dependency on WerChat)
+            Logger.debugIntegration("Initializing WerChat integration...");
             werchatIntegration = new WerChatIntegration(this);
             werchatIntegration.setEnabled(config.isWerChatIntegrationEnabled());
             werchatIntegration.setNoChannelDefault(config.getWerChatNoChannelDefault());
@@ -288,6 +290,7 @@ public final class HyperPerms implements HyperPermsAPI {
             chatManager.setWerChatIntegration(werchatIntegration);
 
             // Initialize PlaceholderAPI integration (soft dependency on PlaceholderAPI)
+            Logger.debugIntegration("Initializing PlaceholderAPI integration...");
             placeholderApiIntegration = new PlaceholderAPIIntegration(this);
             placeholderApiIntegration.setEnabled(config.isPlaceholderAPIEnabled());
             placeholderApiIntegration.setParseExternal(config.isPlaceholderAPIParseExternal());
@@ -297,6 +300,7 @@ public final class HyperPerms implements HyperPermsAPI {
             }
 
             // Initialize MysticNameTags integration (soft dependency on MysticNameTags)
+            Logger.debugIntegration("Initializing MysticNameTags integration...");
             mysticNameTagsIntegration = new MysticNameTagsIntegration(this);
             mysticNameTagsIntegration.setEnabled(config.isMysticNameTagsEnabled());
             mysticNameTagsIntegration.setRefreshOnPermissionChange(config.isMysticNameTagsRefreshOnPermissionChange());
@@ -308,7 +312,10 @@ public final class HyperPerms implements HyperPermsAPI {
 
             // Initialize VaultUnlocked integration (soft dependency)
             if (config.isVaultIntegrationEnabled()) {
+                Logger.debugIntegration("Initializing VaultUnlocked integration...");
                 VaultUnlockedIntegration.init(this);
+            } else {
+                Logger.debugIntegration("VaultUnlocked integration disabled in config");
             }
 
             // Initialize web editor service
@@ -840,14 +847,6 @@ public final class HyperPerms implements HyperPermsAPI {
     }
 
     /**
-     * Sets the player context provider.
-     * <p>
-     * This should be called by the platform adapter to provide
-     * player-specific context data like world and game mode.
-     *
-     * @param provider the player context provider
-     */
-    /**
      * Gets the player context provider.
      *
      * @return the player context provider
@@ -857,6 +856,14 @@ public final class HyperPerms implements HyperPermsAPI {
         return playerContextProvider;
     }
 
+    /**
+     * Sets the player context provider.
+     * <p>
+     * This should be called by the platform adapter to provide
+     * player-specific context data like world and game mode.
+     *
+     * @param provider the player context provider
+     */
     public void setPlayerContextProvider(@NotNull PlayerContextProvider provider) {
         this.playerContextProvider = provider;
         // Re-register calculators with new provider

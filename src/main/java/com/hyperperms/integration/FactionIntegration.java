@@ -2,6 +2,7 @@ package com.hyperperms.integration;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.ReflectionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,22 +37,31 @@ public final class FactionIntegration {
     public FactionIntegration(@NotNull HyperPerms plugin) {
         this.plugin = plugin;
 
+        Logger.debugIntegration("Checking for faction plugin availability...");
+
         // Check for HyperFactions first (preferred), then HyFactions (legacy)
         if (checkHyperFactionsAvailable()) {
+            Logger.debugIntegration("HyperFactions classes found, creating reflection provider");
             this.provider = createHyperFactionsProvider();
             this.factionPluginAvailable = provider != null;
             this.detectedPlugin = "HyperFactions";
             if (factionPluginAvailable) {
                 Logger.info("HyperFactions integration enabled - faction placeholders available");
+            } else {
+                Logger.debugIntegration("HyperFactions classes found but provider creation failed");
             }
         } else if (checkHyFactionsAvailable()) {
+            Logger.debugIntegration("HyFactions classes found, creating reflection provider");
             this.provider = createHyFactionsProvider();
             this.factionPluginAvailable = provider != null;
             this.detectedPlugin = "HyFactions";
             if (factionPluginAvailable) {
                 Logger.info("HyFactions integration enabled - faction placeholders available");
+            } else {
+                Logger.debugIntegration("HyFactions classes found but provider creation failed");
             }
         } else {
+            Logger.debugIntegration("No faction plugin detected (checked HyperFactions, HyFactions)");
             this.provider = null;
             this.factionPluginAvailable = false;
             this.detectedPlugin = null;
@@ -62,24 +72,14 @@ public final class FactionIntegration {
      * Checks if HyperFactions plugin classes are available.
      */
     private boolean checkHyperFactionsAvailable() {
-        try {
-            Class.forName("com.hyperfactions.api.HyperFactionsAPI");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return ReflectionUtil.isClassAvailable("com.hyperfactions.api.HyperFactionsAPI");
     }
 
     /**
      * Checks if HyFactions plugin classes are available.
      */
     private boolean checkHyFactionsAvailable() {
-        try {
-            Class.forName("com.kaws.hyfaction.claim.ClaimManager");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return ReflectionUtil.isClassAvailable("com.kaws.hyfaction.claim.ClaimManager");
     }
 
     /**

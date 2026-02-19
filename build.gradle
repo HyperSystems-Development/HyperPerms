@@ -30,8 +30,8 @@ repositories {
 }
 
 dependencies {
-    // Hytale Server API (provided at runtime)
-    compileOnly files(rootProject.hytaleServerJar)
+    // Hytale Server API (resolved from maven.hytale.com)
+    compileOnly "com.hypixel.hytale:Server:${rootProject.hytaleVersion}"
 
     // Note: HyFactions is a soft dependency using pure reflection
     // No compile-time dependency needed - just runtime class detection
@@ -62,8 +62,10 @@ dependencies {
     // Null safety annotations
     compileOnly 'org.jetbrains:annotations:26.0.1'
 
-    // VaultUnlocked API (soft dependency - compileOnly)
-    compileOnly files('libs/VaultUnlocked-Hytale-2.19.0.jar')
+    // Local soft dependencies (libs/ — symlinked in monorepo, manual drop-in for contributors)
+    // Required JARs:
+    //   - VaultUnlocked-Hytale — https://www.curseforge.com/hytale/mods/vaultunlocked
+    compileOnly fileTree('libs') { include '*.jar' }
 
     // PlaceholderAPI Hytale (soft dependency - compileOnly)
     compileOnly 'at.helpch:placeholderapi-hytale:1.0.4'
@@ -109,7 +111,7 @@ tasks.named('compileJava') {
 // Expand version placeholder in manifest.json
 processResources {
     def ver = buildVersion
-    def srvVer = rootProject.hytaleServerVersion
+    def srvVer = rootProject.hytaleVersion
     inputs.property('version', ver)
     inputs.property('serverVersion', srvVer)
     filesMatching('manifest.json') {

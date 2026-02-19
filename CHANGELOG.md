@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Maven build migration**: Hytale Server API now resolved from `maven.hytale.com` instead of local JAR files. Use `-Phytale_channel=pre-release` to build against the pre-release server
+- **Local soft dependencies**: `libs/` now uses `fileTree` glob — version bumps only need a symlink update, no `build.gradle` edits
+
+### Added
+
+- **CONTRIBUTING.md**: New contributor guide with build setup, soft dependency instructions, code style, and branch strategy
+
 ### Refactored
 
 - **Command system extraction**: Decomposed monolithic `HyperPermsCommand` (3,000 lines) into 48 focused command classes under `com.hyperperms.command.*` organized by domain (`user/`, `group/`, `debug/`, `util/`). Root command class is now 90 lines — registration and help only

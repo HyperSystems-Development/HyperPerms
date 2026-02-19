@@ -163,10 +163,14 @@ api.getGroupManager().createGroup(admin);
 
 **Requirements:** Java 25, Gradle 9.3+
 
+Download [VaultUnlocked-Hytale](https://www.curseforge.com/hytale/mods/vaultunlocked) into `libs/` before building. The Hytale Server API is resolved automatically from Maven.
+
 ```bash
 ./gradlew shadowJar
-# Output: build/libs/HyperPerms-2.7.7.jar
+# Output: build/libs/HyperPerms-<version>.jar
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup and contribution guidelines.
 
 </details>
 

@@ -132,6 +132,23 @@ SQLite enables analytics tracking and audit logs. It's **not bundled** to keep t
 ## For Developers
 
 <details>
+<summary><strong>Maven Dependency (JitPack)</strong></summary>
+
+Add HyperPerms as a dependency to build integrations:
+
+```gradle
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    compileOnly 'com.github.HyperSystemsDev:HyperPerms:v2.8.5'
+}
+```
+
+</details>
+
+<details>
 <summary><strong>API Usage</strong></summary>
 
 ```java
@@ -163,7 +180,7 @@ api.getGroupManager().createGroup(admin);
 
 **Requirements:** Java 25, Gradle 9.3+
 
-Download [VaultUnlocked-Hytale](https://www.curseforge.com/hytale/mods/vaultunlocked) into `libs/` before building. The Hytale Server API is resolved automatically from Maven.
+All dependencies are resolved automatically from Maven. The Hytale Server API comes from `maven.hytale.com` and VaultUnlocked from `repo.codemc.io`.
 
 ```bash
 ./gradlew shadowJar

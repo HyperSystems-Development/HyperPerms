@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CONTRIBUTING.md**: New contributor guide with build setup, soft dependency instructions, code style, and branch strategy
 - **JitPack publishing**: Added `maven-publish` plugin and `jitpack.yml` — other developers can now depend on HyperPerms via `com.github.HyperSystemsDev:HyperPerms:<version>` from JitPack
 - **Standalone build support**: Build resolves Hytale server version independently when built outside the monorepo (JitPack, CI)
+- **Developer docs**: Updated README with JitPack dependency instructions and removed local JAR build requirement
 
 ### Refactored
 

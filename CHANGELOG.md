@@ -11,10 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Maven build migration**: Hytale Server API now resolved from `maven.hytale.com` instead of local JAR files. Use `-Phytale_channel=pre-release` to build against the pre-release server
 - **Local soft dependencies**: `libs/` now uses `fileTree` glob — version bumps only need a symlink update, no `build.gradle` edits
+- **VaultUnlocked dependency**: Replaced local JAR reference with Maven coordinate (`net.cfh.vault:VaultUnlocked:2.19.0` from `repo.codemc.io`)
 
 ### Added
 
 - **CONTRIBUTING.md**: New contributor guide with build setup, soft dependency instructions, code style, and branch strategy
+- **JitPack publishing**: Added `maven-publish` plugin and `jitpack.yml` — other developers can now depend on HyperPerms via `com.github.HyperSystemsDev:HyperPerms:<version>` from JitPack
+- **Standalone build support**: Build resolves Hytale server version independently when built outside the monorepo (JitPack, CI)
 
 ### Refactored
 

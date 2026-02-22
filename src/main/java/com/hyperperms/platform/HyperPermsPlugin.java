@@ -499,9 +499,11 @@ public class HyperPermsPlugin extends JavaPlugin {
      * Syncs resolved permissions to Hytale's internal permission system.
      *
      * Since Hytale doesn't query our PermissionProvider for permission checks,
-     * we must proactively push permission changes. Specifically:
-     * - Remove negated permissions so Hytale's internal storage doesn't grant them
-     * - This handles cases where a child group negates a parent group's permission
+     * we must proactively push permission changes:
+     * - ADD granted permissions so third-party plugins see them via PermissionsModule.hasPermission()
+     * - REMOVE negated permissions so Hytale's internal storage doesn't grant them
+     *
+     * Order matters: add first, then remove — ensures negated permissions override grants.
      *
      * @param uuid the player's UUID
      * @param user the HyperPerms user
@@ -510,46 +512,50 @@ public class HyperPermsPlugin extends JavaPlugin {
         try {
             var contexts = hyperPerms.getContexts(uuid);
             var resolved = hyperPerms.getResolver().resolve(user, contexts);
+            var registry = hyperPerms.getPermissionRegistry();
 
-            // Get permissions that are explicitly DENIED (negated)
+            // Get GRANTED permissions (expanded with wildcards + aliases)
+            java.util.Set<String> expandedGranted = resolved.getExpandedPermissions(registry);
+
+            // Get DENIED permissions (expanded with wildcards + aliases)
             java.util.Set<String> deniedPerms = resolved.getDeniedPermissions();
+            java.util.Set<String> expandedDenied = new java.util.HashSet<>(deniedPerms);
+            var aliases = com.hyperperms.registry.PermissionAliases.getInstance();
 
-            if (!deniedPerms.isEmpty()) {
-                // Expand denied permissions (handle wildcards and aliases)
-                java.util.Set<String> expandedDenied = new java.util.HashSet<>(deniedPerms);
-                var aliases = com.hyperperms.registry.PermissionAliases.getInstance();
-                var registry = hyperPerms.getPermissionRegistry();
+            for (String perm : deniedPerms) {
+                expandedDenied.addAll(aliases.expand(perm));
+                if (perm.endsWith(".*") || perm.equals("*")) {
+                    expandedDenied.addAll(registry.getMatchingPermissions(perm));
+                }
+            }
 
-                for (String perm : deniedPerms) {
-                    // Expand aliases
-                    expandedDenied.addAll(aliases.expand(perm));
+            Logger.info("Syncing permissions to Hytale for %s: %d granted, %d denied",
+                    user.getUsername(), expandedGranted.size(), expandedDenied.size());
 
-                    // Expand wildcards
-                    if (perm.endsWith(".*") || perm.equals("*")) {
-                        expandedDenied.addAll(registry.getMatchingPermissions(perm));
+            // IMPORTANT: Only modify OTHER providers, not our own!
+            // Calling our own add/removeUserPermissions() would cause infinite recursion
+            // because it triggers syncUserPermissions() which calls this method again.
+            PermissionsModule.get().getProviders().forEach(provider -> {
+                if (provider != permissionProvider) {
+                    // Step 1: ADD granted permissions
+                    if (!expandedGranted.isEmpty()) {
+                        try {
+                            provider.addUserPermissions(uuid, expandedGranted);
+                        } catch (Exception e) {
+                            Logger.debug("Could not add to provider %s: %s", provider.getName(), e.getMessage());
+                        }
                     }
-                }
 
-                Logger.info("Removing %d negated permissions from Hytale for %s", expandedDenied.size(), user.getUsername());
-                for (String perm : expandedDenied) {
-                    Logger.debug("  Removing negated: %s", perm);
-                }
-
-                // Remove negated permissions from Hytale's internal storage
-                // IMPORTANT: Only remove from OTHER providers, not our own!
-                // Calling our own removeUserPermissions() would cause infinite recursion
-                // because it triggers syncUserPermissions() which calls this method again.
-                PermissionsModule.get().getProviders().forEach(provider -> {
-                    if (provider != permissionProvider) {
-                        // Remove from other providers (like HytalePermissionsProvider)
+                    // Step 2: REMOVE denied permissions (overrides any grants from step 1)
+                    if (!expandedDenied.isEmpty()) {
                         try {
                             provider.removeUserPermissions(uuid, expandedDenied);
                         } catch (Exception e) {
                             Logger.debug("Could not remove from provider %s: %s", provider.getName(), e.getMessage());
                         }
                     }
-                });
-            }
+                }
+            });
 
             Logger.debug("Permission sync complete for %s", user.getUsername());
         } catch (Exception e) {

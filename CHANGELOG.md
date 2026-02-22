@@ -5,6 +5,14 @@ All notable changes to HyperPerms will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.7] - 2026-02-22
+
+### Fixed
+
+- **Permissions not applied after permissions.json wipe** - `syncPermissionsToHytale()` only removed negated permissions from Hytale's internal storage but never added granted permissions. After an OOM crash wiped Hytale's `permissions.json`, third-party plugins (OrbisGuard, etc.) using `PermissionsModule.hasPermission()` saw an empty permission set. Now pushes all expanded granted permissions (with wildcard and alias resolution) to other providers, then removes denied permissions — ensuring negations still override grants
+- **JSON storage data loss on JVM crash** - `saveUser()`, `saveGroup()`, and `saveTrack()` used `Files.writeString()` with `TRUNCATE_EXISTING`, which could leave files empty or corrupt if the JVM crashed mid-write. Now writes to a `.tmp` file first, then atomically renames to the target path
+- **Corrupt JSON file crashes entire load** - `loadAllUsers()`, `loadAllGroups()`, and `loadAllTracks()` only caught `IOException`, not `JsonParseException` (a `RuntimeException`). A single corrupt file would crash the entire load and prevent all other files from loading. Now catches all exceptions, logs a warning with the filename and error, and continues loading remaining files
+
 ## [2.8.6] - 2026-02-22
 
 ### Added

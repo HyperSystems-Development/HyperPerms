@@ -114,7 +114,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
             Path file = usersDirectory.resolve(user.getUuid() + ".json");
             try {
                 String json = gson.toJson(user);
-                Files.writeString(file, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                atomicWrite(file, json);
                 Logger.debugStorage("Saved user: %s (%d nodes)", user.getUuid(), user.getNodes().size());
             } catch (IOException e) {
                 Logger.severe("Failed to save user: " + user.getUuid(), e);
@@ -150,8 +150,8 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
                                 if (user != null) {
                                     users.put(user.getUuid(), user);
                                 }
-                            } catch (IOException e) {
-                                Logger.warn("Failed to load user file: " + file.getFileName());
+                            } catch (Exception e) {
+                                Logger.warn("Failed to load user file: %s (%s)", file.getFileName(), e.getMessage());
                             }
                         });
             } catch (IOException e) {
@@ -220,7 +220,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
             Path file = groupsDirectory.resolve(group.getName() + ".json");
             try {
                 String json = gson.toJson(group);
-                Files.writeString(file, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                atomicWrite(file, json);
                 Logger.debugStorage("Saved group: %s (%d nodes)", group.getName(), group.getNodes().size());
             } catch (IOException e) {
                 Logger.severe("Failed to save group: " + group.getName(), e);
@@ -256,8 +256,8 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
                                 if (group != null) {
                                     groups.put(group.getName(), group);
                                 }
-                            } catch (IOException e) {
-                                Logger.warn("Failed to load group file: " + file.getFileName());
+                            } catch (Exception e) {
+                                Logger.warn("Failed to load group file: %s (%s)", file.getFileName(), e.getMessage());
                             }
                         });
             } catch (IOException e) {
@@ -314,7 +314,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
             Path file = tracksDirectory.resolve(track.getName() + ".json");
             try {
                 String json = gson.toJson(track);
-                Files.writeString(file, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                atomicWrite(file, json);
                 Logger.debugStorage("Saved track: %s (%d groups)", track.getName(), track.getGroups().size());
             } catch (IOException e) {
                 Logger.severe("Failed to save track: " + track.getName(), e);
@@ -350,8 +350,8 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
                                 if (track != null) {
                                     tracks.put(track.getName(), track);
                                 }
-                            } catch (IOException e) {
-                                Logger.warn("Failed to load track file: " + file.getFileName());
+                            } catch (Exception e) {
+                                Logger.warn("Failed to load track file: %s (%s)", file.getFileName(), e.getMessage());
                             }
                         });
             } catch (IOException e) {
@@ -597,6 +597,21 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @NotNull
     public String getType() {
         return "json";
+    }
+
+    /**
+     * Writes content to a file atomically by writing to a temporary file first,
+     * then renaming. Prevents data loss if the JVM crashes mid-write.
+     */
+    private void atomicWrite(Path file, String content) throws IOException {
+        Path tmpFile = file.resolveSibling(file.getFileName() + ".tmp");
+        Files.writeString(tmpFile, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        try {
+            Files.move(tmpFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+            // Fallback for filesystems that don't support atomic move
+            Files.move(tmpFile, file, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     // ==================== Type Adapters ====================

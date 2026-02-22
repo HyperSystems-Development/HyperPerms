@@ -118,17 +118,17 @@ public final class WebEditorService {
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
                     String body = response.body();
-                    Logger.info("Changes API response (status " + response.statusCode() + "): " + body);
+                    Logger.debug("Changes API response (status " + response.statusCode() + "): " + body);
                     
                     if (response.statusCode() >= 200 && response.statusCode() < 300) {
                         try {
                             JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
                             List<Change> changes = new ArrayList<>();
                             
-                            Logger.info("Response has 'changes' key: " + obj.has("changes"));
+                            Logger.debug("Response has 'changes' key: " + obj.has("changes"));
                             if (obj.has("changes")) {
                                 JsonElement changesElement = obj.get("changes");
-                                Logger.info("changes isJsonObject: " + changesElement.isJsonObject() + 
+                                Logger.debug("changes isJsonObject: " + changesElement.isJsonObject() +
                                            ", isJsonArray: " + changesElement.isJsonArray() +
                                            ", isJsonNull: " + changesElement.isJsonNull());
                             }
@@ -136,12 +136,12 @@ public final class WebEditorService {
                             if (obj.has("changes") && obj.get("changes").isJsonObject()) {
                                 // API returns categorized changes object
                                 JsonObject changesObj = obj.getAsJsonObject("changes");
-                                Logger.info("Parsing categorized changes. Keys: " + changesObj.keySet());
+                                Logger.debug("Parsing categorized changes. Keys: " + changesObj.keySet());
                                 
                                 // Parse groups to create
                                 if (changesObj.has("groupsToCreate") && changesObj.get("groupsToCreate").isJsonArray()) {
                                     JsonArray arr = changesObj.getAsJsonArray("groupsToCreate");
-                                    Logger.info("groupsToCreate has " + arr.size() + " items");
+                                    Logger.debug("groupsToCreate has " + arr.size() + " items");
                                     for (JsonElement elem : arr) {
                                         Change change = parseGroupChange(elem.getAsJsonObject(), Change.Type.GROUP_CREATED);
                                         if (change != null) changes.add(change);
@@ -151,10 +151,10 @@ public final class WebEditorService {
                                 // Parse groups to update (modified)
                                 if (changesObj.has("groupsToUpdate") && changesObj.get("groupsToUpdate").isJsonArray()) {
                                     JsonArray arr = changesObj.getAsJsonArray("groupsToUpdate");
-                                    Logger.info("groupsToUpdate has " + arr.size() + " items");
+                                    Logger.debug("groupsToUpdate has " + arr.size() + " items");
                                     for (JsonElement elem : arr) {
                                         List<Change> groupChanges = parseGroupUpdateChanges(elem.getAsJsonObject());
-                                        Logger.info("Parsed " + groupChanges.size() + " changes from group update");
+                                        Logger.debug("Parsed " + groupChanges.size() + " changes from group update");
                                         changes.addAll(groupChanges);
                                     }
                                 }
@@ -175,10 +175,10 @@ public final class WebEditorService {
                                 // Parse users to update
                                 if (changesObj.has("usersToUpdate") && changesObj.get("usersToUpdate").isJsonArray()) {
                                     JsonArray arr = changesObj.getAsJsonArray("usersToUpdate");
-                                    Logger.info("usersToUpdate has " + arr.size() + " items");
+                                    Logger.debug("usersToUpdate has " + arr.size() + " items");
                                     for (JsonElement elem : arr) {
                                         List<Change> userChanges = parseUserUpdateChanges(elem.getAsJsonObject());
-                                        Logger.info("Parsed " + userChanges.size() + " changes from user update");
+                                        Logger.debug("Parsed " + userChanges.size() + " changes from user update");
                                         changes.addAll(userChanges);
                                     }
                                 }
@@ -189,7 +189,7 @@ public final class WebEditorService {
                                         String userId = elem.isJsonPrimitive() ? elem.getAsString()
                                             : elem.getAsJsonObject().get("uuid").getAsString();
                                         // User deletion is handled as removing all permissions/groups
-                                        Logger.info("User deletion requested for: " + userId);
+                                        Logger.debug("User deletion requested for: " + userId);
                                     }
                                 }
                                 
@@ -222,7 +222,7 @@ public final class WebEditorService {
                                     }
                                 }
                                 
-                                Logger.info("Parsed " + changes.size() + " change(s) from web editor");
+                                Logger.debug("Parsed " + changes.size() + " change(s) from web editor");
                             } else if (obj.has("changes") && obj.get("changes").isJsonArray()) {
                                 // Legacy flat array format
                                 for (JsonElement element : obj.getAsJsonArray("changes")) {
@@ -465,7 +465,7 @@ public final class WebEditorService {
             username = uuid;
         }
         
-        Logger.info("Parsing user update for: " + username + " (" + uuid + ")");
+        Logger.debug("Parsing user update for: " + username + " (" + uuid + ")");
 
         // Get all the user data from the API
         String primaryGroup = safeGetString(userObj, "primaryGroup");
@@ -484,18 +484,18 @@ public final class WebEditorService {
             // Use groups field (this is the edited/current state from web app)
             // Empty array means user has no additional groups - that's valid!
             parentGroups.addAll(parseStringList(userObj.getAsJsonArray("groups")));
-            Logger.info("  - Using 'groups' field for parent groups (count: " + parentGroups.size() + ")");
+            Logger.debug("  - Using 'groups' field for parent groups (count: " + parentGroups.size() + ")");
         } else if (userObj.has("parents") && userObj.get("parents").isJsonArray()) {
             // Fall back to parents field only if groups doesn't exist
             parentGroups.addAll(parseStringList(userObj.getAsJsonArray("parents")));
-            Logger.info("  - Using 'parents' field for parent groups (fallback)");
+            Logger.debug("  - Using 'parents' field for parent groups (fallback)");
         }
         
-        Logger.info("  - primaryGroup: " + primaryGroup);
-        Logger.info("  - customPrefix: " + customPrefix);
-        Logger.info("  - customSuffix: " + customSuffix);
-        Logger.info("  - permissions: " + permissions.size());
-        Logger.info("  - parent groups: " + parentGroups.size() + " " + parentGroups);
+        Logger.debug("  - primaryGroup: " + primaryGroup);
+        Logger.debug("  - customPrefix: " + customPrefix);
+        Logger.debug("  - customSuffix: " + customSuffix);
+        Logger.debug("  - permissions: " + permissions.size());
+        Logger.debug("  - parent groups: " + parentGroups.size() + " " + parentGroups);
 
         // Create a single USER_SYNC change that will handle full replacement
         // We'll use a special marker in the Change to indicate this is a full sync

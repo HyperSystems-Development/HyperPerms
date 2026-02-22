@@ -27,6 +27,9 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MariaDB/MySQL-based storage provider using HikariCP connection pooling.
@@ -51,6 +54,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
     private final Path backupsDirectory;
 
     private HikariDataSource dataSource;
+    private ExecutorService dbExecutor;
     private volatile boolean healthy = false;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -104,6 +108,15 @@ public final class MariaDBStorageProvider implements StorageProvider {
                 config.setMinimumIdle(Math.max(1, maxPoolSize / 2));
 
                 dataSource = new HikariDataSource(config);
+
+                dbExecutor = Executors.newFixedThreadPool(
+                    Math.max(2, maxPoolSize),
+                    r -> {
+                        Thread t = new Thread(r, "HyperPerms-MariaDB");
+                        t.setDaemon(true);
+                        return t;
+                    }
+                );
 
                 // Create directories
                 Files.createDirectories(backupsDirectory);
@@ -192,6 +205,15 @@ public final class MariaDBStorageProvider implements StorageProvider {
         return CompletableFuture.runAsync(() -> {
             healthy = false;
 
+            if (dbExecutor != null) {
+                dbExecutor.shutdown();
+                try {
+                    dbExecutor.awaitTermination(10, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+
             if (dataSource != null && !dataSource.isClosed()) {
                 dataSource.close();
             }
@@ -215,7 +237,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Optional<User>> loadUser(@NotNull UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT * FROM users WHERE uuid = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -269,7 +291,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> saveUser(@NotNull User user) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
             try (Connection conn = dataSource.getConnection()) {
                 conn.setAutoCommit(false);
                 try {
@@ -329,7 +351,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> deleteUser(@NotNull UUID uuid) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement("DELETE FROM users WHERE uuid = ?")) {
                 stmt.setString(1, uuid.toString());
@@ -342,7 +364,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Map<UUID, User>> loadAllUsers() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             Map<UUID, User> users = new HashMap<>();
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT * FROM users";
@@ -368,7 +390,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Set<UUID>> getUserUuids() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             Set<UUID> uuids = new HashSet<>();
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT uuid FROM users";
@@ -387,7 +409,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Optional<UUID>> lookupUuid(@NotNull String username) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT uuid FROM users WHERE LOWER(username) = LOWER(?)";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -409,7 +431,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Optional<Group>> loadGroup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT * FROM `groups` WHERE name = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -464,7 +486,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> saveGroup(@NotNull Group group) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
             try (Connection conn = dataSource.getConnection()) {
                 conn.setAutoCommit(false);
                 try {
@@ -528,7 +550,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> deleteGroup(@NotNull String name) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement("DELETE FROM `groups` WHERE name = ?")) {
                 stmt.setString(1, name.toLowerCase());
@@ -541,7 +563,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Map<String, Group>> loadAllGroups() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             Map<String, Group> groups = new HashMap<>();
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT * FROM `groups`";
@@ -568,7 +590,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Set<String>> getGroupNames() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             Set<String> names = new HashSet<>();
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT name FROM `groups`";
@@ -589,7 +611,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Optional<Track>> loadTrack(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT * FROM tracks WHERE name = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -614,7 +636,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> saveTrack(@NotNull Track track) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
             try (Connection conn = dataSource.getConnection()) {
                 String sql = """
                     INSERT INTO tracks (name, groups_json) VALUES (?, ?)
@@ -633,7 +655,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> deleteTrack(@NotNull String name) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement("DELETE FROM tracks WHERE name = ?")) {
                 stmt.setString(1, name.toLowerCase());
@@ -646,7 +668,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Map<String, Track>> loadAllTracks() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             Map<String, Track> tracks = new HashMap<>();
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT * FROM tracks";
@@ -668,7 +690,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Set<String>> getTrackNames() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             Set<String> names = new HashSet<>();
             try (Connection conn = dataSource.getConnection()) {
                 String sql = "SELECT name FROM tracks";
@@ -689,7 +711,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<String> createBackup(@Nullable String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             String backupName = name != null ? name :
                 "backup-" + java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
@@ -828,7 +850,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Boolean> restoreBackup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             Path backupDir = resolveBackupPath(name);
 
             if (!Files.exists(backupDir)) {
@@ -1010,7 +1032,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<List<String>> listBackups() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             List<String> backups = new ArrayList<>();
 
             try {
@@ -1032,7 +1054,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Boolean> deleteBackup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supplyAsync(() -> {
             Path backupDir = resolveBackupPath(name);
 
             if (!Files.exists(backupDir)) {
@@ -1054,6 +1076,14 @@ public final class MariaDBStorageProvider implements StorageProvider {
                 return false;
             }
         });
+    }
+
+    private <T> CompletableFuture<T> supplyAsync(java.util.function.Supplier<T> supplier) {
+        return CompletableFuture.supplyAsync(supplier, dbExecutor);
+    }
+
+    private CompletableFuture<Void> runAsync(Runnable runnable) {
+        return CompletableFuture.runAsync(runnable, dbExecutor);
     }
 
     private Path resolveBackupPath(String name) {

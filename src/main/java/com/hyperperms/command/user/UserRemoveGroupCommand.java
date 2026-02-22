@@ -45,7 +45,11 @@ public class UserRemoveGroupCommand extends HpSubCommand {
         var result = user.removeGroup(groupName);
         if (result == PermissionHolder.DataMutateResult.SUCCESS) {
             hyperPerms.getUserManager().saveUser(user).join();
-            hyperPerms.getCache().invalidate(user.getUuid());
+            hyperPerms.getCacheInvalidator().invalidate(user.getUuid());
+            var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
+            if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin plugin) {
+                plugin.syncPermissionsToHytale(user.getUuid(), user);
+            }
             ctx.sender().sendMessage(Message.raw("Removed user " + user.getFriendlyName() + " from group " + groupName));
         } else {
             ctx.sender().sendMessage(Message.raw("User " + user.getFriendlyName() + " is not in group " + groupName));

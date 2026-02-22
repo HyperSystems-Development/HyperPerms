@@ -2,6 +2,7 @@ package com.hyperperms.chat;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.util.Logger;
+import static com.hyperperms.util.Logger.debugChat;
 import com.hypixel.hytale.event.EventPriority;
 import com.hypixel.hytale.event.EventRegistration;
 import com.hypixel.hytale.event.EventRegistry;
@@ -106,11 +107,13 @@ public class ChatListener {
      */
     public void register(@NotNull EventRegistry eventRegistry) {
         Objects.requireNonNull(eventRegistry, "eventRegistry cannot be null");
+        debugChat("ChatListener.register: checking for plugin integrations");
 
         // Check for Werchat first - if installed, it handles chat via ChatAPI
         // We don't need to register a formatter since Werchat cancels the event
         // and broadcasts manually using ChatAPI.getPrefix/getSuffix
         if (isWerchatInstalled()) {
+            debugChat("ChatListener.register: Werchat detected, deferring chat formatting");
             Logger.info("Werchat detected - HyperPerms will provide prefix/suffix via ChatAPI only");
             Logger.info("Chat formatting will be handled by Werchat");
             // Don't register a chat listener - let Werchat handle everything
@@ -123,9 +126,11 @@ public class ChatListener {
         EventPriority priority;
         if (isHyFactionsInstalled()) {
             priority = EventPriority.LAST;
+            debugChat("ChatListener.register: HyFactions detected, using LAST priority");
             Logger.info("HyFactions detected - using LAST priority to wrap its chat formatter");
         } else {
             priority = EventPriority.FIRST;
+            debugChat("ChatListener.register: no factions plugin, using FIRST priority");
         }
 
         chatEventRegistration = eventRegistry.registerAsyncGlobal(
@@ -167,21 +172,25 @@ public class ChatListener {
             try {
                 // If chat formatting is disabled or event is cancelled, pass through
                 if (!chatManager.isEnabled()) {
+                    debugChat("onPlayerChatAsync: chat formatting disabled, passing through");
                     return CompletableFuture.completedFuture(event);
                 }
 
                 if (event.isCancelled()) {
+                    debugChat("onPlayerChatAsync: event cancelled, passing through");
                     return CompletableFuture.completedFuture(event);
                 }
 
                 PlayerRef sender = event.getSender();
                 if (sender == null) {
+                    debugChat("onPlayerChatAsync: sender is null, passing through");
                     return CompletableFuture.completedFuture(event);
                 }
 
                 UUID uuid = sender.getUuid();
                 String playerName = sender.getUsername();
                 String content = event.getContent();
+                debugChat("onPlayerChatAsync: received chat from %s (uuid=%s): '%s'", playerName, uuid, content);
 
                 // Process player colors in message if allowed
                 String processedContent = processPlayerColors(uuid, content);
@@ -198,12 +207,15 @@ public class ChatListener {
                         // (FactionIntegration already includes faction prefix in our formatted message)
                         // This gives us full control over colors and formatting
                         if (isHyFactionsInstalled()) {
+                            debugChat("onPlayerChatAsync: using HyperPermsFormatter (HyFactions present)");
                             event.setFormatter(new HyperPermsFormatter(formattedMessage));
                         } else if (hasCustomFormatter) {
                             // Wrap other formatters (like WerChat) to inject our prefix/suffix
+                            debugChat("onPlayerChatAsync: wrapping existing formatter with WrappingFormatter");
                             event.setFormatter(new WrappingFormatter(existingFormatter, formattedMessage));
                         } else {
                             // No other formatter - use our full formatter
+                            debugChat("onPlayerChatAsync: using HyperPermsFormatter (no other formatter)");
                             event.setFormatter(new HyperPermsFormatter(formattedMessage));
                         }
                         return event;
@@ -227,17 +239,20 @@ public class ChatListener {
      */
     private String processPlayerColors(@NotNull UUID uuid, @NotNull String content) {
         if (!allowPlayerColors) {
+            debugChat("processPlayerColors: player colors disabled globally");
             return content;
         }
-        
+
         // Check if player has color permission
         if (!plugin.hasPermission(uuid, colorPermission)) {
             // Strip any color codes they tried to use
+            debugChat("processPlayerColors: player %s lacks %s, stripping colors", uuid, colorPermission);
             return ColorUtil.stripColors(content);
         }
-        
+
         // Player has permission - let colors through
         // They will be processed by the formatter
+        debugChat("processPlayerColors: player %s has color permission, allowing colors", uuid);
         return content;
     }
     

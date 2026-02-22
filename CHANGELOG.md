@@ -5,7 +5,50 @@ All notable changes to HyperPerms will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.6] - 2026-02-21
+
+### Added
+
+- **Missing `hytale.mods.outdated.notify` permission**: Registered in PermissionRegistry and PermissionAliases, matching the constant defined in Hytale's `HytalePermissions` class
+- **Vanilla OP/Default overwrite warning**: Startup check warns server operators if custom permissions are detected in vanilla's OP or Default groups, which are forcibly reset on every server restart by `HytalePermissionsProvider.read()`
+- **Wildcard restriction documentation**: Added explicit note that middle wildcards (e.g., `hytale.*.ban`) are not supported, matching vanilla Hytale behavior
+
+### Changed
+
+- **Improved documentation**: Added multi-provider aggregation notes, nondeterministic iteration explanation, vanilla `permissions.json` initialization behavior, and wildcard restriction details to HYTALE_PERMISSIONS.md and README.md
+
 ## [Unreleased]
+
+### Changed
+
+- **Maven build migration**: Hytale Server API now resolved from `maven.hytale.com` instead of local JAR files. Use `-Phytale_channel=pre-release` to build against the pre-release server
+- **Local soft dependencies**: `libs/` now uses `fileTree` glob — version bumps only need a symlink update, no `build.gradle` edits
+- **VaultUnlocked dependency**: Replaced local JAR reference with Maven coordinate (`net.cfh.vault:VaultUnlocked:2.19.0` from `repo.codemc.io`)
+
+### Added
+
+- **CONTRIBUTING.md**: New contributor guide with build setup, soft dependency instructions, code style, and branch strategy
+- **JitPack publishing**: Added `maven-publish` plugin and `jitpack.yml` — other developers can now depend on HyperPerms via `com.github.HyperSystemsDev:HyperPerms:<version>` from JitPack
+- **Standalone build support**: Build resolves Hytale server version independently when built outside the monorepo (JitPack, CI)
+- **Developer docs**: Updated README with JitPack dependency instructions and removed local JAR build requirement
+
+### Refactored
+
+- **Command system extraction**: Decomposed monolithic `HyperPermsCommand` (3,000 lines) into 48 focused command classes under `com.hyperperms.command.*` organized by domain (`user/`, `group/`, `debug/`, `util/`). Root command class is now 90 lines — registration and help only
+- **CommandUtil shared utilities**: Extracted common message colors, `join()` helper, and confirmation tracking into `CommandUtil` — eliminates duplicated color constants and `Message.join()` boilerplate across all commands
+- **ConfigManager system**: New `com.hyperperms.config` package with `ConfigManager` orchestrating typed config files (`CoreConfig`, `CacheConfig`, `ChatConfig`, `DebugConfig`, `IntegrationConfig`, `WebEditorConfig`) with validation via `ValidationResult`
+- **PermissionHolderBase**: Extracted shared node storage, listener, and `PermissionHolder` API implementation from `Group` and `User` into `PermissionHolderBase` abstract class — removes ~200 lines of duplicated code
+- **AbstractStorageProvider**: Extracted shared executor lifecycle, health tracking, and `runAsync()` helper from `JsonStorageProvider` and `SQLiteStorageProvider` into a common base class
+- **AbstractSqlLuckPermsReader**: Extracted shared SQL migration logic from `H2StorageReader` and `SqlStorageReader` into a common base class — eliminates ~300 lines of duplicated JDBC code
+- **SimpleContextCalculator**: Extracted shared boilerplate from 5 context calculators (`Biome`, `GameMode`, `Region`, `Time`, `World`) into a generic base class with `computeValue()` template method
+- **ReflectionUtil**: Centralized reflection helpers used by integration classes — replaces scattered `Class.forName()` + `getMethod()` patterns
+
+### Added
+
+- **Category-based debug logging**: New `Logger.DebugCategory` enum with 10 categories (`RESOLUTION`, `CACHE`, `STORAGE`, `CONTEXT`, `INHERITANCE`, `INTEGRATION`, `CHAT`, `WEB`, `MIGRATION`, `EXPIRY`) — each toggleable individually via `/hp debug toggle <category>`
+- **Debug logging throughout chat pipeline**: `ChatListener`, `ChatManager`, `ChatFormatter`, `PrefixSuffixResolver` now emit `debugChat()` traces for diagnosing prefix/suffix/formatting issues
+- **Debug logging for integrations**: Faction, WerChat, PlaceholderAPI, MysticNameTags, and VaultUnlocked integration setup now logged under `INTEGRATION` category
+- **Update permission constants**: Added `UPDATES_ALL`, `UPDATES_TOGGLE`, `UPDATES_NOTIFY` to `Permissions` utility class
 
 ### Fixed
 
@@ -13,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Prefix/suffix priority resetting to 0**: `SessionData.GroupDto` was missing `prefixPriority` and `suffixPriority` fields, so web editor sessions sent groups without priority data. Saving from the editor reset priorities to 0
 - **Prefix priority resolution using stale data**: `PrefixSuffixResolver` loaded groups from raw storage instead of the GroupManager cache, meaning prefix priority changes via commands could be ignored until the async storage save completed. Now uses `GroupManager.loadGroup()` for all group lookups
 - **Primary group missing from prefix priority comparison**: `PrefixSuffixResolver` only used `user.getInheritedGroups()` (group nodes), not the user's primary group field. If the primary group wasn't also an inherited group node, it wouldn't participate in prefix priority comparison at all. Now includes the primary group consistently with how `PermissionResolver` handles it
+- **Duplicate javadoc on setter/getter**: Fixed `setPlayerContextProvider()` javadoc that was accidentally duplicated onto the getter
 
 ## [2.8.5] - 2026-02-17
 

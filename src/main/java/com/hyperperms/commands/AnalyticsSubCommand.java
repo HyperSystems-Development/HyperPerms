@@ -22,19 +22,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hyperperms.command.util.CommandUtil.*;
+
 /**
  * Container command for analytics management: /hp analytics
  */
 public class AnalyticsSubCommand extends AbstractCommand {
-
-    private static final Color GOLD = new Color(255, 170, 0);
-    private static final Color GREEN = new Color(85, 255, 85);
-    private static final Color RED = new Color(255, 85, 85);
-    private static final Color GRAY = Color.GRAY;
-    private static final Color WHITE = Color.WHITE;
-    private static final Color AQUA = new Color(85, 255, 255);
-    private static final Color YELLOW = new Color(255, 255, 85);
-    private static final Color BLUE = new Color(85, 85, 255);
 
     private static final DateTimeFormatter TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -178,7 +171,7 @@ public class AnalyticsSubCommand extends AbstractCommand {
                 }
                 
                 parts.add(Message.raw("-------------------------").color(GRAY));
-                ctx.sender().sendMessage(Message.join(parts.toArray(new Message[0])));
+                ctx.sender().sendMessage(join(parts));
             }).exceptionally(e -> {
                 ctx.sender().sendMessage(Message.raw("Error loading summary: " + e.getMessage()).color(RED));
                 return null;
@@ -224,7 +217,7 @@ public class AnalyticsSubCommand extends AbstractCommand {
                 }
                 
                 parts.add(Message.raw("------------------------------------------").color(GRAY));
-                ctx.sender().sendMessage(Message.join(parts.toArray(new Message[0])));
+                ctx.sender().sendMessage(join(parts));
             }).exceptionally(e -> {
                 ctx.sender().sendMessage(Message.raw("Error loading hotspots: " + e.getMessage()).color(RED));
                 return null;
@@ -270,7 +263,7 @@ public class AnalyticsSubCommand extends AbstractCommand {
                 
                 parts.add(Message.raw("Total: " + unused.size() + " unused permissions\n").color(WHITE));
                 parts.add(Message.raw("--------------------------------------").color(GRAY));
-                ctx.sender().sendMessage(Message.join(parts.toArray(new Message[0])));
+                ctx.sender().sendMessage(join(parts));
             }).exceptionally(e -> {
                 ctx.sender().sendMessage(Message.raw("Error loading unused permissions: " + e.getMessage()).color(RED));
                 return null;
@@ -337,7 +330,7 @@ public class AnalyticsSubCommand extends AbstractCommand {
                 }
                 
                 parts.add(Message.raw("--------------------------------------").color(GRAY));
-                ctx.sender().sendMessage(Message.join(parts.toArray(new Message[0])));
+                ctx.sender().sendMessage(join(parts));
             }).exceptionally(e -> {
                 ctx.sender().sendMessage(Message.raw("Error loading audit log: " + e.getMessage()).color(RED));
                 return null;

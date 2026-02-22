@@ -6,6 +6,7 @@ import com.hyperperms.integration.PlaceholderAPIIntegration;
 import com.hyperperms.integration.WerChatIntegration;
 import com.hyperperms.model.User;
 import com.hyperperms.util.Logger;
+import static com.hyperperms.util.Logger.debugChat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -108,7 +109,8 @@ public class ChatManager {
      */
     public void setFactionIntegration(@Nullable FactionIntegration factionIntegration) {
         this.factionIntegration = factionIntegration;
-        
+        debugChat("setFactionIntegration: available=%s", factionIntegration != null && factionIntegration.isAvailable());
+
         if (factionIntegration != null && factionIntegration.isAvailable()) {
             registerFactionPlaceholders(factionIntegration);
             Logger.info("Faction placeholders registered: %faction%, %faction_rank%, %faction_tag%");
@@ -133,7 +135,8 @@ public class ChatManager {
      */
     public void setWerChatIntegration(@Nullable WerChatIntegration werchatIntegration) {
         this.werchatIntegration = werchatIntegration;
-        
+        debugChat("setWerChatIntegration: available=%s", werchatIntegration != null && werchatIntegration.isAvailable());
+
         if (werchatIntegration != null && werchatIntegration.isAvailable()) {
             registerWerChatPlaceholders(werchatIntegration);
             Logger.info("WerChat placeholders registered: %%werchat_channel%%, %%werchat_channel_nick%%, %%werchat_channel_color%%, %%werchat_channels%%, %%werchat_muted%%, %%werchat_moderator%%");
@@ -158,6 +161,7 @@ public class ChatManager {
      */
     public void setPlaceholderAPIIntegration(@Nullable PlaceholderAPIIntegration placeholderApiIntegration) {
         this.placeholderApiIntegration = placeholderApiIntegration;
+        debugChat("setPlaceholderAPIIntegration: available=%s", placeholderApiIntegration != null && placeholderApiIntegration.isAvailable());
 
         if (placeholderApiIntegration != null && placeholderApiIntegration.isAvailable()) {
             Logger.info("PlaceholderAPI external placeholder parsing enabled for chat");
@@ -252,21 +256,26 @@ public class ChatManager {
             @NotNull String playerName,
             @NotNull String message) {
         
+        debugChat("formatChatMessage: player=%s, uuid=%s, enabled=%s", playerName, uuid, enabled);
+
         if (!enabled) {
             // Chat formatting disabled - return raw message
+            debugChat("formatChatMessage: formatting disabled, returning raw message");
             return CompletableFuture.completedFuture(
                 new FormattedChatMessage(message, message, null)
             );
         }
-        
+
         // Check cache first
         CachedDisplayData cached = displayDataCache.get(uuid);
         if (cached != null && !cached.isExpired()) {
+            debugChat("formatChatMessage: using cached display data for %s", playerName);
             return CompletableFuture.completedFuture(
                 formatWithDisplayData(cached.displayData, playerName, message, uuid)
             );
         }
-        
+
+        debugChat("formatChatMessage: loading display data for %s (cache miss)", playerName);
         // Load display data
         return loadDisplayData(uuid).thenApply(displayData -> {
             // Cache it
@@ -312,15 +321,18 @@ public class ChatManager {
         
         // Get the base prefix
         String prefix = displayData.getPrefix();
-        
+        debugChat("formatWithDisplayData: player=%s, basePrefix='%s', suffix='%s', group=%s",
+                playerName, prefix, displayData.getSuffix(), displayData.getPrimaryGroupName());
+
         // Prepend faction prefix if available and enabled
         if (playerUuid != null && factionIntegration != null && factionIntegration.isPrefixEnabled()) {
             String factionPrefix = factionIntegration.getFormattedFactionPrefix(playerUuid);
             if (!factionPrefix.isEmpty()) {
+                debugChat("formatWithDisplayData: prepending faction prefix '%s'", factionPrefix);
                 prefix = factionPrefix + prefix;
             }
         }
-        
+
         // Build context with potentially modified prefix
         ChatFormatter.PlaceholderContext context = ChatFormatter.PlaceholderContext.builder()
             .playerName(playerName)
@@ -333,13 +345,16 @@ public class ChatManager {
             .extra("rank", String.valueOf(displayData.getRank()))
             .message(message)
             .build();
-        
+
         // Format the message
         String formatted = ChatFormatter.format(chatFormat, context);
+        debugChat("formatWithDisplayData: format='%s', afterPlaceholders='%s'", chatFormat, formatted);
 
         // Parse external PlaceholderAPI placeholders (e.g., %player_health%, %vault_balance%)
         if (playerUuid != null && placeholderApiIntegration != null && placeholderApiIntegration.shouldParseExternal()) {
+            String beforePapi = formatted;
             formatted = placeholderApiIntegration.parsePlaceholders(playerUuid, formatted);
+            debugChat("formatWithDisplayData: PlaceholderAPI parsing applied, changed=%s", !beforePapi.equals(formatted));
         }
 
         // Process colors
@@ -494,10 +509,13 @@ public class ChatManager {
             this.chatFormat = config.getChatFormat();
             this.defaultPrefix = config.getDefaultPrefix();
             this.defaultSuffix = config.getDefaultSuffix();
-            
+
             // Update resolver defaults
             prefixSuffixResolver.setDefaultPrefix(defaultPrefix);
             prefixSuffixResolver.setDefaultSuffix(defaultSuffix);
+
+            debugChat("loadConfig: enabled=%s, format='%s', defaultPrefix='%s', defaultSuffix='%s'",
+                    enabled, chatFormat, defaultPrefix, defaultSuffix);
         }
     }
     

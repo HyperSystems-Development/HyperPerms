@@ -3,6 +3,7 @@ package com.hyperperms.integration;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.integration.papi.HyperPermsExpansion;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.ReflectionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,9 +50,12 @@ public final class PlaceholderAPIIntegration {
      */
     public PlaceholderAPIIntegration(@NotNull HyperPerms plugin) {
         this.plugin = plugin;
+
+        Logger.debugIntegration("Checking for PlaceholderAPI availability...");
         this.papiAvailable = checkAvailable();
 
         if (papiAvailable) {
+            Logger.debugIntegration("PlaceholderAPI detected, initializing reflection and expansion");
             initReflection();
             registerExpansion();
         }
@@ -61,11 +65,10 @@ public final class PlaceholderAPIIntegration {
      * Checks if PlaceholderAPI is available.
      */
     private boolean checkAvailable() {
-        try {
-            Class.forName("at.helpch.placeholderapi.PlaceholderAPI");
-            Logger.debug("PlaceholderAPI classes found");
+        if (ReflectionUtil.isClassAvailable("at.helpch.placeholderapi.PlaceholderAPI")) {
+            Logger.debugIntegration("PlaceholderAPI classes found");
             return true;
-        } catch (ClassNotFoundException e) {
+        } else {
             Logger.info("PlaceholderAPI not found - integration disabled");
             return false;
         }

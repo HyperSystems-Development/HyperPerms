@@ -8,17 +8,12 @@ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.Color;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class UpdateSubCommand extends AbstractCommand {
+import static com.hyperperms.command.util.CommandUtil.*;
 
-    private static final Color GOLD = new Color(255, 170, 0);
-    private static final Color GRAY = Color.GRAY;
-    private static final Color GREEN = new Color(85, 255, 85);
-    private static final Color RED = new Color(255, 85, 85);
-    private static final Color WHITE = Color.WHITE;
+public class UpdateSubCommand extends AbstractCommand {
 
     private final HyperPerms hyperPerms;
 
@@ -136,18 +131,17 @@ public class UpdateSubCommand extends AbstractCommand {
         }
 
         // Check HyperPerms permissions (wildcard first, then specific)
-        if (hp.hasPermission(uuid, "hyperperms.*") ||
-            hp.hasPermission(uuid, "hyperperms.admin") ||
-            hp.hasPermission(uuid, "hyperperms.update")) {
+        if (hp.hasPermission(uuid, com.hyperperms.util.Permissions.ADMIN) ||
+            hp.hasPermission(uuid, com.hyperperms.util.Permissions.UPDATE)) {
             return true;
         }
-        
+
         // Fallback to Hytale's native permission system (for operators)
         try {
             var permModule = com.hypixel.hytale.server.core.permissions.PermissionsModule.get();
             if (permModule != null) {
-                return permModule.hasPermission(uuid, "hyperperms.admin") || 
-                       permModule.hasPermission(uuid, "hyperperms.update") ||
+                return permModule.hasPermission(uuid, com.hyperperms.util.Permissions.ADMIN) ||
+                       permModule.hasPermission(uuid, com.hyperperms.util.Permissions.UPDATE) ||
                        permModule.hasPermission(uuid, "*");
             }
         } catch (Exception ignored) {

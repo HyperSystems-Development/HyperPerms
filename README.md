@@ -109,6 +109,10 @@ Config file: `mods/com.hyperperms_HyperPerms/config.json`
 
 </details>
 
+## Important: Vanilla Group Overwrite
+
+Hytale's built-in permission system forcibly resets the `OP` and `Default` groups every time the server starts. Any custom permissions added to these groups via `/perm` will be **lost on restart**. Always use HyperPerms groups instead (`/hp group create <name>`). HyperPerms logs a warning at startup if it detects custom permissions in vanilla groups.
+
 ## Optional: SQLite & Analytics
 
 SQLite enables analytics tracking and audit logs. It's **not bundled** to keep the JAR small (2.4MB vs 15MB).
@@ -130,6 +134,23 @@ SQLite enables analytics tracking and audit logs. It's **not bundled** to keep t
 </details>
 
 ## For Developers
+
+<details>
+<summary><strong>Maven Dependency (JitPack)</strong></summary>
+
+Add HyperPerms as a dependency to build integrations:
+
+```gradle
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    compileOnly 'com.github.HyperSystemsDev:HyperPerms:v2.8.5'
+}
+```
+
+</details>
 
 <details>
 <summary><strong>API Usage</strong></summary>
@@ -163,10 +184,14 @@ api.getGroupManager().createGroup(admin);
 
 **Requirements:** Java 25, Gradle 9.3+
 
+All dependencies are resolved automatically from Maven. The Hytale Server API comes from `maven.hytale.com` and VaultUnlocked from `repo.codemc.io`.
+
 ```bash
 ./gradlew shadowJar
-# Output: build/libs/HyperPerms-2.7.7.jar
+# Output: build/libs/HyperPerms-<version>.jar
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup and contribution guidelines.
 
 </details>
 

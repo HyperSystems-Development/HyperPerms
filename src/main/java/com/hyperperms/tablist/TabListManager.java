@@ -6,6 +6,7 @@ import com.hyperperms.chat.ColorUtil;
 import com.hyperperms.chat.PrefixSuffixResolver;
 import com.hyperperms.model.User;
 import com.hyperperms.util.Logger;
+import static com.hyperperms.util.Logger.debugChat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -90,16 +91,21 @@ public class TabListManager {
      * @return a future containing the formatted tab list name
      */
     public CompletableFuture<String> formatTabListName(@NotNull UUID uuid, @NotNull String playerName) {
+        debugChat("TabListManager.formatTabListName: player=%s, uuid=%s, enabled=%s", playerName, uuid, enabled);
+
         if (!enabled) {
+            debugChat("TabListManager.formatTabListName: tab list formatting disabled");
             return CompletableFuture.completedFuture(playerName);
         }
 
         // Check cache first
         CachedDisplayName cached = displayNameCache.get(uuid);
         if (cached != null && !cached.isExpired()) {
+            debugChat("TabListManager.formatTabListName: using cached name for %s", playerName);
             return CompletableFuture.completedFuture(cached.formattedName);
         }
 
+        debugChat("TabListManager.formatTabListName: loading display data for %s (cache miss)", playerName);
         // Load display data and format
         return loadDisplayData(uuid).thenApply(displayData -> {
             String formatted = formatWithDisplayData(displayData, playerName, uuid);
@@ -125,6 +131,9 @@ public class TabListManager {
             @NotNull String playerName,
             @Nullable UUID playerUuid) {
 
+        debugChat("TabListManager.formatWithDisplayData: player=%s, prefix='%s', suffix='%s', group=%s",
+                playerName, displayData.getPrefix(), displayData.getSuffix(), displayData.getPrimaryGroupName());
+
         // Build context
         ChatFormatter.PlaceholderContext context = ChatFormatter.PlaceholderContext.builder()
             .playerName(playerName)
@@ -142,7 +151,9 @@ public class TabListManager {
         String formatted = ChatFormatter.format(tabListFormat, context);
 
         // Process colors
-        return ColorUtil.colorize(formatted);
+        String colorized = ColorUtil.colorize(formatted);
+        debugChat("TabListManager.formatWithDisplayData: format='%s', result='%s'", tabListFormat, colorized);
+        return colorized;
     }
 
     /**
@@ -282,6 +293,9 @@ public class TabListManager {
             this.tabListFormat = config.getTabListFormat();
             this.sortByWeight = config.isTabListSortByWeight();
             this.updateIntervalTicks = config.getTabListUpdateIntervalTicks();
+
+            debugChat("TabListManager.loadConfig: enabled=%s, format='%s', sortByWeight=%s, updateInterval=%d",
+                    enabled, tabListFormat, sortByWeight, updateIntervalTicks);
         }
     }
 

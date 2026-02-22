@@ -4,7 +4,7 @@ import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
 import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
-import com.hyperperms.storage.StorageProvider;
+import com.hyperperms.storage.AbstractStorageProvider;
 import com.hyperperms.util.Logger;
 import com.hyperperms.util.SQLiteDriverLoader;
 import org.jetbrains.annotations.NotNull;
@@ -19,9 +19,6 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * SQLite-based storage provider.
@@ -43,22 +40,16 @@ import java.util.concurrent.TimeUnit;
  * as concurrent access to the shared connection would cause transaction interference and
  * potential data corruption.
  */
-public final class SQLiteStorageProvider implements StorageProvider {
+public final class SQLiteStorageProvider extends AbstractStorageProvider {
 
     private final Path databaseFile;
     private final Path backupsDirectory;
-    private final ExecutorService executor;
     private Connection connection;
-    private volatile boolean healthy = false;
 
     public SQLiteStorageProvider(@NotNull Path databaseFile) {
+        super("HyperPerms-SQLiteStorage");
         this.databaseFile = databaseFile;
         this.backupsDirectory = databaseFile.getParent().resolve("backups");
-        this.executor = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "HyperPerms-SQLiteStorage");
-            t.setDaemon(true);
-            return t;
-        });
     }
 
     /**
@@ -87,7 +78,8 @@ public final class SQLiteStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> init() {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Initializing SQLite storage at: %s", databaseFile);
             try {
                 // Check if driver is available
                 if (!isDriverAvailable()) {
@@ -111,14 +103,14 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 // Create tables
                 createTables();
 
-                healthy = true;
+                setHealthy(true);
                 Logger.info("SQLite storage initialized at: " + databaseFile);
 
             } catch (Exception e) {
-                healthy = false;
+                setHealthy(false);
                 throw new RuntimeException("Failed to initialize SQLite storage", e);
             }
-        }, executor);
+        });
     }
 
     private void createTables() throws SQLException {
@@ -190,44 +182,27 @@ public final class SQLiteStorageProvider implements StorageProvider {
     }
 
     @Override
-    public CompletableFuture<Void> shutdown() {
-        return CompletableFuture.runAsync(() -> {
-            healthy = false;
-            
-            try {
-                if (connection != null && !connection.isClosed()) {
-                    connection.close();
-                }
-            } catch (SQLException e) {
-                Logger.warn("Failed to close SQLite connection cleanly");
-            }
-
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-
-            Logger.info("SQLite storage shut down");
-        });
+    protected void closeResources() throws Exception {
+        if (connection != null && !connection.isClosed()) {
+            connection.close();
+            Logger.debugStorage("SQLite connection closed");
+        }
     }
 
     // ==================== User Operations ====================
 
     @Override
     public CompletableFuture<Optional<User>> loadUser(@NotNull UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading user from SQLite: %s", uuid);
             try {
                 String sql = "SELECT * FROM users WHERE uuid = ?";
                 try (PreparedStatement stmt = connection.prepareStatement(sql)) {
                     stmt.setString(1, uuid.toString());
                     ResultSet rs = stmt.executeQuery();
-                    
+
                     if (!rs.next()) {
+                        Logger.debugStorage("User not found in SQLite: %s", uuid);
                         return Optional.empty();
                     }
 
@@ -240,13 +215,14 @@ public final class SQLiteStorageProvider implements StorageProvider {
                     // Load nodes
                     loadUserNodes(user);
 
+                    Logger.debugStorage("Loaded user from SQLite: %s (%d nodes)", uuid, user.getNodes().size());
                     return Optional.of(user);
                 }
             } catch (SQLException e) {
                 Logger.severe("Failed to load user: " + uuid, e);
                 return Optional.empty();
             }
-        }, executor);
+        });
     }
 
     private void loadUserNodes(User user) throws SQLException {
@@ -274,7 +250,8 @@ public final class SQLiteStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> saveUser(@NotNull User user) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Saving user to SQLite: %s", user.getUuid());
             try {
                 connection.setAutoCommit(false);
 
@@ -322,6 +299,7 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 }
 
                 connection.commit();
+                Logger.debugStorage("Saved user to SQLite: %s (%d nodes)", user.getUuid(), user.getNodes().size());
             } catch (SQLException e) {
                 try {
                     connection.rollback();
@@ -336,25 +314,28 @@ public final class SQLiteStorageProvider implements StorageProvider {
                     Logger.warn("Failed to reset auto-commit");
                 }
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> deleteUser(@NotNull UUID uuid) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Deleting user from SQLite: %s", uuid);
             try (PreparedStatement stmt = connection.prepareStatement(
                     "DELETE FROM users WHERE uuid = ?")) {
                 stmt.setString(1, uuid.toString());
                 stmt.executeUpdate();
+                Logger.debugStorage("Deleted user from SQLite: %s", uuid);
             } catch (SQLException e) {
                 Logger.severe("Failed to delete user: " + uuid, e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Map<UUID, User>> loadAllUsers() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading all users from SQLite");
             Map<UUID, User> users = new HashMap<>();
             try {
                 String sql = "SELECT * FROM users";
@@ -374,13 +355,14 @@ public final class SQLiteStorageProvider implements StorageProvider {
             } catch (SQLException e) {
                 Logger.severe("Failed to load all users", e);
             }
+            Logger.debugStorage("Loaded %d users from SQLite", users.size());
             return users;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Set<UUID>> getUserUuids() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Set<UUID> uuids = new HashSet<>();
             try {
                 String sql = "SELECT uuid FROM users";
@@ -394,12 +376,12 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to get user UUIDs", e);
             }
             return uuids;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Optional<UUID>> lookupUuid(@NotNull String username) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             try {
                 String sql = "SELECT uuid FROM users WHERE LOWER(username) = LOWER(?)";
                 try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -413,14 +395,15 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to lookup UUID for: " + username, e);
             }
             return Optional.empty();
-        }, executor);
+        });
     }
 
     // ==================== Group Operations ====================
 
     @Override
     public CompletableFuture<Optional<Group>> loadGroup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading group from SQLite: %s", name);
             try {
                 String sql = "SELECT * FROM groups WHERE name = ?";
                 try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -447,7 +430,7 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to load group: " + name, e);
                 return Optional.empty();
             }
-        }, executor);
+        });
     }
 
     private void loadGroupNodes(Group group) throws SQLException {
@@ -475,7 +458,8 @@ public final class SQLiteStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> saveGroup(@NotNull Group group) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Saving group to SQLite: %s", group.getName());
             try {
                 connection.setAutoCommit(false);
 
@@ -540,12 +524,13 @@ public final class SQLiteStorageProvider implements StorageProvider {
                     Logger.warn("Failed to reset auto-commit");
                 }
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> deleteGroup(@NotNull String name) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Deleting group from SQLite: %s", name);
             try (PreparedStatement stmt = connection.prepareStatement(
                     "DELETE FROM groups WHERE name = ?")) {
                 stmt.setString(1, name.toLowerCase());
@@ -553,12 +538,13 @@ public final class SQLiteStorageProvider implements StorageProvider {
             } catch (SQLException e) {
                 Logger.severe("Failed to delete group: " + name, e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Map<String, Group>> loadAllGroups() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading all groups from SQLite");
             Map<String, Group> groups = new HashMap<>();
             try {
                 String sql = "SELECT * FROM groups";
@@ -579,13 +565,14 @@ public final class SQLiteStorageProvider implements StorageProvider {
             } catch (SQLException e) {
                 Logger.severe("Failed to load all groups", e);
             }
+            Logger.debugStorage("Loaded %d groups from SQLite", groups.size());
             return groups;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Set<String>> getGroupNames() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Set<String> names = new HashSet<>();
             try {
                 String sql = "SELECT name FROM groups";
@@ -599,14 +586,14 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to get group names", e);
             }
             return names;
-        }, executor);
+        });
     }
 
     // ==================== Track Operations ====================
 
     @Override
     public CompletableFuture<Optional<Track>> loadTrack(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             try {
                 String sql = "SELECT * FROM tracks WHERE name = ?";
                 try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -626,12 +613,12 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to load track: " + name, e);
                 return Optional.empty();
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> saveTrack(@NotNull Track track) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
             try {
                 String sql = """
                     INSERT INTO tracks (name, groups_json) VALUES (?, ?)
@@ -645,12 +632,12 @@ public final class SQLiteStorageProvider implements StorageProvider {
             } catch (SQLException e) {
                 Logger.severe("Failed to save track: " + track.getName(), e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> deleteTrack(@NotNull String name) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
             try (PreparedStatement stmt = connection.prepareStatement(
                     "DELETE FROM tracks WHERE name = ?")) {
                 stmt.setString(1, name.toLowerCase());
@@ -658,12 +645,12 @@ public final class SQLiteStorageProvider implements StorageProvider {
             } catch (SQLException e) {
                 Logger.severe("Failed to delete track: " + name, e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Map<String, Track>> loadAllTracks() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Map<String, Track> tracks = new HashMap<>();
             try {
                 String sql = "SELECT * FROM tracks";
@@ -680,12 +667,12 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to load all tracks", e);
             }
             return tracks;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Set<String>> getTrackNames() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Set<String> names = new HashSet<>();
             try {
                 String sql = "SELECT name FROM tracks";
@@ -699,14 +686,14 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to get track names", e);
             }
             return names;
-        }, executor);
+        });
     }
 
     // ==================== Backup Operations ====================
 
     @Override
     public CompletableFuture<String> createBackup(@Nullable String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             String backupName = name != null ? name :
                 "backup-" + java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
@@ -722,12 +709,12 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to create SQLite backup", e);
                 throw new RuntimeException("Backup failed", e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Boolean> restoreBackup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Path backupFile = backupsDirectory.resolve(name + ".db");
             
             if (!Files.exists(backupFile)) {
@@ -762,12 +749,12 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to restore SQLite backup", e);
                 return false;
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<List<String>> listBackups() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             List<String> backups = new ArrayList<>();
             try {
                 if (Files.exists(backupsDirectory)) {
@@ -785,12 +772,12 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to list SQLite backups", e);
             }
             return backups;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Boolean> deleteBackup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Path backupFile = backupsDirectory.resolve(name + ".db");
             try {
                 return Files.deleteIfExists(backupFile);
@@ -798,18 +785,13 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Logger.severe("Failed to delete SQLite backup: " + name, e);
                 return false;
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> saveAll() {
         // SQLite auto-commits, nothing to do
         return CompletableFuture.completedFuture(null);
-    }
-
-    @Override
-    public boolean isHealthy() {
-        return healthy;
     }
 
     // ==================== Helper Methods ====================

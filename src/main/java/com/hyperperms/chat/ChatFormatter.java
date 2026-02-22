@@ -1,5 +1,6 @@
 package com.hyperperms.chat;
 
+import static com.hyperperms.util.Logger.debugChat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -89,6 +90,8 @@ public final class ChatFormatter {
      */
     @NotNull
     public static String format(@NotNull String format, @NotNull PlaceholderContext context) {
+        debugChat("ChatFormatter.format: input='%s', player=%s", format, context.getPlayerName());
+
         String result = format;
 
         // Process conditional placeholders first
@@ -96,6 +99,8 @@ public final class ChatFormatter {
 
         // Process regular placeholders
         result = processPlaceholders(result, context);
+
+        debugChat("ChatFormatter.format: afterPlaceholders='%s'", result);
 
         // Apply color codes
         result = ColorUtil.colorize(result);

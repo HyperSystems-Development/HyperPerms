@@ -3,8 +3,25 @@ plugins {
     id 'com.gradleup.shadow' version '9.3.1'
 }
 
-group = 'com.hyperperms'
-version = '2.8.5'
+group = project.mod_group
+version = project.mod_version
+
+// ---------------------------------------------------------------------------
+// Hytale Maven version resolution
+// Fetches the latest release from maven.hytale.com at build time.
+// Use -Phytale_channel=pre-release  (or run ./gradlew buildPreRelease)
+// to target the pre-release channel instead.
+// ---------------------------------------------------------------------------
+def resolveHytaleVersion(String channel) {
+    def url = "https://maven.hytale.com/${channel}/com/hypixel/hytale/Server/maven-metadata.xml"
+    def text = new URL(url).text
+    def matcher = text =~ /<release>(.+?)<\/release>/
+    if (!matcher.find()) throw new GradleException("Could not resolve Hytale server version from ${url}")
+    return matcher.group(1)
+}
+
+def hytaleChannel = project.findProperty('hytale_channel') ?: 'release'
+def hytaleVersion = resolveHytaleVersion(hytaleChannel)
 
 // Shared version property avoids accessing project at execution time
 def buildVersion = objects.property(String).convention(version)
@@ -19,19 +36,20 @@ gradle.taskGraph.whenReady { graph ->
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(project.java_version.toInteger())
     }
 }
 
 repositories {
     mavenCentral()
+    maven { url "https://maven.hytale.com/${hytaleChannel}" }
     // PlaceholderAPI for Hytale
     maven { url = 'https://repo.helpch.at/releases/' }
 }
 
 dependencies {
-    // Hytale Server API (provided at runtime)
-    compileOnly files(rootProject.hytaleServerJar)
+    // Hytale Server API — resolved automatically from maven.hytale.com
+    compileOnly "com.hypixel.hytale:Server:${hytaleVersion}"
 
     // Note: HyFactions is a soft dependency using pure reflection
     // No compile-time dependency needed - just runtime class detection
@@ -45,16 +63,16 @@ dependencies {
     // YAML parsing (for LuckPerms migration)
     implementation 'org.yaml:snakeyaml:2.2'
 
-    // Database - HikariCP connection pooling (P5 - deferred, for future MariaDB support)
-    // implementation 'com.zaxxer:HikariCP:6.2.1'
+    // Database - HikariCP connection pooling
+    implementation 'com.zaxxer:HikariCP:6.2.1'
 
     // Database - SQLite JDBC driver (optional - user must download separately)
     // The driver is NOT bundled to keep JAR size small (~4MB vs ~15MB)
     // Users who want SQLite features must download the JAR to plugins/HyperPerms/lib/
     compileOnly 'org.xerial:sqlite-jdbc:3.45.1.0'
 
-    // Database - MariaDB JDBC driver (P5 - deferred)
-    // implementation 'org.mariadb.jdbc:mariadb-java-client:3.5.1'
+    // Database - MariaDB JDBC driver
+    implementation 'org.mariadb.jdbc:mariadb-java-client:3.5.1'
 
     // Redis client for pub/sub and L2 cache (P5 - deferred)
     // implementation 'io.lettuce:lettuce-core:6.5.2.RELEASE'
@@ -106,14 +124,13 @@ tasks.named('compileJava') {
     dependsOn 'generateBuildInfo'
 }
 
-// Expand version placeholder in manifest.json
+// Expand version placeholders in manifest.json
 processResources {
     def ver = buildVersion
-    def srvVer = rootProject.hytaleServerVersion
     inputs.property('version', ver)
-    inputs.property('serverVersion', srvVer)
+    inputs.property('serverVersion', hytaleVersion)
     filesMatching('manifest.json') {
-        expand(version: ver.get(), serverVersion: srvVer)
+        expand(version: ver.get(), serverVersion: hytaleVersion)
     }
 }
 
@@ -132,10 +149,12 @@ shadowJar {
     relocate 'com.github.benmanes.caffeine', 'com.hyperperms.lib.caffeine'
     relocate 'org.yaml.snakeyaml', 'com.hyperperms.lib.snakeyaml'
     // Note: SQLite JDBC cannot be relocated due to native library loading
+    relocate 'com.zaxxer.hikari', 'com.hyperperms.lib.hikari'
+    // Note: MariaDB JDBC is NOT relocated because the shadow plugin does not
+    // rewrite META-INF/services files, breaking the driver's internal
+    // ServiceLoader-based plugin discovery (auth plugins, codecs, etc.).
 
-    // Future relocations when database support is added:
-    // relocate 'com.zaxxer.hikari', 'com.hyperperms.lib.hikari'
-    // relocate 'org.mariadb.jdbc', 'com.hyperperms.lib.mariadb'
+    // Future relocations:
     // relocate 'io.lettuce', 'com.hyperperms.lib.lettuce'
 }
 
@@ -155,7 +174,9 @@ build {
     dependsOn shadowJar
 }
 
-// Dev build task - clean build with version set to 'dev'
+// ---------------------------------------------------------------------------
+// Build tasks
+// ---------------------------------------------------------------------------
 tasks.register('buildDev') {
     group = 'build'
     description = 'Clean build with dev version identifier'
@@ -166,6 +187,20 @@ tasks.named('build') {
     mustRunAfter 'clean'
 }
 
+tasks.register('buildRelease', GradleBuild) {
+    group       = 'build'
+    description = 'Clean build against the latest Hytale release server'
+    tasks       = ['clean', 'shadowJar']
+    startParameter.projectProperties = ['hytale_channel': 'release']
+}
+
+tasks.register('buildPreRelease', GradleBuild) {
+    group       = 'build'
+    description = 'Clean build against the latest Hytale pre-release server'
+    tasks       = ['clean', 'shadowJar']
+    startParameter.projectProperties = ['hytale_channel': 'pre-release']
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.compilerArgs.addAll([
@@ -174,4 +209,3 @@ tasks.withType(JavaCompile).configureEach {
         '--enable-preview'
     ])
 }
-

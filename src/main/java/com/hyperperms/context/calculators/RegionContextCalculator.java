@@ -1,11 +1,9 @@
 package com.hyperperms.context.calculators;
 
-import com.hyperperms.api.context.ContextSet;
-import com.hyperperms.context.ContextCalculator;
 import com.hyperperms.context.PlayerContextProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -26,15 +24,15 @@ import java.util.UUID;
  * This calculator integrates with any region/zone system that provides region data
  * through the {@link PlayerContextProvider}. If no region system is available or
  * the player is not in a defined region, no context is added.
+ * <p>
+ * Region names are normalized to lowercase with spaces replaced by underscores.
  */
-public final class RegionContextCalculator implements ContextCalculator {
+public final class RegionContextCalculator extends SimpleContextCalculator {
 
     /**
      * The context key for region contexts.
      */
     public static final String KEY = "region";
-
-    private final PlayerContextProvider provider;
 
     /**
      * Creates a new region context calculator.
@@ -42,16 +40,19 @@ public final class RegionContextCalculator implements ContextCalculator {
      * @param provider the player context provider
      */
     public RegionContextCalculator(@NotNull PlayerContextProvider provider) {
-        this.provider = Objects.requireNonNull(provider, "provider cannot be null");
+        super(KEY, provider);
     }
 
     @Override
-    public void calculate(@NotNull UUID uuid, @NotNull ContextSet.Builder builder) {
-        String region = provider.getRegion(uuid);
-        if (region != null && !region.isEmpty()) {
-            // Normalize region name: lowercase and replace spaces with underscores
-            String normalizedRegion = region.toLowerCase().replace(' ', '_');
-            builder.add(KEY, normalizedRegion);
-        }
+    @Nullable
+    protected String computeValue(@NotNull UUID uuid) {
+        return provider.getRegion(uuid);
+    }
+
+    @Override
+    @NotNull
+    protected String normalize(@NotNull String value) {
+        // Normalize region name: lowercase and replace spaces with underscores
+        return value.toLowerCase().replace(' ', '_');
     }
 }

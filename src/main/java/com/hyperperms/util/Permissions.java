@@ -454,6 +454,28 @@ public final class Permissions {
      */
     public static final String TRACK_REMOVE = "hyperperms.command.track.remove";
 
+    // ==================== Update Permissions ====================
+
+    /**
+     * Permission for update commands.
+     */
+    public static final String UPDATE = "hyperperms.command.update";
+
+    /**
+     * Permission for all update operations.
+     */
+    public static final String UPDATES_ALL = "hyperperms.updates.*";
+
+    /**
+     * Permission to toggle update notifications.
+     */
+    public static final String UPDATES_TOGGLE = "hyperperms.updates.toggle";
+
+    /**
+     * Permission to receive update notifications on join.
+     */
+    public static final String UPDATES_NOTIFY = "hyperperms.updates.notify";
+
     // ==================== Utility Methods ====================
 
     /**

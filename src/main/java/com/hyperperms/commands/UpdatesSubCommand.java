@@ -7,9 +7,10 @@ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.Color;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+
+import static com.hyperperms.command.util.CommandUtil.*;
 
 /**
  * Subcommand for /hp updates [on|off].
@@ -22,12 +23,6 @@ import java.util.concurrent.CompletableFuture;
  * </ul>
  */
 public class UpdatesSubCommand extends AbstractCommand {
-
-    private static final Color GOLD = new Color(255, 170, 0);
-    private static final Color GRAY = Color.GRAY;
-    private static final Color GREEN = new Color(85, 255, 85);
-    private static final Color RED = new Color(255, 85, 85);
-    private static final Color WHITE = Color.WHITE;
 
     private final HyperPerms hyperPerms;
 
@@ -128,18 +123,17 @@ public class UpdatesSubCommand extends AbstractCommand {
             return true;
         }
 
-        if (hyperPerms.hasPermission(uuid, "hyperperms.*") ||
-            hyperPerms.hasPermission(uuid, "hyperperms.admin") ||
-            hyperPerms.hasPermission(uuid, "hyperperms.updates.*") ||
-            hyperPerms.hasPermission(uuid, "hyperperms.updates.toggle")) {
+        if (hyperPerms.hasPermission(uuid, com.hyperperms.util.Permissions.ADMIN) ||
+            hyperPerms.hasPermission(uuid, com.hyperperms.util.Permissions.UPDATES_ALL) ||
+            hyperPerms.hasPermission(uuid, com.hyperperms.util.Permissions.UPDATES_TOGGLE)) {
             return true;
         }
 
         try {
             var permModule = com.hypixel.hytale.server.core.permissions.PermissionsModule.get();
             if (permModule != null) {
-                return permModule.hasPermission(uuid, "hyperperms.admin") ||
-                       permModule.hasPermission(uuid, "hyperperms.updates.toggle") ||
+                return permModule.hasPermission(uuid, com.hyperperms.util.Permissions.ADMIN) ||
+                       permModule.hasPermission(uuid, com.hyperperms.util.Permissions.UPDATES_TOGGLE) ||
                        permModule.hasPermission(uuid, "*");
             }
         } catch (Exception ignored) {

@@ -7,7 +7,7 @@ import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
 import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
-import com.hyperperms.storage.StorageProvider;
+import com.hyperperms.storage.AbstractStorageProvider;
 import com.hyperperms.util.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,9 +18,6 @@ import java.nio.file.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * JSON file-based storage provider.
@@ -32,7 +29,7 @@ import java.util.concurrent.TimeUnit;
  *   <li>{@code tracks/<name>.json} - Track data</li>
  * </ul>
  */
-public final class JsonStorageProvider implements StorageProvider {
+public final class JsonStorageProvider extends AbstractStorageProvider {
 
     private final Path dataDirectory;
     private final Path usersDirectory;
@@ -40,20 +37,14 @@ public final class JsonStorageProvider implements StorageProvider {
     private final Path tracksDirectory;
     private final Path backupsDirectory;
     private final Gson gson;
-    private final ExecutorService executor;
-    private volatile boolean healthy = false;
 
     public JsonStorageProvider(@NotNull Path dataDirectory) {
+        super("HyperPerms-JsonStorage");
         this.dataDirectory = dataDirectory;
         this.usersDirectory = dataDirectory.resolve("users");
         this.groupsDirectory = dataDirectory.resolve("groups");
         this.tracksDirectory = dataDirectory.resolve("tracks");
         this.backupsDirectory = dataDirectory.resolve("backups");
-        this.executor = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "HyperPerms-JsonStorage");
-            t.setDaemon(true);
-            return t;
-        });
         this.gson = createGson();
     }
 
@@ -77,35 +68,19 @@ public final class JsonStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Void> init() {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Initializing JSON storage at: %s", dataDirectory);
             try {
                 Files.createDirectories(usersDirectory);
                 Files.createDirectories(groupsDirectory);
                 Files.createDirectories(tracksDirectory);
                 Files.createDirectories(backupsDirectory);
-                healthy = true;
+                setHealthy(true);
                 Logger.info("JSON storage initialized at: " + dataDirectory);
             } catch (IOException e) {
-                healthy = false;
+                setHealthy(false);
                 throw new RuntimeException("Failed to initialize JSON storage", e);
             }
-        }, executor);
-    }
-
-    @Override
-    public CompletableFuture<Void> shutdown() {
-        return CompletableFuture.runAsync(() -> {
-            healthy = false;
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-            Logger.info("JSON storage shut down");
         });
     }
 
@@ -113,50 +88,58 @@ public final class JsonStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Optional<User>> loadUser(@NotNull UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading user: %s", uuid);
             Path file = usersDirectory.resolve(uuid + ".json");
             if (!Files.exists(file)) {
+                Logger.debugStorage("User file not found: %s", uuid);
                 return Optional.empty();
             }
             try {
                 String json = Files.readString(file);
                 User user = gson.fromJson(json, User.class);
+                Logger.debugStorage("Loaded user: %s", uuid);
                 return Optional.ofNullable(user);
             } catch (IOException e) {
                 Logger.severe("Failed to load user: " + uuid, e);
                 return Optional.empty();
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> saveUser(@NotNull User user) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Saving user: %s", user.getUuid());
             Path file = usersDirectory.resolve(user.getUuid() + ".json");
             try {
                 String json = gson.toJson(user);
                 Files.writeString(file, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                Logger.debugStorage("Saved user: %s (%d nodes)", user.getUuid(), user.getNodes().size());
             } catch (IOException e) {
                 Logger.severe("Failed to save user: " + user.getUuid(), e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> deleteUser(@NotNull UUID uuid) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Deleting user: %s", uuid);
             Path file = usersDirectory.resolve(uuid + ".json");
             try {
                 Files.deleteIfExists(file);
+                Logger.debugStorage("Deleted user: %s", uuid);
             } catch (IOException e) {
                 Logger.severe("Failed to delete user: " + uuid, e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Map<UUID, User>> loadAllUsers() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading all users from JSON");
             Map<UUID, User> users = new HashMap<>();
             try (var stream = Files.list(usersDirectory)) {
                 stream.filter(p -> p.toString().endsWith(".json"))
@@ -174,13 +157,14 @@ public final class JsonStorageProvider implements StorageProvider {
             } catch (IOException e) {
                 Logger.severe("Failed to list users directory", e);
             }
+            Logger.debugStorage("Loaded %d users from JSON", users.size());
             return users;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Set<UUID>> getUserUuids() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Set<UUID> uuids = new HashSet<>();
             try (var stream = Files.list(usersDirectory)) {
                 stream.filter(p -> p.toString().endsWith(".json"))
@@ -195,7 +179,7 @@ public final class JsonStorageProvider implements StorageProvider {
                 Logger.severe("Failed to list users", e);
             }
             return uuids;
-        }, executor);
+        });
     }
 
     @Override
@@ -210,50 +194,58 @@ public final class JsonStorageProvider implements StorageProvider {
 
     @Override
     public CompletableFuture<Optional<Group>> loadGroup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading group: %s", name);
             Path file = groupsDirectory.resolve(name.toLowerCase() + ".json");
             if (!Files.exists(file)) {
+                Logger.debugStorage("Group file not found: %s", name);
                 return Optional.empty();
             }
             try {
                 String json = Files.readString(file);
                 Group group = gson.fromJson(json, Group.class);
+                Logger.debugStorage("Loaded group: %s", name);
                 return Optional.ofNullable(group);
             } catch (IOException e) {
                 Logger.severe("Failed to load group: " + name, e);
                 return Optional.empty();
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> saveGroup(@NotNull Group group) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Saving group: %s", group.getName());
             Path file = groupsDirectory.resolve(group.getName() + ".json");
             try {
                 String json = gson.toJson(group);
                 Files.writeString(file, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                Logger.debugStorage("Saved group: %s (%d nodes)", group.getName(), group.getNodes().size());
             } catch (IOException e) {
                 Logger.severe("Failed to save group: " + group.getName(), e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> deleteGroup(@NotNull String name) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Deleting group: %s", name);
             Path file = groupsDirectory.resolve(name.toLowerCase() + ".json");
             try {
                 Files.deleteIfExists(file);
+                Logger.debugStorage("Deleted group: %s", name);
             } catch (IOException e) {
                 Logger.severe("Failed to delete group: " + name, e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Map<String, Group>> loadAllGroups() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading all groups from JSON");
             Map<String, Group> groups = new HashMap<>();
             try (var stream = Files.list(groupsDirectory)) {
                 stream.filter(p -> p.toString().endsWith(".json"))
@@ -271,13 +263,14 @@ public final class JsonStorageProvider implements StorageProvider {
             } catch (IOException e) {
                 Logger.severe("Failed to list groups directory", e);
             }
+            Logger.debugStorage("Loaded %d groups from JSON", groups.size());
             return groups;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Set<String>> getGroupNames() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Set<String> names = new HashSet<>();
             try (var stream = Files.list(groupsDirectory)) {
                 stream.filter(p -> p.toString().endsWith(".json"))
@@ -289,14 +282,15 @@ public final class JsonStorageProvider implements StorageProvider {
                 Logger.severe("Failed to list groups", e);
             }
             return names;
-        }, executor);
+        });
     }
 
     // ==================== Track Operations ====================
 
     @Override
     public CompletableFuture<Optional<Track>> loadTrack(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading track: %s", name);
             Path file = tracksDirectory.resolve(name.toLowerCase() + ".json");
             if (!Files.exists(file)) {
                 return Optional.empty();
@@ -304,42 +298,48 @@ public final class JsonStorageProvider implements StorageProvider {
             try {
                 String json = Files.readString(file);
                 Track track = gson.fromJson(json, Track.class);
+                Logger.debugStorage("Loaded track: %s", name);
                 return Optional.ofNullable(track);
             } catch (IOException e) {
                 Logger.severe("Failed to load track: " + name, e);
                 return Optional.empty();
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> saveTrack(@NotNull Track track) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Saving track: %s", track.getName());
             Path file = tracksDirectory.resolve(track.getName() + ".json");
             try {
                 String json = gson.toJson(track);
                 Files.writeString(file, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                Logger.debugStorage("Saved track: %s (%d groups)", track.getName(), track.getGroups().size());
             } catch (IOException e) {
                 Logger.severe("Failed to save track: " + track.getName(), e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Void> deleteTrack(@NotNull String name) {
-        return CompletableFuture.runAsync(() -> {
+        return runAsync(() -> {
+            Logger.debugStorage("Deleting track: %s", name);
             Path file = tracksDirectory.resolve(name.toLowerCase() + ".json");
             try {
                 Files.deleteIfExists(file);
+                Logger.debugStorage("Deleted track: %s", name);
             } catch (IOException e) {
                 Logger.severe("Failed to delete track: " + name, e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Map<String, Track>> loadAllTracks() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
+            Logger.debugStorage("Loading all tracks from JSON");
             Map<String, Track> tracks = new HashMap<>();
             try (var stream = Files.list(tracksDirectory)) {
                 stream.filter(p -> p.toString().endsWith(".json"))
@@ -357,13 +357,14 @@ public final class JsonStorageProvider implements StorageProvider {
             } catch (IOException e) {
                 Logger.severe("Failed to list tracks directory", e);
             }
+            Logger.debugStorage("Loaded %d tracks from JSON", tracks.size());
             return tracks;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Set<String>> getTrackNames() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Set<String> names = new HashSet<>();
             try (var stream = Files.list(tracksDirectory)) {
                 stream.filter(p -> p.toString().endsWith(".json"))
@@ -375,7 +376,7 @@ public final class JsonStorageProvider implements StorageProvider {
                 Logger.severe("Failed to list tracks", e);
             }
             return names;
-        }, executor);
+        });
     }
 
     @Override
@@ -384,16 +385,11 @@ public final class JsonStorageProvider implements StorageProvider {
         return CompletableFuture.completedFuture(null);
     }
 
-    @Override
-    public boolean isHealthy() {
-        return healthy;
-    }
-
     // ==================== Backup Operations ====================
 
     @Override
     public CompletableFuture<String> createBackup(@Nullable String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             String backupName = name != null ? name : 
                 "backup-" + java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
@@ -471,12 +467,12 @@ public final class JsonStorageProvider implements StorageProvider {
                 Logger.severe("Failed to create backup: " + backupName, e);
                 throw new RuntimeException("Backup failed", e);
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Boolean> restoreBackup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Path backupDir = backupsDirectory.resolve(name);
             
             if (!Files.exists(backupDir)) {
@@ -541,14 +537,14 @@ public final class JsonStorageProvider implements StorageProvider {
                 Logger.severe("Failed to restore backup: " + name, e);
                 return false;
             }
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<List<String>> listBackups() {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             List<String> backups = new ArrayList<>();
-            
+
             try {
                 if (Files.exists(backupsDirectory)) {
                     try (var stream = Files.list(backupsDirectory)) {
@@ -561,16 +557,16 @@ public final class JsonStorageProvider implements StorageProvider {
             } catch (IOException e) {
                 Logger.severe("Failed to list backups", e);
             }
-            
+
             return backups;
-        }, executor);
+        });
     }
 
     @Override
     public CompletableFuture<Boolean> deleteBackup(@NotNull String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return executeAsync(() -> {
             Path backupDir = backupsDirectory.resolve(name);
-            
+
             if (!Files.exists(backupDir)) {
                 return false;
             }
@@ -586,7 +582,7 @@ public final class JsonStorageProvider implements StorageProvider {
                              Logger.warn("Failed to delete: " + path);
                          }
                      });
-                
+
                 Logger.info("Deleted backup: " + name);
                 return true;
 
@@ -594,7 +590,7 @@ public final class JsonStorageProvider implements StorageProvider {
                 Logger.severe("Failed to delete backup: " + name, e);
                 return false;
             }
-        }, executor);
+        });
     }
 
     @Override

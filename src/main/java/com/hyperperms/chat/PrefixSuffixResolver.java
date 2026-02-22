@@ -3,6 +3,7 @@ package com.hyperperms.chat;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.User;
+import static com.hyperperms.util.Logger.debugChat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -120,11 +121,13 @@ public class PrefixSuffixResolver {
      */
     public CompletableFuture<ResolveResult> resolve(@NotNull UUID uuid) {
         Objects.requireNonNull(uuid, "uuid cannot be null");
-        
+        debugChat("PrefixSuffixResolver.resolve: uuid=%s", uuid);
+
         return plugin.getUserManager().loadUser(uuid)
             .thenCompose(optUser -> {
                 if (optUser.isEmpty()) {
                     // User not found - return defaults
+                    debugChat("PrefixSuffixResolver.resolve: user not found, returning defaults");
                     return CompletableFuture.completedFuture(
                         new ResolveResult(defaultPrefix, defaultSuffix, null, null)
                     );
@@ -141,13 +144,17 @@ public class PrefixSuffixResolver {
      */
     public CompletableFuture<ResolveResult> resolve(@NotNull User user) {
         Objects.requireNonNull(user, "user cannot be null");
-        
+
         // Check for custom prefix/suffix first (highest priority)
         String customPrefix = user.getCustomPrefix();
         String customSuffix = user.getCustomSuffix();
-        
+        debugChat("PrefixSuffixResolver.resolve: user=%s, customPrefix=%s, customSuffix=%s",
+                user.getUuid(), customPrefix != null ? "'" + customPrefix + "'" : "null",
+                customSuffix != null ? "'" + customSuffix + "'" : "null");
+
         // If both custom values are set, no need to check groups
         if (customPrefix != null && customSuffix != null) {
+            debugChat("PrefixSuffixResolver.resolve: both custom values set, skipping group resolution");
             return CompletableFuture.completedFuture(
                 new ResolveResult(
                     processColors ? ColorUtil.colorize(customPrefix) : customPrefix,
@@ -157,7 +164,7 @@ public class PrefixSuffixResolver {
                 )
             );
         }
-        
+
         // Need to resolve from groups
         return resolveFromGroups(user, customPrefix, customSuffix);
     }
@@ -178,9 +185,12 @@ public class PrefixSuffixResolver {
         if (primaryGroupName != null && !primaryGroupName.isEmpty()) {
             groupNames.add(primaryGroupName);
         }
+        debugChat("PrefixSuffixResolver.resolveFromGroups: groups=%s, primaryGroup=%s",
+                groupNames, primaryGroupName);
 
         if (groupNames.isEmpty()) {
             // No groups - use defaults or custom values
+            debugChat("PrefixSuffixResolver.resolveFromGroups: no groups, using defaults");
             String prefix = customPrefix != null ? customPrefix : defaultPrefix;
             String suffix = customSuffix != null ? customSuffix : defaultSuffix;
             return CompletableFuture.completedFuture(
@@ -308,45 +318,62 @@ public class PrefixSuffixResolver {
         // Resolve prefix
         if (customPrefix != null) {
             resolvedPrefix = customPrefix;
+            debugChat("resolveFromGroupList: using custom prefix '%s'", customPrefix);
         } else {
             // Always use weight/priority-based selection first
             GroupPrefixSuffix best = findBestPrefix(groups);
             if (best != null) {
                 resolvedPrefix = best.value;
                 prefixSource = best.group;
+                debugChat("resolveFromGroupList: best prefix '%s' from group '%s' (priority=%d, weight=%d)",
+                        best.value, best.group.getName(), getEffectivePrefixPriority(best.group), best.group.getWeight());
             } else if (primaryGroup != null && primaryGroup.getPrefix() != null && !primaryGroup.getPrefix().isEmpty()) {
                 // Fall back to primary group only if no weighted prefix found
                 resolvedPrefix = primaryGroup.getPrefix();
                 prefixSource = primaryGroup;
+                debugChat("resolveFromGroupList: fallback to primary group prefix '%s' from '%s'",
+                        resolvedPrefix, primaryGroup.getName());
             } else {
                 resolvedPrefix = defaultPrefix;
+                debugChat("resolveFromGroupList: using default prefix '%s'", defaultPrefix);
             }
         }
 
         // Resolve suffix
         if (customSuffix != null) {
             resolvedSuffix = customSuffix;
+            debugChat("resolveFromGroupList: using custom suffix '%s'", customSuffix);
         } else {
             // Always use weight/priority-based selection first
             GroupPrefixSuffix best = findBestSuffix(groups);
             if (best != null) {
                 resolvedSuffix = best.value;
                 suffixSource = best.group;
+                debugChat("resolveFromGroupList: best suffix '%s' from group '%s' (priority=%d, weight=%d)",
+                        best.value, best.group.getName(), getEffectiveSuffixPriority(best.group), best.group.getWeight());
             } else if (primaryGroup != null && primaryGroup.getSuffix() != null && !primaryGroup.getSuffix().isEmpty()) {
                 // Fall back to primary group only if no weighted suffix found
                 resolvedSuffix = primaryGroup.getSuffix();
                 suffixSource = primaryGroup;
+                debugChat("resolveFromGroupList: fallback to primary group suffix '%s' from '%s'",
+                        resolvedSuffix, primaryGroup.getName());
             } else {
                 resolvedSuffix = defaultSuffix;
+                debugChat("resolveFromGroupList: using default suffix '%s'", defaultSuffix);
             }
         }
-        
+
         // Process colors if enabled
         if (processColors) {
             resolvedPrefix = ColorUtil.colorize(resolvedPrefix);
             resolvedSuffix = ColorUtil.colorize(resolvedSuffix);
         }
-        
+
+        debugChat("resolveFromGroupList: final prefix='%s', suffix='%s', prefixSource=%s, suffixSource=%s",
+                resolvedPrefix, resolvedSuffix,
+                prefixSource != null ? prefixSource.getName() : "custom/default",
+                suffixSource != null ? suffixSource.getName() : "custom/default");
+
         return new ResolveResult(resolvedPrefix, resolvedSuffix, prefixSource, suffixSource);
     }
     

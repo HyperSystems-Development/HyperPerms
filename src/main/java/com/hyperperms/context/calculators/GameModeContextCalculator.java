@@ -1,11 +1,9 @@
 package com.hyperperms.context.calculators;
 
-import com.hyperperms.api.context.ContextSet;
-import com.hyperperms.context.ContextCalculator;
 import com.hyperperms.context.PlayerContextProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -26,14 +24,12 @@ import java.util.UUID;
  * /hp user Player permission set some.permission gamemode=creative
  * </pre>
  */
-public final class GameModeContextCalculator implements ContextCalculator {
+public final class GameModeContextCalculator extends SimpleContextCalculator {
 
     /**
      * The context key for game mode contexts.
      */
     public static final String KEY = "gamemode";
-
-    private final PlayerContextProvider provider;
 
     /**
      * Creates a new game mode context calculator.
@@ -41,14 +37,12 @@ public final class GameModeContextCalculator implements ContextCalculator {
      * @param provider the player context provider
      */
     public GameModeContextCalculator(@NotNull PlayerContextProvider provider) {
-        this.provider = Objects.requireNonNull(provider, "provider cannot be null");
+        super(KEY, provider);
     }
 
     @Override
-    public void calculate(@NotNull UUID uuid, @NotNull ContextSet.Builder builder) {
-        String gameMode = provider.getGameMode(uuid);
-        if (gameMode != null && !gameMode.isEmpty()) {
-            builder.add(KEY, gameMode.toLowerCase());
-        }
+    @Nullable
+    protected String computeValue(@NotNull UUID uuid) {
+        return provider.getGameMode(uuid);
     }
 }

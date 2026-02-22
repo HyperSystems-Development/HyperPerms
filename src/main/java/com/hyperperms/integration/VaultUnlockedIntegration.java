@@ -2,6 +2,7 @@ package com.hyperperms.integration;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.ReflectionUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Method;
@@ -29,10 +30,12 @@ public final class VaultUnlockedIntegration {
             return;
         }
 
+        Logger.debugIntegration("Checking for VaultUnlocked availability...");
         if (!isVaultUnlockedAvailable()) {
             Logger.info("VaultUnlocked not found - integration disabled");
             return;
         }
+        Logger.debugIntegration("VaultUnlocked detected, registering permission provider");
 
         try {
             // Create the provider
@@ -96,12 +99,7 @@ public final class VaultUnlockedIntegration {
      * @return true if VaultUnlocked classes are available
      */
     public static boolean isVaultUnlockedAvailable() {
-        try {
-            Class.forName("net.cfh.vault.VaultUnlockedServicesManager");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return ReflectionUtil.isClassAvailable("net.cfh.vault.VaultUnlockedServicesManager");
     }
 
     /**

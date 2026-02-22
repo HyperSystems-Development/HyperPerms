@@ -2,6 +2,7 @@ package com.hyperperms.integration;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.util.Logger;
+import com.hyperperms.util.ReflectionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,11 +33,17 @@ public final class WerChatIntegration {
 
     public WerChatIntegration(@NotNull HyperPerms plugin) {
         this.plugin = plugin;
+
+        Logger.debugIntegration("Checking for WerChat availability...");
         this.werchatAvailable = checkWerChatAvailable();
         this.provider = werchatAvailable ? createReflectiveProvider() : null;
 
-        if (werchatAvailable) {
+        if (werchatAvailable && provider != null) {
             Logger.info("WerChat integration enabled - chat channel placeholders available");
+        } else if (werchatAvailable) {
+            Logger.debugIntegration("WerChat classes found but provider creation failed");
+        } else {
+            Logger.debugIntegration("WerChat not detected");
         }
     }
 
@@ -44,12 +51,7 @@ public final class WerChatIntegration {
      * Checks if WerChat plugin classes are available.
      */
     private boolean checkWerChatAvailable() {
-        try {
-            Class.forName("com.werchat.WerchatPlugin");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return ReflectionUtil.isClassAvailable("com.werchat.WerchatPlugin");
     }
 
     /**

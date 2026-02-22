@@ -34,6 +34,15 @@ import java.util.Objects;
  *   <li>Prefix wildcards (shortest prefix first: "a.*" before "a.b.*")</li>
  * </ol>
  * <p>
+ * <strong>Wildcard Restrictions:</strong> Middle wildcards (e.g., {@code hytale.*.ban})
+ * are <b>not</b> supported. The {@code *} in such patterns is treated as a literal
+ * character, not a wildcard. This matches vanilla Hytale behavior. Wildcards are only
+ * valid in two positions:
+ * <ul>
+ *   <li>Standalone: {@code *} (grant all) or {@code -*} (deny all)</li>
+ *   <li>Trailing: {@code prefix.*} (grant all under prefix) or {@code -prefix.*} (deny all under prefix)</li>
+ * </ul>
+ * <p>
  * <strong>Important:</strong> With this resolution order, {@code ["*", "-ban"]} checking
  * {@code ban} returns TRUE because global {@code *} is checked first and wins.
  * To deny specific permissions, avoid using global {@code *} and use more specific

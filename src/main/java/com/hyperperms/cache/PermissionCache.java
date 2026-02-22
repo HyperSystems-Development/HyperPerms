@@ -91,8 +91,16 @@ public final class PermissionCache {
      * @param uuid the user UUID
      */
     public void invalidate(@NotNull UUID uuid) {
-        // Unfortunately Caffeine doesn't support partial key invalidation efficiently,
-        // so we collect matching keys first, then invalidate them
+        // Caffeine doesn't support partial key invalidation efficiently,
+        // so we collect matching keys first, then invalidate them.
+        //
+        // Known limitation: there is a small race window between collecting
+        // keys and invalidating them — a concurrent put() for the same UUID
+        // could insert a new entry that we miss. This is acceptable because
+        // the cache has a short TTL and the next permission check will
+        // repopulate with fresh data. Eliminating this race entirely would
+        // require a secondary index (UUID -> Set<CacheKey>), which adds
+        // complexity that isn't justified given the TTL safety net.
         var keysToInvalidate = cache.asMap().keySet().stream()
                 .filter(key -> key.uuid.equals(uuid))
                 .toList();

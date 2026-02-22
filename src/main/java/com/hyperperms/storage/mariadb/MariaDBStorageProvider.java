@@ -219,22 +219,22 @@ public final class MariaDBStorageProvider implements StorageProvider {
                 String sql = "SELECT * FROM users WHERE uuid = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setString(1, uuid.toString());
-                    ResultSet rs = stmt.executeQuery();
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (!rs.next()) {
+                            return Optional.<User>empty();
+                        }
 
-                    if (!rs.next()) {
-                        return Optional.<User>empty();
+                        String username = rs.getString("username");
+                        User user = new User(uuid, username);
+                        user.setPrimaryGroup(rs.getString("primary_group"));
+                        user.setCustomPrefix(rs.getString("custom_prefix"));
+                        user.setCustomSuffix(rs.getString("custom_suffix"));
+
+                        // Load nodes using the same connection
+                        loadUserNodes(conn, user);
+
+                        return Optional.of(user);
                     }
-
-                    String username = rs.getString("username");
-                    User user = new User(uuid, username);
-                    user.setPrimaryGroup(rs.getString("primary_group"));
-                    user.setCustomPrefix(rs.getString("custom_prefix"));
-                    user.setCustomSuffix(rs.getString("custom_suffix"));
-
-                    // Load nodes using the same connection
-                    loadUserNodes(conn, user);
-
-                    return Optional.of(user);
                 }
             } catch (SQLException e) {
                 Logger.severe("Failed to load user: " + uuid, e);
@@ -247,21 +247,21 @@ public final class MariaDBStorageProvider implements StorageProvider {
         String sql = "SELECT * FROM user_nodes WHERE user_uuid = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, user.getUuid().toString());
-            ResultSet rs = stmt.executeQuery();
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String permission = rs.getString("permission");
+                    boolean value = rs.getInt("value") == 1;
+                    Long expiryMs = rs.getObject("expiry") != null ? rs.getLong("expiry") : null;
+                    Instant expiry = expiryMs != null ? Instant.ofEpochMilli(expiryMs) : null;
+                    ContextSet contexts = deserializeContexts(rs.getString("contexts_json"));
 
-            while (rs.next()) {
-                String permission = rs.getString("permission");
-                boolean value = rs.getInt("value") == 1;
-                Long expiryMs = rs.getObject("expiry") != null ? rs.getLong("expiry") : null;
-                Instant expiry = expiryMs != null ? Instant.ofEpochMilli(expiryMs) : null;
-                ContextSet contexts = deserializeContexts(rs.getString("contexts_json"));
-
-                Node node = Node.builder(permission)
-                    .value(value)
-                    .expiry(expiry)
-                    .contexts(contexts)
-                    .build();
-                user.addNode(node);
+                    Node node = Node.builder(permission)
+                        .value(value)
+                        .expiry(expiry)
+                        .contexts(contexts)
+                        .build();
+                    user.addNode(node);
+                }
             }
         }
     }
@@ -391,9 +391,10 @@ public final class MariaDBStorageProvider implements StorageProvider {
                 String sql = "SELECT uuid FROM users WHERE LOWER(username) = LOWER(?)";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setString(1, username);
-                    ResultSet rs = stmt.executeQuery();
-                    if (rs.next()) {
-                        return Optional.of(UUID.fromString(rs.getString("uuid")));
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            return Optional.of(UUID.fromString(rs.getString("uuid")));
+                        }
                     }
                 }
             } catch (SQLException e) {
@@ -412,23 +413,23 @@ public final class MariaDBStorageProvider implements StorageProvider {
                 String sql = "SELECT * FROM `groups` WHERE name = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setString(1, name.toLowerCase());
-                    ResultSet rs = stmt.executeQuery();
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (!rs.next()) {
+                            return Optional.<Group>empty();
+                        }
 
-                    if (!rs.next()) {
-                        return Optional.<Group>empty();
+                        Group group = new Group(rs.getString("name"), rs.getInt("weight"));
+                        group.setDisplayName(rs.getString("display_name"));
+                        group.setPrefix(rs.getString("prefix"));
+                        group.setSuffix(rs.getString("suffix"));
+                        group.setPrefixPriority(rs.getInt("prefix_priority"));
+                        group.setSuffixPriority(rs.getInt("suffix_priority"));
+
+                        // Load nodes using the same connection
+                        loadGroupNodes(conn, group);
+
+                        return Optional.of(group);
                     }
-
-                    Group group = new Group(rs.getString("name"), rs.getInt("weight"));
-                    group.setDisplayName(rs.getString("display_name"));
-                    group.setPrefix(rs.getString("prefix"));
-                    group.setSuffix(rs.getString("suffix"));
-                    group.setPrefixPriority(rs.getInt("prefix_priority"));
-                    group.setSuffixPriority(rs.getInt("suffix_priority"));
-
-                    // Load nodes using the same connection
-                    loadGroupNodes(conn, group);
-
-                    return Optional.of(group);
                 }
             } catch (SQLException e) {
                 Logger.severe("Failed to load group: " + name, e);
@@ -441,21 +442,21 @@ public final class MariaDBStorageProvider implements StorageProvider {
         String sql = "SELECT * FROM group_nodes WHERE group_name = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, group.getName());
-            ResultSet rs = stmt.executeQuery();
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String permission = rs.getString("permission");
+                    boolean value = rs.getInt("value") == 1;
+                    Long expiryMs = rs.getObject("expiry") != null ? rs.getLong("expiry") : null;
+                    Instant expiry = expiryMs != null ? Instant.ofEpochMilli(expiryMs) : null;
+                    ContextSet contexts = deserializeContexts(rs.getString("contexts_json"));
 
-            while (rs.next()) {
-                String permission = rs.getString("permission");
-                boolean value = rs.getInt("value") == 1;
-                Long expiryMs = rs.getObject("expiry") != null ? rs.getLong("expiry") : null;
-                Instant expiry = expiryMs != null ? Instant.ofEpochMilli(expiryMs) : null;
-                ContextSet contexts = deserializeContexts(rs.getString("contexts_json"));
-
-                Node node = Node.builder(permission)
-                    .value(value)
-                    .expiry(expiry)
-                    .contexts(contexts)
-                    .build();
-                group.addNode(node);
+                    Node node = Node.builder(permission)
+                        .value(value)
+                        .expiry(expiry)
+                        .contexts(contexts)
+                        .build();
+                    group.addNode(node);
+                }
             }
         }
     }
@@ -592,16 +593,16 @@ public final class MariaDBStorageProvider implements StorageProvider {
                 String sql = "SELECT * FROM tracks WHERE name = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setString(1, name.toLowerCase());
-                    ResultSet rs = stmt.executeQuery();
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (!rs.next()) {
+                            return Optional.<Track>empty();
+                        }
 
-                    if (!rs.next()) {
-                        return Optional.<Track>empty();
+                        String groupsJson = rs.getString("groups_json");
+                        List<String> groups = parseGroupsList(groupsJson);
+
+                        return Optional.of(new Track(rs.getString("name"), groups));
                     }
-
-                    String groupsJson = rs.getString("groups_json");
-                    List<String> groups = parseGroupsList(groupsJson);
-
-                    return Optional.of(new Track(rs.getString("name"), groups));
                 }
             } catch (SQLException e) {
                 Logger.severe("Failed to load track: " + name, e);

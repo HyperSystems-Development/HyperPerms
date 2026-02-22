@@ -4,6 +4,7 @@ import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
 import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
+import com.hyperperms.storage.SqlSerializationHelper;
 import com.hyperperms.storage.StorageProvider;
 import com.hyperperms.util.Logger;
 import com.google.gson.Gson;
@@ -1066,71 +1067,18 @@ public final class MariaDBStorageProvider implements StorageProvider {
     // ==================== Helper Methods ====================
 
     private List<String> parseGroupsList(String json) {
-        List<String> groups = new ArrayList<>();
-        if (json != null && json.startsWith("[") && json.endsWith("]")) {
-            String content = json.substring(1, json.length() - 1).trim();
-            if (!content.isEmpty()) {
-                for (String item : content.split(",")) {
-                    String trimmed = item.trim();
-                    if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
-                        groups.add(trimmed.substring(1, trimmed.length() - 1));
-                    }
-                }
-            }
-        }
-        return groups;
+        return SqlSerializationHelper.parseGroupsList(json);
     }
 
     private String serializeGroupsList(List<String> groups) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < groups.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append("\"").append(groups.get(i)).append("\"");
-        }
-        sb.append("]");
-        return sb.toString();
+        return SqlSerializationHelper.serializeGroupsList(groups);
     }
 
     private String serializeContexts(ContextSet contexts) {
-        if (contexts == null || contexts.isEmpty()) {
-            return "[]";
-        }
-        StringBuilder sb = new StringBuilder("[");
-        boolean first = true;
-        for (Context ctx : contexts) {
-            if (!first) sb.append(",");
-            sb.append("\"").append(ctx.key()).append("=").append(ctx.value()).append("\"");
-            first = false;
-        }
-        sb.append("]");
-        return sb.toString();
+        return SqlSerializationHelper.serializeContexts(contexts);
     }
 
     private ContextSet deserializeContexts(String json) {
-        if (json == null || json.equals("[]") || json.isBlank()) {
-            return ContextSet.empty();
-        }
-        String content = json.trim();
-        if (content.startsWith("[") && content.endsWith("]")) {
-            content = content.substring(1, content.length() - 1).trim();
-        }
-        if (content.isEmpty()) {
-            return ContextSet.empty();
-        }
-        ContextSet.Builder builder = ContextSet.builder();
-        for (String item : content.split(",")) {
-            String trimmed = item.trim();
-            if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
-                trimmed = trimmed.substring(1, trimmed.length() - 1);
-            }
-            if (trimmed.contains("=")) {
-                try {
-                    builder.add(Context.parse(trimmed));
-                } catch (IllegalArgumentException e) {
-                    Logger.warn("Skipping invalid context entry: " + trimmed);
-                }
-            }
-        }
-        return builder.build();
+        return SqlSerializationHelper.deserializeContexts(json);
     }
 }

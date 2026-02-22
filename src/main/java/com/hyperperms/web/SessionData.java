@@ -1,5 +1,6 @@
 package com.hyperperms.web;
 
+import com.hyperperms.BuildInfo;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
@@ -64,7 +65,7 @@ public final class SessionData {
         // Create metadata
         MetadataDto metadata = new MetadataDto(
                 hyperPerms.getConfig().getServerName(),
-                "2.0.0", // Plugin version
+                BuildInfo.VERSION,
                 playerCount
         );
 

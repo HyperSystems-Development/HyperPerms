@@ -493,6 +493,11 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
                 Path backupGroupsDir = backupDir.resolve("groups");
                 Path backupTracksDir = backupDir.resolve("tracks");
 
+                // Clear stale .json files before restoring
+                clearJsonFiles(usersDirectory);
+                clearJsonFiles(groupsDirectory);
+                clearJsonFiles(tracksDirectory);
+
                 // Restore users
                 if (Files.exists(backupUsersDir)) {
                     try (var stream = Files.list(backupUsersDir)) {
@@ -602,6 +607,22 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @NotNull
     public String getType() {
         return "json";
+    }
+
+    private void clearJsonFiles(Path directory) {
+        if (!Files.exists(directory)) return;
+        try (var stream = Files.list(directory)) {
+            stream.filter(p -> p.toString().endsWith(".json"))
+                  .forEach(file -> {
+                      try {
+                          Files.delete(file);
+                      } catch (IOException e) {
+                          Logger.warn("Failed to clear stale file: " + file.getFileName());
+                      }
+                  });
+        } catch (IOException e) {
+            Logger.warn("Failed to list directory for cleanup: " + directory);
+        }
     }
 
     private void validateName(String name) {

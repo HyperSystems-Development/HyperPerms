@@ -18,6 +18,7 @@ import java.nio.file.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 
 /**
  * JSON file-based storage provider.
@@ -30,6 +31,8 @@ import java.util.concurrent.CompletableFuture;
  * </ul>
  */
 public final class JsonStorageProvider extends AbstractStorageProvider {
+
+    private static final Pattern SAFE_NAME = Pattern.compile("^[a-zA-Z0-9_.\\-]+$");
 
     private final Path dataDirectory;
     private final Path usersDirectory;
@@ -216,6 +219,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Void> saveGroup(@NotNull Group group) {
         return runAsync(() -> {
+            validateName(group.getName());
             Logger.debugStorage("Saving group: %s", group.getName());
             Path file = groupsDirectory.resolve(group.getName() + ".json");
             try {
@@ -310,6 +314,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Void> saveTrack(@NotNull Track track) {
         return runAsync(() -> {
+            validateName(track.getName());
             Logger.debugStorage("Saving track: %s", track.getName());
             Path file = tracksDirectory.resolve(track.getName() + ".json");
             try {
@@ -597,6 +602,12 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @NotNull
     public String getType() {
         return "json";
+    }
+
+    private void validateName(String name) {
+        if (!SAFE_NAME.matcher(name).matches()) {
+            throw new IllegalArgumentException("Invalid name: " + name);
+        }
     }
 
     private Path resolveBackupPath(String name) {

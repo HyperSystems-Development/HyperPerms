@@ -204,7 +204,7 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         // Ensure the group exists
         Group group = hyperPerms.getGroupManager().getGroup(groupName);
         if (group == null) {
-            Logger.warn("Cannot add user %s to non-existent group %s", uuid, groupName);
+            Logger.debug("Ignoring addUserToGroup for non-existent group '%s' (user %s) - likely a Hytale virtual group (e.g. gamemode)", groupName, uuid);
             return;
         }
 

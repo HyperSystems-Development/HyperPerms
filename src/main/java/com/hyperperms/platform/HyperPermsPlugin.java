@@ -152,8 +152,66 @@ public class HyperPermsPlugin extends JavaPlugin {
             ensureFirstProvider(module);
 
             Logger.info("Registered HyperPerms as permission provider");
+
+            // Warn about vanilla OP/Default group overwrite behavior.
+            // HytalePermissionsProvider.read() forcibly re-inserts DEFAULT_GROUPS with put()
+            // (not putIfAbsent()), meaning any custom permissions added to vanilla's OP or
+            // Default groups via /perm are silently lost on server restart.
+            warnAboutVanillaGroupOverwrite(module);
         } catch (Exception e) {
             getLogger().at(Level.SEVERE).withCause(e).log("Failed to register permission provider");
+        }
+    }
+
+    /**
+     * Logs a warning about Hytale's vanilla OP/Default group overwrite behavior.
+     *
+     * Hytale's HytalePermissionsProvider forcibly overwrites the OP and Default groups
+     * with hardcoded defaults on every server load (using put(), not putIfAbsent()).
+     * Any custom permissions added to these groups via vanilla's /perm command are
+     * silently discarded on restart. This method warns server admins about this
+     * behavior so they know to use HyperPerms groups instead.
+     *
+     * @param module the permissions module
+     */
+    private void warnAboutVanillaGroupOverwrite(PermissionsModule module) {
+        try {
+            // Check if the vanilla provider has custom permissions on OP or Default groups.
+            // The vanilla defaults are: OP = ["*"], Default = [].
+            for (var provider : module.getProviders()) {
+                if (provider == permissionProvider) {
+                    continue; // Skip our own provider
+                }
+
+                java.util.Set<String> opPerms = provider.getGroupPermissions("OP");
+                java.util.Set<String> defaultPerms = provider.getGroupPermissions("Default");
+
+                // OP group: vanilla default is ["*"]; anything else means custom perms were added
+                boolean opCustomized = !opPerms.isEmpty() && !(opPerms.size() == 1 && opPerms.contains("*"));
+                // Default group: vanilla default is []; any permissions means it was customized
+                boolean defaultCustomized = !defaultPerms.isEmpty();
+
+                if (opCustomized || defaultCustomized) {
+                    Logger.warn("=======================================================");
+                    Logger.warn("VANILLA GROUP OVERWRITE WARNING");
+                    Logger.warn("=======================================================");
+                    if (opCustomized) {
+                        Logger.warn("The vanilla OP group has custom permissions beyond '*'.");
+                        Logger.warn("These WILL BE LOST on next server restart!");
+                        Logger.warn("  Current OP perms: %s", opPerms);
+                    }
+                    if (defaultCustomized) {
+                        Logger.warn("The vanilla Default group has custom permissions.");
+                        Logger.warn("These WILL BE LOST on next server restart!");
+                        Logger.warn("  Current Default perms: %s", defaultPerms);
+                    }
+                    Logger.warn("Hytale forcibly resets OP and Default groups on every load.");
+                    Logger.warn("Use HyperPerms groups instead: /hp group create <name>");
+                    Logger.warn("=======================================================");
+                }
+            }
+        } catch (Exception e) {
+            Logger.debug("Could not check vanilla group customization: %s", e.getMessage());
         }
     }
 

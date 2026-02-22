@@ -109,6 +109,10 @@ Config file: `mods/com.hyperperms_HyperPerms/config.json`
 
 </details>
 
+## Important: Vanilla Group Overwrite
+
+Hytale's built-in permission system forcibly resets the `OP` and `Default` groups every time the server starts. Any custom permissions added to these groups via `/perm` will be **lost on restart**. Always use HyperPerms groups instead (`/hp group create <name>`). HyperPerms logs a warning at startup if it detects custom permissions in vanilla groups.
+
 ## Optional: SQLite & Analytics
 
 SQLite enables analytics tracking and audit logs. It's **not bundled** to keep the JAR small (2.4MB vs 15MB).

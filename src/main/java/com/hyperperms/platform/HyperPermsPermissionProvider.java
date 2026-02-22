@@ -249,6 +249,22 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         //
         // By returning only the virtual user group, Hytale queries HyperPermsPermissionSet
         // which delegates to hasPermission() for proper resolution.
+        //
+        // DESIGN NOTE: This single-element return also intentionally sidesteps a
+        // nondeterministic iteration issue in Hytale's vanilla resolver. In
+        // PermissionsModule.hasPermission(), groups are iterated from a HashSet with
+        // undefined order, so conflicting permissions across groups produce random results.
+        // By returning exactly one virtual group, iteration order is irrelevant.
+        //
+        // MULTI-PROVIDER AGGREGATION NOTE: PermissionsModule.getGroupsForUser() aggregates
+        // non-empty group sets from ALL registered providers. This means HyperPerms users
+        // will appear in BOTH our virtual group ("user:<uuid>") AND vanilla's "Default"
+        // group (since HytalePermissionsProvider returns ["Default"] for users without
+        // explicit vanilla groups). The combined result seen by Hytale is
+        // ["user:<uuid>", "Default"]. This is expected behavior — vanilla's Default group
+        // has no permissions by default, so it's harmless. However, if someone adds perms
+        // to vanilla's Default group via /perm, those perms will apply AND be lost on
+        // restart due to the OP/Default overwrite behavior.
         return Set.of("user:" + uuid.toString());
     }
 

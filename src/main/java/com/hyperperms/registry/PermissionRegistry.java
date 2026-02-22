@@ -749,6 +749,10 @@ public final class PermissionRegistry {
         // ==================== Other Commands ====================
         register("hytale.command.emote", "Emote command", "hytale", "Hytale");
 
+        // ==================== Mods Permissions ====================
+        register("hytale.mods.*", "All mod-related permissions", "hytale", "Hytale");
+        register("hytale.mods.outdated.notify", "Receive outdated mod notifications", "hytale", "Hytale");
+
         Logger.debug("Registered Hytale permissions for wildcard expansion");
     }
 

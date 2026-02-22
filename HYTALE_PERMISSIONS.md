@@ -123,6 +123,7 @@ Example: To change another player's gamemode, you need `hytale.command.gamemode.
 | `hytale.world_map.teleport.coordinate` | Teleport via coordinates |
 | `hytale.world_map.teleport.marker` | Teleport via markers |
 | `hytale.system.update.notify` | Update notifications |
+| `hytale.mods.outdated.notify` | Receive outdated mod notifications |
 
 ---
 
@@ -188,6 +189,32 @@ Wildcards expand to include all actual Hytale permissions in that category:
 This allows the web UI to use friendly, hierarchical permission names while ensuring compatibility with Hytale's actual permission checks.
 
 ---
+
+## Important Notes
+
+### Vanilla OP/Default Group Overwrite
+
+Hytale's built-in `HytalePermissionsProvider` forcibly re-inserts the default OP (`["*"]`) and Default (`[]`) groups using `put()` every time `permissions.json` is loaded. This happens on server startup and `/perm reload`. Any custom permissions added to these vanilla groups via `/perm` commands **will be lost on restart**.
+
+**Recommendation:** Always use HyperPerms groups instead of modifying vanilla's OP or Default groups. Use `/hp group create <name>` to create persistent groups.
+
+HyperPerms logs a warning at startup if it detects custom permissions in vanilla's OP or Default groups.
+
+### Multi-Provider Group Aggregation
+
+Hytale's `PermissionsModule.getGroupsForUser()` aggregates non-empty group sets from **all** registered providers. This means HyperPerms users will appear in both the HyperPerms virtual group (`user:<uuid>`) and vanilla's `Default` group (since `HytalePermissionsProvider` returns `["Default"]` for users without explicit vanilla groups).
+
+This is expected behavior — vanilla's Default group has no permissions by default, so it's harmless. However, if someone adds permissions to vanilla's Default group via `/perm`, those permissions will apply but be lost on restart due to the overwrite behavior described above.
+
+### Wildcard Restrictions
+
+Middle wildcards (e.g., `hytale.*.ban`) are **not** supported. The `*` character in such patterns is treated as a literal, not a wildcard. This matches vanilla Hytale behavior. Wildcards only work in two positions:
+- **Standalone:** `*` (grant all) or `-*` (deny all)
+- **Trailing:** `prefix.*` (grant all under prefix) or `-prefix.*` (deny all under prefix)
+
+### Vanilla `permissions.json` Initialization
+
+When `HytalePermissionsProvider.create()` is called (first server run), it writes an empty JSON object `{}` to `permissions.json`. The default OP and Default groups are injected in-memory by `read()`, not stored in the file.
 
 ## Verification Steps
 

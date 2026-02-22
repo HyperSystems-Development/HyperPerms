@@ -5,6 +5,18 @@ All notable changes to HyperPerms will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.6] - 2026-02-21
+
+### Added
+
+- **Missing `hytale.mods.outdated.notify` permission**: Registered in PermissionRegistry and PermissionAliases, matching the constant defined in Hytale's `HytalePermissions` class
+- **Vanilla OP/Default overwrite warning**: Startup check warns server operators if custom permissions are detected in vanilla's OP or Default groups, which are forcibly reset on every server restart by `HytalePermissionsProvider.read()`
+- **Wildcard restriction documentation**: Added explicit note that middle wildcards (e.g., `hytale.*.ban`) are not supported, matching vanilla Hytale behavior
+
+### Changed
+
+- **Improved documentation**: Added multi-provider aggregation notes, nondeterministic iteration explanation, vanilla `permissions.json` initialization behavior, and wildcard restriction details to HYTALE_PERMISSIONS.md and README.md
+
 ## [Unreleased]
 
 ### Changed

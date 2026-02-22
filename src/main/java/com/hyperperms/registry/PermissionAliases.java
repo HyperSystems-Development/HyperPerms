@@ -229,6 +229,11 @@ public final class PermissionAliases {
         // ==================== System Permissions ====================
         alias("hytale.system.update.notify", "hytale.system.update.notify");
 
+        // ==================== Mods Permissions ====================
+        alias("hytale.mods.outdated.notify", "hytale.mods.outdated.notify");
+        aliasWildcard("hytale.mods.*",
+            "hytale.mods.outdated.notify");
+
         // ==================== Legacy System Command Format ====================
         // Format: hytale.system.command.* → actual Hytale permissions (used by some older configs)
         alias("hytale.system.command.gamemode", "hytale.command.gamemode.self", "hytale.command.gamemode.other");

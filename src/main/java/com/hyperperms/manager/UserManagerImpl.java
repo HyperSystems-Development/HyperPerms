@@ -157,6 +157,7 @@ public final class UserManagerImpl implements UserManager {
     @Override
     public void unload(@NotNull UUID uuid) {
         User user = loadedUsers.remove(uuid);
+        userLocks.remove(uuid);
         cache.invalidate(uuid);
 
         // Fire user unload event
@@ -171,6 +172,7 @@ public final class UserManagerImpl implements UserManager {
      */
     public void unload(@NotNull UUID uuid, @NotNull UserUnloadEvent.UnloadReason reason) {
         User user = loadedUsers.remove(uuid);
+        userLocks.remove(uuid);
         cache.invalidate(uuid);
         eventBus.fire(new UserUnloadEvent(uuid, user, reason));
     }

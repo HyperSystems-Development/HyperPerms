@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * SQLite implementation of analytics storage.
@@ -100,15 +101,22 @@ public final class SQLiteAnalyticsStorage implements AnalyticsStorage {
     public CompletableFuture<Void> shutdown() {
         return CompletableFuture.runAsync(() -> {
             try {
-                if (connection != null && !connection.isClosed()) {
-                    connection.close();
-                }
                 executor.shutdown();
-                Logger.info("[Analytics] Storage shut down");
-            } catch (SQLException e) {
-                Logger.warn("[Analytics] Error closing connection: %s", e.getMessage());
+                executor.awaitTermination(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Logger.warn("[Analytics] Interrupted while waiting for executor shutdown");
+            } finally {
+                try {
+                    if (connection != null && !connection.isClosed()) {
+                        connection.close();
+                    }
+                } catch (SQLException e) {
+                    Logger.warn("[Analytics] Error closing connection: %s", e.getMessage());
+                }
             }
-        }, executor);
+            Logger.info("[Analytics] Storage shut down");
+        });
     }
 
     @Override

@@ -40,6 +40,7 @@ public final class WebEditorService {
     public WebEditorService(@NotNull HyperPerms hyperPerms) {
         this.hyperPerms = hyperPerms;
         this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(hyperPerms.getConfig().getWebEditorTimeoutSeconds()))
                 .build();
     }

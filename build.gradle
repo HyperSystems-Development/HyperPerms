@@ -150,7 +150,9 @@ shadowJar {
     relocate 'org.yaml.snakeyaml', 'com.hyperperms.lib.snakeyaml'
     // Note: SQLite JDBC cannot be relocated due to native library loading
     relocate 'com.zaxxer.hikari', 'com.hyperperms.lib.hikari'
-    relocate 'org.mariadb.jdbc', 'com.hyperperms.lib.mariadb'
+    // Note: MariaDB JDBC is NOT relocated because the shadow plugin does not
+    // rewrite META-INF/services files, breaking the driver's internal
+    // ServiceLoader-based plugin discovery (auth plugins, codecs, etc.).
 
     // Future relocations:
     // relocate 'io.lettuce', 'com.hyperperms.lib.lettuce'

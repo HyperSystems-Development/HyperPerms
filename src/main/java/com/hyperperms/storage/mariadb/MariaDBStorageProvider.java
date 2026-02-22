@@ -85,6 +85,7 @@ public final class MariaDBStorageProvider implements StorageProvider {
                 // Configure HikariCP connection pool
                 HikariConfig config = new HikariConfig();
                 config.setJdbcUrl("jdbc:mariadb://" + host + ":" + port + "/" + database);
+                config.setDriverClassName("org.mariadb.jdbc.Driver");
                 config.setUsername(username);
                 config.setPassword(password);
                 config.setMaximumPoolSize(maxPoolSize);

@@ -263,7 +263,7 @@ public final class UserManagerImpl implements UserManager {
      * @return a future that completes with the set of all known UUIDs
      */
     public CompletableFuture<Set<UUID>> getAllKnownUUIDs() {
-        return storage.loadAllUsers().thenApply(Map::keySet);
+        return storage.getUserUuids();
     }
 
     /**

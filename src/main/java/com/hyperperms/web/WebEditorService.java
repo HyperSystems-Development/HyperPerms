@@ -13,6 +13,7 @@ import com.hyperperms.web.dto.SessionCreateResponse;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -103,7 +104,7 @@ public final class WebEditorService {
     public CompletableFuture<FetchChangesResult> fetchChanges(@NotNull String sessionId) {
         // Use apiUrl for API calls (may be Cloudflare Worker)
         String apiBaseUrl = hyperPerms.getConfig().getWebEditorApiUrl();
-        String url = apiBaseUrl + "/api/session/" + sessionId + "/changes";
+        String url = apiBaseUrl + "/api/session/" + URLEncoder.encode(sessionId, StandardCharsets.UTF_8) + "/changes";
 
         Logger.debug("Fetching changes from: " + url);
 

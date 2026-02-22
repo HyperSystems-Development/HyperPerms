@@ -165,14 +165,14 @@ public final class EventBus {
      * @param eventClass the event class
      */
     private void sortHandlers(Class<? extends HyperPermsEvent> eventClass) {
-        List<HandlerEntry<?>> list = handlers.get(eventClass);
-        if (list != null && list.size() > 1) {
-            // CopyOnWriteArrayList doesn't support sort, so we need to work around it
+        handlers.computeIfPresent(eventClass, (key, list) -> {
+            if (list.size() <= 1) {
+                return list;
+            }
             List<HandlerEntry<?>> sorted = new ArrayList<>(list);
             sorted.sort((a, b) -> Integer.compare(a.priority.getSlot(), b.priority.getSlot()));
-            list.clear();
-            list.addAll(sorted);
-        }
+            return new CopyOnWriteArrayList<>(sorted);
+        });
     }
 
     /**

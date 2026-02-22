@@ -698,7 +698,7 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
                 "backup-" + java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
 
-            Path backupFile = backupsDirectory.resolve(backupName + ".db");
+            Path backupFile = resolveBackupPath(backupName + ".db");
 
             try {
                 Files.createDirectories(backupsDirectory);
@@ -715,11 +715,11 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Boolean> restoreBackup(@NotNull String name) {
         return executeAsync(() -> {
-            Path backupFile = backupsDirectory.resolve(name + ".db");
-            
+            Path backupFile = resolveBackupPath(name + ".db");
+
             if (!Files.exists(backupFile)) {
                 // Try without .db extension
-                backupFile = backupsDirectory.resolve(name);
+                backupFile = resolveBackupPath(name);
                 if (!Files.exists(backupFile)) {
                     Logger.warn("SQLite backup not found: " + name);
                     return false;
@@ -778,7 +778,7 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Boolean> deleteBackup(@NotNull String name) {
         return executeAsync(() -> {
-            Path backupFile = backupsDirectory.resolve(name + ".db");
+            Path backupFile = resolveBackupPath(name + ".db");
             try {
                 return Files.deleteIfExists(backupFile);
             } catch (IOException e) {
@@ -792,6 +792,14 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
     public CompletableFuture<Void> saveAll() {
         // SQLite auto-commits, nothing to do
         return CompletableFuture.completedFuture(null);
+    }
+
+    private Path resolveBackupPath(String name) {
+        Path resolved = backupsDirectory.resolve(name).normalize();
+        if (!resolved.startsWith(backupsDirectory)) {
+            throw new IllegalArgumentException("Invalid backup name: " + name);
+        }
+        return resolved;
     }
 
     // ==================== Helper Methods ====================

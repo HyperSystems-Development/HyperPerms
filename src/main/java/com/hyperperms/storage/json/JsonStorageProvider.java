@@ -394,8 +394,8 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
                 "backup-" + java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
             
-            Path backupDir = backupsDirectory.resolve(backupName);
-            
+            Path backupDir = resolveBackupPath(backupName);
+
             try {
                 // Create backup directory
                 Files.createDirectories(backupDir);
@@ -473,7 +473,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Boolean> restoreBackup(@NotNull String name) {
         return executeAsync(() -> {
-            Path backupDir = backupsDirectory.resolve(name);
+            Path backupDir = resolveBackupPath(name);
             
             if (!Files.exists(backupDir)) {
                 Logger.warn("Backup not found: " + name);
@@ -565,7 +565,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Boolean> deleteBackup(@NotNull String name) {
         return executeAsync(() -> {
-            Path backupDir = backupsDirectory.resolve(name);
+            Path backupDir = resolveBackupPath(name);
 
             if (!Files.exists(backupDir)) {
                 return false;
@@ -597,6 +597,14 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @NotNull
     public String getType() {
         return "json";
+    }
+
+    private Path resolveBackupPath(String name) {
+        Path resolved = backupsDirectory.resolve(name).normalize();
+        if (!resolved.startsWith(backupsDirectory)) {
+            throw new IllegalArgumentException("Invalid backup name: " + name);
+        }
+        return resolved;
     }
 
     /**

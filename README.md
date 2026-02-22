@@ -2,12 +2,12 @@
 
 [![Latest Release](https://img.shields.io/github/v/release/HyperSystemsDev/HyperPerms?label=version)](https://github.com/HyperSystemsDev/HyperPerms/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-green)](LICENSE)
-[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.gg/SNPjyfkYPc)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/aZaa5vcFYh)
 [![GitHub Stars](https://img.shields.io/github/stars/HyperSystemsDev/HyperPerms?style=social)](https://github.com/HyperSystemsDev/HyperPerms)
 
 **The permission system for Hytale.** Web editor, templates, and everything you need out of the box.
 
-**[Documentation](https://www.hyperperms.com/wiki)** | **[Web Editor](https://hyperperms.com)** | **[Discord](https://discord.gg/SNPjyfkYPc)**
+**[Documentation](https://www.hyperperms.com/wiki)** | **[Web Editor](https://hyperperms.com)** | **[Discord](https://discord.com/invite/aZaa5vcFYh)**
 
 ![Web Editor](web-editor.png)
 
@@ -198,7 +198,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup and contributi
 ## Links
 
 - [Documentation](https://www.hyperperms.com/wiki) - Full wiki and guides
-- [Discord](https://discord.gg/SNPjyfkYPc) - Support & community
+- [Discord](https://discord.com/invite/aZaa5vcFYh) - Support & community
 - [Issues](https://github.com/HyperSystemsDev/HyperPerms/issues) - Bug reports & features
 - [Releases](https://github.com/HyperSystemsDev/HyperPerms/releases) - Downloads
 

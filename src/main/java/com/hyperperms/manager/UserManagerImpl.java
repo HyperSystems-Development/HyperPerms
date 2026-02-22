@@ -131,16 +131,13 @@ public final class UserManagerImpl implements UserManager {
         // Use per-entity locks to prevent concurrent modification lost updates
         Object lock = userLocks.computeIfAbsent(uuid, k -> new Object());
 
-        return CompletableFuture.runAsync(() -> {
+        return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
                 User user = getOrCreateUser(uuid);
                 action.accept(user);
+                return user;
             }
-        }).thenCompose(v -> {
-            // Re-fetch the user to save (modifications already applied)
-            User user = getOrCreateUser(uuid);
-            return saveUser(user);
-        }).thenRun(() -> {
+        }).thenCompose(this::saveUser).thenRun(() -> {
             // Invalidate cache AFTER save completes to prevent stale reads
             cache.invalidate(uuid);
         });

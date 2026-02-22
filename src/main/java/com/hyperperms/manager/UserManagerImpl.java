@@ -40,16 +40,6 @@ public final class UserManagerImpl implements UserManager {
         this.permissionListener = new UserPermissionListener();
     }
 
-    /**
-     * Creates a user manager without event bus support.
-     * @deprecated Use the constructor with EventBus parameter
-     */
-    @Deprecated
-    public UserManagerImpl(@NotNull StorageProvider storage, @NotNull PermissionCache cache,
-                           @NotNull String defaultGroup) {
-        this(storage, cache, new EventBus(), defaultGroup);
-    }
-
     @Override
     public CompletableFuture<Optional<User>> loadUser(@NotNull UUID uuid) {
         // Check cache first - if already loaded, return immediately

@@ -581,17 +581,16 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
                 return false;
             }
 
-            try {
+            try (var walk = Files.walk(backupDir)) {
                 // Delete all files in backup directory recursively
-                Files.walk(backupDir)
-                     .sorted(Comparator.reverseOrder())
-                     .forEach(path -> {
-                         try {
-                             Files.delete(path);
-                         } catch (IOException e) {
-                             Logger.warn("Failed to delete: " + path);
-                         }
-                     });
+                walk.sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            Logger.warn("Failed to delete: " + path);
+                        }
+                    });
 
                 Logger.info("Deleted backup: " + name);
                 return true;

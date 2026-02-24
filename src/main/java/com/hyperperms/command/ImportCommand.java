@@ -126,7 +126,7 @@ public class ImportCommand extends HpContainerCommand {
             groupManager.saveGroup(ownerGroup);
 
             // Invalidate all caches
-            hyperPerms.getCache().invalidateAll();
+            hyperPerms.getCacheInvalidator().invalidateAll();
 
             ctx.sender().sendMessage(Message.raw(""));
             ctx.sender().sendMessage(Message.raw("Default groups created:"));

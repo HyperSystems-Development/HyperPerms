@@ -73,7 +73,7 @@ public class GroupSetExpiryCommand extends HpSubCommand {
         Node newNode = existingNode.withExpiry(newExpiry);
         group.setNode(newNode);
         hyperPerms.getGroupManager().saveGroup(group);
-        hyperPerms.getCache().invalidateAll();
+        hyperPerms.getCacheInvalidator().invalidateGroup(groupName);
 
         String expiryDisplay = newExpiry != null ? TimeUtil.formatExpiry(newExpiry) : "permanent";
         ctx.sender().sendMessage(Message.raw("Set expiry on " + permission + " in group " + groupName + " to " + expiryDisplay));

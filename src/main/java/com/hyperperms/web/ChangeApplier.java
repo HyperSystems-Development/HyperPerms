@@ -87,7 +87,7 @@ public final class ChangeApplier {
         }
 
         // Invalidate all caches after applying changes
-        hyperPerms.getCache().invalidateAll();
+        hyperPerms.getCacheInvalidator().invalidateAll();
         
         // Also invalidate chat display data cache
         var chatManager = hyperPerms.getChatManager();

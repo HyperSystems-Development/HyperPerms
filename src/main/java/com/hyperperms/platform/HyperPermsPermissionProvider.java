@@ -67,8 +67,6 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         hyperPerms.getUserManager().saveUser(user);
         hyperPerms.getCacheInvalidator().invalidate(uuid);
         Logger.debug("Removed %d permissions from user %s", permissions.size(), uuid);
-        // Trigger permission sync to handle any negations
-        syncUserPermissions(uuid);
     }
 
     @Override
@@ -213,8 +211,6 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         hyperPerms.getUserManager().saveUser(user);
         hyperPerms.getCacheInvalidator().invalidate(uuid);
         Logger.debug("Added user %s to group %s", uuid, groupName);
-        // Trigger permission sync to handle any negations from new group
-        syncUserPermissions(uuid);
     }
 
     @Override
@@ -227,8 +223,6 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         hyperPerms.getUserManager().saveUser(user);
         hyperPerms.getCacheInvalidator().invalidate(uuid);
         Logger.debug("Removed user %s from group %s", uuid, groupName);
-        // Trigger permission sync to handle any negations that might now apply/not apply
-        syncUserPermissions(uuid);
     }
 
     @Override
@@ -323,20 +317,4 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         return hyperPerms.hasPermission(uuid, permission, contexts);
     }
 
-    /**
-     * Triggers a permission sync for the given user.
-     * Called when permissions change to ensure negations are applied in Hytale.
-     *
-     * @param uuid the user's UUID
-     */
-    private void syncUserPermissions(UUID uuid) {
-        // Get the plugin instance to call sync
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof HyperPermsPlugin plugin) {
-            var user = hyperPerms.getUserManager().getUser(uuid);
-            if (user != null) {
-                plugin.syncPermissionsToHytale(uuid, user);
-            }
-        }
-    }
 }

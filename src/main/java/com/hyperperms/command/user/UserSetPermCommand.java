@@ -86,7 +86,7 @@ public class UserSetPermCommand extends HpSubCommand {
         hyperPerms.getUserManager().saveUser(user).join();
 
         // Invalidate cache for this user
-        hyperPerms.getCache().invalidate(user.getUuid());
+        hyperPerms.getCacheInvalidator().invalidate(user.getUuid());
 
         String displayPerm = node.getBasePermission();
         boolean granted = node.getValue() && !node.isNegated();

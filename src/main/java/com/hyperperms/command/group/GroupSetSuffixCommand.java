@@ -56,7 +56,7 @@ public class GroupSetSuffixCommand extends HpSubCommand {
         }
 
         hyperPerms.getGroupManager().saveGroup(group);
-        hyperPerms.getCache().invalidateAll();
+        hyperPerms.getCacheInvalidator().invalidateGroup(groupName);
 
         return CompletableFuture.completedFuture(null);
     }

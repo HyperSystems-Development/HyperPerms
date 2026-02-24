@@ -45,7 +45,7 @@ public class UserUnsetPermCommand extends HpSubCommand {
         var result = user.removeNode(permission);
         if (result == PermissionHolder.DataMutateResult.SUCCESS) {
             hyperPerms.getUserManager().saveUser(user).join();
-            hyperPerms.getCache().invalidate(user.getUuid());
+            hyperPerms.getCacheInvalidator().invalidate(user.getUuid());
             ctx.sender().sendMessage(Message.raw("Removed " + permission + " from user " + user.getFriendlyName()));
         } else {
             ctx.sender().sendMessage(Message.raw("User " + user.getFriendlyName() + " does not have permission " + permission));

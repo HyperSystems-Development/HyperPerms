@@ -81,7 +81,7 @@ public class GroupSetPermCommand extends HpSubCommand {
         hyperPerms.getGroupManager().saveGroup(group);
 
         // Invalidate caches for users in this group
-        hyperPerms.getCache().invalidateAll();
+        hyperPerms.getCacheInvalidator().invalidateGroup(groupName);
 
         String displayPerm = node.getBasePermission();
         boolean granted = node.getValue() && !node.isNegated();

@@ -4,9 +4,11 @@ import com.hyperperms.api.ChatAPI;
 import com.hyperperms.api.TabListAPI;
 import com.hyperperms.util.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Manages targeted cache invalidation by tracking user-group memberships.
@@ -25,6 +27,13 @@ public final class CacheInvalidator {
     // Maps user UUID -> set of groups they belong to (for reverse lookup)
     private final Map<UUID, Set<String>> userGroups = new ConcurrentHashMap<>();
 
+    // Optional listener called after each user invalidation to sync permissions to Hytale
+    @Nullable
+    private volatile Consumer<UUID> syncListener;
+
+    // Reentrant guard: prevents infinite recursion if sync triggers another invalidation
+    private final ThreadLocal<Boolean> syncing = ThreadLocal.withInitial(() -> false);
+
     /**
      * Creates a new cache invalidator.
      *
@@ -32,6 +41,16 @@ public final class CacheInvalidator {
      */
     public CacheInvalidator(@NotNull PermissionCache cache) {
         this.cache = Objects.requireNonNull(cache, "cache cannot be null");
+    }
+
+    /**
+     * Sets the sync listener that is called for each affected user UUID
+     * whenever permissions are invalidated.
+     *
+     * @param listener the sync listener, or null to disable
+     */
+    public void setSyncListener(@Nullable Consumer<UUID> listener) {
+        this.syncListener = listener;
     }
 
     /**
@@ -111,6 +130,9 @@ public final class CacheInvalidator {
             TabListAPI.invalidate(uuid);
         }
 
+        // Notify sync listener for affected users
+        notifySyncAll(snapshot);
+
         Logger.debug("Invalidated cache for %d users in group '%s'", snapshot.size(), groupName);
         return snapshot.size();
     }
@@ -137,9 +159,12 @@ public final class CacheInvalidator {
 
         for (UUID uuid : toInvalidate) {
             cache.invalidate(uuid);
-            ChatAPI.invalidate(uuid); // Also invalidate chat prefix/suffix cache
-            TabListAPI.invalidate(uuid); // Also invalidate tab list cache
+            ChatAPI.invalidate(uuid);
+            TabListAPI.invalidate(uuid);
         }
+
+        // Notify sync listener for affected users
+        notifySyncAll(toInvalidate);
 
         Logger.debug("Invalidated cache for %d users across %d groups",
                 toInvalidate.size(), groupNames.size());
@@ -153,8 +178,9 @@ public final class CacheInvalidator {
      */
     public void invalidateUser(@NotNull UUID uuid) {
         cache.invalidate(uuid);
-        ChatAPI.invalidate(uuid); // Also invalidate chat prefix/suffix cache
-        TabListAPI.invalidate(uuid); // Also invalidate tab list cache
+        ChatAPI.invalidate(uuid);
+        TabListAPI.invalidate(uuid);
+        notifySync(uuid);
     }
 
     /**
@@ -165,8 +191,9 @@ public final class CacheInvalidator {
      */
     public void invalidate(@NotNull UUID uuid) {
         cache.invalidate(uuid);
-        ChatAPI.invalidate(uuid); // Also invalidate chat prefix/suffix cache
-        TabListAPI.invalidate(uuid); // Also invalidate tab list cache
+        ChatAPI.invalidate(uuid);
+        TabListAPI.invalidate(uuid);
+        notifySync(uuid);
     }
 
     /**
@@ -174,9 +201,14 @@ public final class CacheInvalidator {
      */
     public void invalidateAll() {
         cache.invalidateAll();
-        ChatAPI.invalidateAll(); // Also invalidate all chat prefix/suffix caches
-        TabListAPI.invalidateAll(); // Also invalidate all tab list caches
-        Logger.debug("Invalidated all cache entries");
+        ChatAPI.invalidateAll();
+        TabListAPI.invalidateAll();
+
+        // Notify sync listener for all tracked users
+        Set<UUID> allUsers = new HashSet<>(userGroups.keySet());
+        notifySyncAll(allUsers);
+
+        Logger.debug("Invalidated all cache entries (%d users synced)", allUsers.size());
     }
 
     /**
@@ -189,9 +221,53 @@ public final class CacheInvalidator {
      */
     public void invalidateContextCache(@NotNull UUID uuid) {
         cache.invalidate(uuid);
-        ChatAPI.invalidate(uuid); // Context changes may affect prefix/suffix
-        TabListAPI.invalidate(uuid); // Context changes may affect tab list
+        ChatAPI.invalidate(uuid);
+        TabListAPI.invalidate(uuid);
+        notifySync(uuid);
         Logger.debug("Invalidated context cache for user %s", uuid);
+    }
+
+    /**
+     * Notifies the sync listener for a single user UUID.
+     * Guarded against reentrant calls to prevent infinite recursion.
+     *
+     * @param uuid the user's UUID
+     */
+    private void notifySync(@NotNull UUID uuid) {
+        Consumer<UUID> listener = syncListener;
+        if (listener == null) return;
+        if (syncing.get()) return; // prevent recursion
+        try {
+            syncing.set(true);
+            listener.accept(uuid);
+        } catch (Exception e) {
+            Logger.warn("Sync listener failed for %s: %s", uuid, e.getMessage());
+        } finally {
+            syncing.set(false);
+        }
+    }
+
+    /**
+     * Notifies the sync listener for multiple user UUIDs.
+     *
+     * @param uuids the user UUIDs
+     */
+    private void notifySyncAll(@NotNull Collection<UUID> uuids) {
+        Consumer<UUID> listener = syncListener;
+        if (listener == null) return;
+        if (syncing.get()) return;
+        try {
+            syncing.set(true);
+            for (UUID uuid : uuids) {
+                try {
+                    listener.accept(uuid);
+                } catch (Exception e) {
+                    Logger.warn("Sync listener failed for %s: %s", uuid, e.getMessage());
+                }
+            }
+        } finally {
+            syncing.set(false);
+        }
     }
 
     /**

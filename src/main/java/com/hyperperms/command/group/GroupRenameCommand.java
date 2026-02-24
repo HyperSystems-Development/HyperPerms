@@ -90,7 +90,7 @@ public class GroupRenameCommand extends HpSubCommand {
             }
         }
 
-        hyperPerms.getCache().invalidateAll();
+        hyperPerms.getCacheInvalidator().invalidateAll();
         ctx.sender().sendMessage(Message.raw("Renamed group " + oldName + " to " + newName));
         return CompletableFuture.completedFuture(null);
     }

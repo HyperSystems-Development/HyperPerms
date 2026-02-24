@@ -76,7 +76,7 @@ public class UserSetExpiryCommand extends HpSubCommand {
         Node newNode = existingNode.withExpiry(newExpiry);
         user.setNode(newNode);
         hyperPerms.getUserManager().saveUser(user).join();
-        hyperPerms.getCache().invalidate(user.getUuid());
+        hyperPerms.getCacheInvalidator().invalidate(user.getUuid());
 
         String expiryDisplay = newExpiry != null ? TimeUtil.formatExpiry(newExpiry) : "permanent";
         ctx.sender().sendMessage(Message.raw("Set expiry on " + permission + " for user " + user.getFriendlyName() + " to " + expiryDisplay));

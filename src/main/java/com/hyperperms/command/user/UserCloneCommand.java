@@ -71,10 +71,6 @@ public class UserCloneCommand extends HpSubCommand {
 
         hyperPerms.getUserManager().saveUser(target);
         hyperPerms.getCacheInvalidator().invalidate(target.getUuid());
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin plugin) {
-            plugin.syncPermissionsToHytale(target.getUuid(), target);
-        }
 
         ctx.sender().sendMessage(Message.raw("Cloned permissions from " + source.getFriendlyName() + " to " + target.getFriendlyName()));
         return CompletableFuture.completedFuture(null);

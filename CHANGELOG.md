@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+*No changes yet*
+
+## [2.8.8] - 2026-02-23
+
+**Server Version:** `2026.02.19-1a311a592`
+
 ### Fixed
 
 - **Permission pollution in Hytale's permissions.json** - `syncPermissionsToHytale()` previously pushed all resolved permissions on every change, causing hundreds of permissions to accumulate. Now uses diff-based sync that computes the delta between Hytale's current state and HyperPerms' resolved set, only adding missing and removing stale permissions

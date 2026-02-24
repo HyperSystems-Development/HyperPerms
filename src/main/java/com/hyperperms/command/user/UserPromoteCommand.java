@@ -107,10 +107,6 @@ public class UserPromoteCommand extends HpSubCommand {
         // Save changes
         hyperPerms.getUserManager().saveUser(user).join();
         hyperPerms.getCacheInvalidator().invalidate(user.getUuid());
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin plugin) {
-            plugin.syncPermissionsToHytale(user.getUuid(), user);
-        }
 
         ctx.sender().sendMessage(
             Message.raw(actionMessage + " ").color(GRAY)

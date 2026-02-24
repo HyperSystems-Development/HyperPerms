@@ -51,7 +51,7 @@ public class UserSetSuffixCommand extends HpSubCommand {
         }
 
         hyperPerms.getUserManager().saveUser(user).join();
-        hyperPerms.getCache().invalidate(user.getUuid());
+        hyperPerms.getCacheInvalidator().invalidate(user.getUuid());
 
         return CompletableFuture.completedFuture(null);
     }

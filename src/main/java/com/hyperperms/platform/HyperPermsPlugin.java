@@ -32,6 +32,12 @@ public class HyperPermsPlugin extends JavaPlugin {
     private com.hyperperms.update.UpdateNotificationListener updateNotificationListener;
     private volatile boolean shuttingDown = false;
 
+    // Per-UUID lock map for serializing syncPermissionsToHytale calls.
+    // Prevents concurrent syncs for the same user from racing on Hytale's
+    // non-thread-safe HashSet views (getUserPermissions returns a live view).
+    private final java.util.concurrent.ConcurrentHashMap<java.util.UUID, Object> syncLocks =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     /**
      * Creates a new HyperPermsPlugin instance.
      * Called by the Hytale plugin loader.
@@ -70,6 +76,20 @@ public class HyperPermsPlugin extends JavaPlugin {
 
         // Register as a permission provider with Hytale
         registerPermissionProvider();
+
+        // Wire up centralized sync: whenever any user's cache is invalidated,
+        // automatically sync their resolved permissions to Hytale's provider
+        hyperPerms.getCacheInvalidator().setSyncListener(uuid -> {
+            if (adapter.isOnline(uuid)) {
+                var user = hyperPerms.getUserManager().getUser(uuid);
+                if (user != null) {
+                    syncPermissionsToHytale(uuid, user);
+                }
+            }
+        });
+
+        // Clean up any permission pollution from previous versions
+        cleanupHytalePermissions();
 
         // Register commands
         registerCommands();
@@ -449,6 +469,9 @@ public class HyperPermsPlugin extends JavaPlugin {
         // Clear ChatAPI cache for external plugins
         com.hyperperms.api.ChatAPI.invalidate(uuid);
 
+        // Clean up per-UUID sync lock
+        syncLocks.remove(uuid);
+
         // Untrack the player
         adapter.untrackPlayer(uuid);
     }
@@ -496,71 +519,101 @@ public class HyperPermsPlugin extends JavaPlugin {
     }
 
     /**
-     * Syncs resolved permissions to Hytale's internal permission system.
+     * Syncs resolved permissions to Hytale's internal permission system using diff-based logic.
      *
-     * Since Hytale doesn't query our PermissionProvider for permission checks,
-     * we must proactively push permission changes:
-     * - ADD granted permissions so third-party plugins see them via PermissionsModule.hasPermission()
-     * - REMOVE negated permissions so Hytale's internal storage doesn't grant them
-     *
-     * Order matters: add first, then remove — ensures negated permissions override grants.
+     * Computes the delta between what Hytale currently has and what HyperPerms resolves,
+     * then only adds missing permissions and removes stale ones. This prevents:
+     * - Permission pollution (hundreds of perms accumulating in permissions.json)
+     * - Unnecessary disk writes (no-op if nothing changed)
+     * - Race conditions (permissions are never fully cleared)
      *
      * @param uuid the player's UUID
      * @param user the HyperPerms user
      */
     public void syncPermissionsToHytale(java.util.UUID uuid, com.hyperperms.model.User user) {
-        try {
-            var contexts = hyperPerms.getContexts(uuid);
-            var resolved = hyperPerms.getResolver().resolve(user, contexts);
-            var registry = hyperPerms.getPermissionRegistry();
+        // Per-UUID lock: serializes concurrent sync calls for the same user.
+        // Multiple threads can trigger this (command thread, scheduler, CF pool, web editor)
+        // and Hytale's getUserPermissions() returns a live view of a non-thread-safe HashSet.
+        Object lock = syncLocks.computeIfAbsent(uuid, k -> new Object());
+        synchronized (lock) {
+            try {
+                var contexts = hyperPerms.getContexts(uuid);
+                var resolved = hyperPerms.getResolver().resolve(user, contexts);
+                var registry = hyperPerms.getPermissionRegistry();
 
-            // Get GRANTED permissions (expanded with wildcards + aliases)
-            java.util.Set<String> expandedGranted = resolved.getExpandedPermissions(registry);
+                // Get GRANTED permissions (expanded with wildcards + aliases)
+                java.util.Set<String> expandedGranted = resolved.getExpandedPermissions(registry);
 
-            // Get DENIED permissions (expanded with wildcards + aliases)
-            java.util.Set<String> deniedPerms = resolved.getDeniedPermissions();
-            java.util.Set<String> expandedDenied = new java.util.HashSet<>(deniedPerms);
-            var aliases = com.hyperperms.registry.PermissionAliases.getInstance();
+                // Get DENIED permissions (expanded with wildcards + aliases)
+                java.util.Set<String> deniedPerms = resolved.getDeniedPermissions();
+                java.util.Set<String> expandedDenied = new java.util.HashSet<>(deniedPerms);
+                var aliases = com.hyperperms.registry.PermissionAliases.getInstance();
 
-            for (String perm : deniedPerms) {
-                expandedDenied.addAll(aliases.expand(perm));
-                if (perm.endsWith(".*") || perm.equals("*")) {
-                    expandedDenied.addAll(registry.getMatchingPermissions(perm));
+                for (String perm : deniedPerms) {
+                    expandedDenied.addAll(aliases.expand(perm));
+                    if (perm.endsWith(".*") || perm.equals("*")) {
+                        expandedDenied.addAll(registry.getMatchingPermissions(perm));
+                    }
                 }
+
+                // Compute the correct resolved set: granted minus denied
+                java.util.Set<String> resolvedSet = new java.util.HashSet<>(expandedGranted);
+                resolvedSet.removeAll(expandedDenied);
+
+                // IMPORTANT: Only modify OTHER providers, not our own!
+                PermissionsModule.get().getProviders().forEach(provider -> {
+                    if (provider != permissionProvider) {
+                        try {
+                            // Defensive copy: getUserPermissions() returns an unmodifiable VIEW
+                            // of a live HashSet. The provider's readLock is released on return,
+                            // so another thread could structurally modify the backing set.
+                            // Copy immediately to get a stable snapshot for diff computation.
+                            java.util.Set<String> currentInHytale =
+                                    new java.util.HashSet<>(provider.getUserPermissions(uuid));
+
+                            // Compute diff
+                            java.util.Set<String> toAdd = new java.util.HashSet<>(resolvedSet);
+                            toAdd.removeAll(currentInHytale);
+
+                            java.util.Set<String> toRemove = new java.util.HashSet<>(currentInHytale);
+                            toRemove.removeAll(resolvedSet);
+
+                            if (toAdd.isEmpty() && toRemove.isEmpty()) {
+                                Logger.debug("Permission sync for %s: no changes needed", user.getUsername());
+                                return;
+                            }
+
+                            if (!toAdd.isEmpty()) {
+                                provider.addUserPermissions(uuid, toAdd);
+                            }
+                            if (!toRemove.isEmpty()) {
+                                provider.removeUserPermissions(uuid, toRemove);
+                            }
+
+                            Logger.debug("Permission sync for %s: +%d -%d (total: %d)",
+                                    user.getUsername(), toAdd.size(), toRemove.size(), resolvedSet.size());
+                        } catch (Exception e) {
+                            Logger.debug("Could not sync to provider %s: %s", provider.getName(), e.getMessage());
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                Logger.severe("Failed to sync permissions to Hytale for " + user.getUsername(), e);
             }
-
-            Logger.info("Syncing permissions to Hytale for %s: %d granted, %d denied",
-                    user.getUsername(), expandedGranted.size(), expandedDenied.size());
-
-            // IMPORTANT: Only modify OTHER providers, not our own!
-            // Calling our own add/removeUserPermissions() would cause infinite recursion
-            // because it triggers syncUserPermissions() which calls this method again.
-            PermissionsModule.get().getProviders().forEach(provider -> {
-                if (provider != permissionProvider) {
-                    // Step 1: ADD granted permissions
-                    if (!expandedGranted.isEmpty()) {
-                        try {
-                            provider.addUserPermissions(uuid, expandedGranted);
-                        } catch (Exception e) {
-                            Logger.debug("Could not add to provider %s: %s", provider.getName(), e.getMessage());
-                        }
-                    }
-
-                    // Step 2: REMOVE denied permissions (overrides any grants from step 1)
-                    if (!expandedDenied.isEmpty()) {
-                        try {
-                            provider.removeUserPermissions(uuid, expandedDenied);
-                        } catch (Exception e) {
-                            Logger.debug("Could not remove from provider %s: %s", provider.getName(), e.getMessage());
-                        }
-                    }
-                }
-            });
-
-            Logger.debug("Permission sync complete for %s", user.getUsername());
-        } catch (Exception e) {
-            Logger.severe("Failed to sync permissions to Hytale for " + user.getUsername(), e);
         }
+    }
+
+    /**
+     * Logs that startup cleanup will happen lazily via diff-based sync.
+     *
+     * The Hytale PermissionProvider API doesn't expose a way to enumerate stored UUIDs,
+     * so we cannot proactively clean polluted permissions at startup. Instead, the
+     * diff-based sync in {@link #syncPermissionsToHytale} removes stale permissions
+     * when each player connects — any permissions in Hytale's provider that don't match
+     * HyperPerms' resolved set are removed as part of the diff.
+     */
+    private void cleanupHytalePermissions() {
+        Logger.info("Diff-based sync enabled: stale permissions will be cleaned on player connect");
     }
 
     /**

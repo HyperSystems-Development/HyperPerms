@@ -75,10 +75,6 @@ public class UserAddGroupCommand extends HpSubCommand {
         user.addGroup(groupName, expiry);
         hyperPerms.getUserManager().saveUser(user).join();
         hyperPerms.getCacheInvalidator().invalidate(user.getUuid());
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin plugin) {
-            plugin.syncPermissionsToHytale(user.getUuid(), user);
-        }
         String expiryMsg = expiry != null ? " (" + TimeUtil.formatExpiry(expiry) + ")" : "";
         ctx.sender().sendMessage(Message.raw("Added user " + user.getFriendlyName() + " to group " + groupName + expiryMsg));
         return CompletableFuture.completedFuture(null);

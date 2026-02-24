@@ -40,7 +40,7 @@ public class GroupSetWeightCommand extends HpSubCommand {
 
         group.setWeight(weight);
         hyperPerms.getGroupManager().saveGroup(group);
-        hyperPerms.getCache().invalidateAll();
+        hyperPerms.getCacheInvalidator().invalidateGroup(groupName);
 
         ctx.sender().sendMessage(Message.raw("Set weight of group " + groupName + " to " + weight));
         return CompletableFuture.completedFuture(null);

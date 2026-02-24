@@ -86,7 +86,7 @@ public class GroupParentCommand extends HpContainerCommand {
 
             group.addParent(parentName, expiry);
             hyperPerms.getGroupManager().saveGroup(group);
-            hyperPerms.getCache().invalidateAll();
+            hyperPerms.getCacheInvalidator().invalidateGroup(groupName);
             String expiryMsg = expiry != null ? " (" + TimeUtil.formatExpiry(expiry) + ")" : "";
             ctx.sender().sendMessage(Message.raw("Group " + groupName + " now inherits from " + parentName + expiryMsg));
             return CompletableFuture.completedFuture(null);
@@ -121,7 +121,7 @@ public class GroupParentCommand extends HpContainerCommand {
             var result = group.removeParent(parentName);
             if (result == com.hyperperms.api.PermissionHolder.DataMutateResult.SUCCESS) {
                 hyperPerms.getGroupManager().saveGroup(group);
-                hyperPerms.getCache().invalidateAll();
+                hyperPerms.getCacheInvalidator().invalidateGroup(groupName);
                 ctx.sender().sendMessage(Message.raw("Group " + groupName + " no longer inherits from " + parentName));
             } else {
                 ctx.sender().sendMessage(Message.raw("Group " + groupName + " does not inherit from " + parentName));

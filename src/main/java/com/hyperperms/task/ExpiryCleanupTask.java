@@ -4,6 +4,7 @@ import com.hyperperms.api.PermissionHolder;
 import com.hyperperms.api.events.EventBus;
 import com.hyperperms.api.events.PermissionChangeEvent;
 import com.hyperperms.api.events.PermissionChangeEvent.ChangeType;
+import com.hyperperms.cache.CacheInvalidator;
 import com.hyperperms.manager.GroupManagerImpl;
 import com.hyperperms.manager.UserManagerImpl;
 import com.hyperperms.model.Node;
@@ -24,6 +25,8 @@ public final class ExpiryCleanupTask implements Runnable {
     private final GroupManagerImpl groupManager;
     @Nullable
     private final EventBus eventBus;
+    @Nullable
+    private final CacheInvalidator cacheInvalidator;
 
     /**
      * Creates a new expiry cleanup task.
@@ -32,21 +35,23 @@ public final class ExpiryCleanupTask implements Runnable {
      * @param groupManager the group manager
      */
     public ExpiryCleanupTask(@NotNull UserManagerImpl userManager, @NotNull GroupManagerImpl groupManager) {
-        this(userManager, groupManager, null);
+        this(userManager, groupManager, null, null);
     }
 
     /**
      * Creates a new expiry cleanup task with event firing.
      *
-     * @param userManager  the user manager
-     * @param groupManager the group manager
-     * @param eventBus     the event bus for firing expiry events, or null to disable
+     * @param userManager      the user manager
+     * @param groupManager     the group manager
+     * @param eventBus         the event bus for firing expiry events, or null to disable
+     * @param cacheInvalidator the cache invalidator for triggering sync, or null to disable
      */
     public ExpiryCleanupTask(@NotNull UserManagerImpl userManager, @NotNull GroupManagerImpl groupManager,
-                             @Nullable EventBus eventBus) {
+                             @Nullable EventBus eventBus, @Nullable CacheInvalidator cacheInvalidator) {
         this.userManager = userManager;
         this.groupManager = groupManager;
         this.eventBus = eventBus;
+        this.cacheInvalidator = cacheInvalidator;
     }
 
     @Override
@@ -80,6 +85,9 @@ public final class ExpiryCleanupTask implements Runnable {
                     total++;
                 }
                 userManager.saveUser(user);
+                if (cacheInvalidator != null) {
+                    cacheInvalidator.invalidate(user.getUuid());
+                }
             }
         }
         return total;
@@ -101,6 +109,9 @@ public final class ExpiryCleanupTask implements Runnable {
                     total++;
                 }
                 groupManager.saveGroup(group);
+                if (cacheInvalidator != null) {
+                    cacheInvalidator.invalidateGroup(group.getName());
+                }
             }
         }
         return total;

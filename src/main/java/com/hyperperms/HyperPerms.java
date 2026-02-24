@@ -351,7 +351,7 @@ public final class HyperPerms implements HyperPermsAPI {
             });
 
             expiryTask = scheduler.scheduleAtFixedRate(
-                    new ExpiryCleanupTask(userManager, groupManager, eventBus),
+                    new ExpiryCleanupTask(userManager, groupManager, eventBus, cacheInvalidator),
                     config.getExpiryCheckInterval(),
                     config.getExpiryCheckInterval(),
                     TimeUnit.SECONDS

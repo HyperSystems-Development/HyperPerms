@@ -61,7 +61,7 @@ public class UserClearCommand extends HpSubCommand {
             user.setCustomSuffix(null);
 
             hyperPerms.getUserManager().saveUser(user).join();
-            hyperPerms.getCache().invalidate(user.getUuid());
+            hyperPerms.getCacheInvalidator().invalidate(user.getUuid());
 
             ctx.sender().sendMessage(Message.raw("Cleared all data for " + user.getFriendlyName()));
             return CompletableFuture.completedFuture(null);

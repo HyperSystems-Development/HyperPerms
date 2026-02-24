@@ -41,7 +41,7 @@ public class GroupUnsetPermCommand extends HpSubCommand {
         var result = group.removeNode(permission);
         if (result == com.hyperperms.api.PermissionHolder.DataMutateResult.SUCCESS) {
             hyperPerms.getGroupManager().saveGroup(group);
-            hyperPerms.getCache().invalidateAll();
+            hyperPerms.getCacheInvalidator().invalidateGroup(groupName);
             ctx.sender().sendMessage(Message.raw("Removed " + permission + " from group " + groupName));
         } else {
             ctx.sender().sendMessage(Message.raw("Group " + groupName + " does not have permission " + permission));

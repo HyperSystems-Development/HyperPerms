@@ -5,6 +5,17 @@ All notable changes to HyperPerms will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Permission pollution in Hytale's permissions.json** - `syncPermissionsToHytale()` previously pushed all resolved permissions on every change, causing hundreds of permissions to accumulate. Now uses diff-based sync that computes the delta between Hytale's current state and HyperPerms' resolved set, only adding missing and removing stale permissions
+- **Race condition in concurrent permission syncs** - Multiple threads (command thread, scheduler, CF pool, web editor) could call `syncPermissionsToHytale()` simultaneously for the same user, racing on Hytale's non-thread-safe `HashSet` view from `getUserPermissions()`. Added per-UUID synchronization locks and defensive copying of the live view
+- **Scattered manual sync calls** - Six user commands and `HyperPermsPermissionProvider` each had their own inline `syncPermissionsToHytale()` call via bootstrap reflection. Centralized all sync logic into a `CacheInvalidator.setSyncListener()` hook — every cache invalidation now automatically triggers Hytale sync for affected online users
+- **Group commands invalidated entire cache** - Group permission/property changes (`setperm`, `unsetperm`, `setprefix`, `setsuffix`, `setweight`, `setexpiry`, `parent add/remove`) called `invalidateAll()` instead of targeted `invalidateGroup()`, causing unnecessary cache churn for unrelated users
+- **Expired permissions not synced to Hytale** - `ExpiryCleanupTask` removed expired nodes but didn't invalidate the cache or trigger Hytale sync, so expired permissions remained active until the player reconnected
+- **Inconsistent cache invalidation API** - Some commands used `getCache().invalidate()` (bypassing sync) while others used `getCacheInvalidator().invalidate()` (with sync). Unified all commands to use `getCacheInvalidator()`
+
 ## [2.8.7] - 2026-02-22
 
 ### Fixed

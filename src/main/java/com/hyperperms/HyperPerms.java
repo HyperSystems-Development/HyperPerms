@@ -915,4 +915,16 @@ public final class HyperPerms implements HyperPermsAPI {
         return dataDirectory;
     }
 
+    /**
+     * Get the service container. Available after {@link #enable()} completes.
+     *
+     * @return the service container
+     */
+    @NotNull
+    public ServiceContainer getServiceContainer() {
+        if (container == null) {
+            throw new IllegalStateException("Plugin not yet enabled");
+        }
+        return container;
+    }
 }

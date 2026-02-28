@@ -189,7 +189,7 @@ public final class HyperPerms implements HyperPermsAPI {
             lifecycle.addStage(new ConfigStage(dataDirectory));
             lifecycle.addStage(new StorageStage(dataDirectory));
             lifecycle.addStage(new CoreManagerStage());
-            lifecycle.addStage(new DefaultGroupsStage(this));
+            lifecycle.addStage(new DefaultGroupsStage());
             lifecycle.addStage(new ResolverStage());
             lifecycle.addStage(new RegistryStage(dataDirectory));
             lifecycle.addStage(new ChatStage(this));
@@ -255,16 +255,16 @@ public final class HyperPerms implements HyperPermsAPI {
         this.tabListManager = container.get(com.hyperperms.tablist.TabListManager.class);
         this.webEditorService = container.get(com.hyperperms.web.WebEditorService.class);
         this.backupManager = container.get(com.hyperperms.backup.BackupManager.class);
-        this.analyticsManager = container.getOptional(com.hyperperms.analytics.AnalyticsManager.class).orElse(null);
+        this.analyticsManager = container.get(com.hyperperms.analytics.AnalyticsManager.class);
         this.updateChecker = container.getOptional(UpdateChecker.class).orElse(null);
-        this.notificationPreferences = container.getOptional(com.hyperperms.update.UpdateNotificationPreferences.class).orElse(null);
-        this.queryApi = container.getOptional(QueryAPI.class).orElse(null);
+        this.notificationPreferences = container.get(com.hyperperms.update.UpdateNotificationPreferences.class);
+        this.queryApi = container.get(QueryAPI.class);
         this.metricsApi = container.getOptional(MetricsAPI.class).orElse(null);
-        this.factionIntegration = container.getOptional(FactionIntegration.class).orElse(null);
-        this.werchatIntegration = container.getOptional(WerChatIntegration.class).orElse(null);
-        this.placeholderApiIntegration = container.getOptional(PlaceholderAPIIntegration.class).orElse(null);
-        this.mysticNameTagsIntegration = container.getOptional(MysticNameTagsIntegration.class).orElse(null);
-        this.scheduler = container.getOptional(ScheduledExecutorService.class).orElse(null);
+        this.factionIntegration = container.get(FactionIntegration.class);
+        this.werchatIntegration = container.get(WerChatIntegration.class);
+        this.placeholderApiIntegration = container.get(PlaceholderAPIIntegration.class);
+        this.mysticNameTagsIntegration = container.get(MysticNameTagsIntegration.class);
+        this.scheduler = container.get(ScheduledExecutorService.class);
         this.verboseMode = config.isVerboseEnabledByDefault();
     }
 
@@ -682,7 +682,7 @@ public final class HyperPerms implements HyperPermsAPI {
      * This is called on first run when no groups exist in storage.
      * It creates a standard group hierarchy: default -> member -> builder -> moderator -> admin -> owner
      */
-    public void loadDefaultGroups() {
+    private void loadDefaultGroups() {
         Logger.info("No groups found, loading default groups...");
         
         try (var inputStream = getClass().getClassLoader().getResourceAsStream("default-groups.json")) {

@@ -7,8 +7,6 @@ import com.hyperperms.api.PermissionCheckBuilder;
 import com.hyperperms.api.QueryAPI;
 import com.hyperperms.api.TriState;
 import com.hyperperms.api.context.ContextSet;
-import com.hyperperms.metrics.MetricsAPIImpl;
-import com.hyperperms.query.QueryAPIImpl;
 import com.hyperperms.api.events.EventBus;
 import com.hyperperms.api.events.PermissionCheckEvent;
 import com.hyperperms.cache.CacheInvalidator;
@@ -26,9 +24,11 @@ import com.hyperperms.context.calculators.WorldContextCalculator;
 import com.hyperperms.integration.FactionIntegration;
 import com.hyperperms.integration.MysticNameTagsIntegration;
 import com.hyperperms.integration.PlaceholderAPIIntegration;
-import com.hyperperms.integration.VaultUnlockedIntegration;
 import com.hyperperms.integration.WerChatIntegration;
 import com.hyperperms.discovery.RuntimePermissionDiscovery;
+import com.hyperperms.lifecycle.PluginLifecycle;
+import com.hyperperms.lifecycle.ServiceContainer;
+import com.hyperperms.lifecycle.stages.*;
 import com.hyperperms.update.UpdateChecker;
 import com.hyperperms.registry.PermissionRegistry;
 import com.hyperperms.manager.GroupManagerImpl;
@@ -37,22 +37,15 @@ import com.hyperperms.manager.UserManagerImpl;
 import com.hyperperms.model.User;
 import com.hyperperms.resolver.PermissionResolver;
 import com.hyperperms.resolver.WildcardMatcher;
-import com.hyperperms.storage.StorageFactory;
 import com.hyperperms.storage.StorageProvider;
-import com.hyperperms.task.ExpiryCleanupTask;
 import com.hyperperms.util.Logger;
-import com.hyperperms.util.SQLiteDriverLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.*;
-import java.util.concurrent.Executor;
-import java.util.logging.Level;
 
 /**
  * Main plugin class for HyperPerms.
@@ -133,11 +126,14 @@ public final class HyperPerms implements HyperPermsAPI {
 
     // Tasks
     private ScheduledExecutorService scheduler;
-    private ScheduledFuture<?> expiryTask;
 
     // State
     private volatile boolean enabled = false;
     private volatile boolean verboseMode = false;
+
+    // Lifecycle
+    private ServiceContainer container;
+    private PluginLifecycle lifecycle;
 
     /**
      * Creates a new HyperPerms instance.
@@ -186,213 +182,26 @@ public final class HyperPerms implements HyperPermsAPI {
             Logger.init(parentLogger);
             Logger.info("Enabling HyperPerms...");
 
-            // Initialize lib directory for optional SQLite driver
-            Path libDir = dataDirectory.resolve("lib");
-            try {
-                Files.createDirectories(libDir);
-            } catch (IOException e) {
-                Logger.warn("Failed to create lib directory: %s", e.getMessage());
-            }
-            SQLiteDriverLoader.setLibDirectory(libDir);
-            Logger.debug("SQLite lib directory: %s", libDir);
+            // Build and run lifecycle
+            container = new ServiceContainer();
+            lifecycle = new PluginLifecycle(container);
 
-            // Load configuration
-            config = new HyperPermsConfig(dataDirectory);
-            config.load();
+            lifecycle.addStage(new ConfigStage(dataDirectory));
+            lifecycle.addStage(new StorageStage(dataDirectory));
+            lifecycle.addStage(new CoreManagerStage());
+            lifecycle.addStage(new DefaultGroupsStage(this));
+            lifecycle.addStage(new ResolverStage());
+            lifecycle.addStage(new RegistryStage(dataDirectory));
+            lifecycle.addStage(new ChatStage(this));
+            lifecycle.addStage(new IntegrationStage(this));
+            lifecycle.addStage(new WebStage(this));
+            lifecycle.addStage(new SchedulerStage());
+            lifecycle.addStage(new AnalyticsStage(this, dataDirectory));
 
-            // Initialize storage
-            storage = StorageFactory.createStorage(config, dataDirectory);
-            storage.init().join();
+            lifecycle.initialize();
 
-            // Initialize cache
-            cache = new PermissionCache(
-                    config.getCacheMaxSize(),
-                    config.getCacheExpirySeconds(),
-                    config.isCacheEnabled()
-            );
-            cacheInvalidator = new CacheInvalidator(cache);
-
-            // Initialize event bus
-            eventBus = new EventBus();
-
-            // Initialize managers with event bus
-            groupManager = new GroupManagerImpl(storage, cacheInvalidator, eventBus);
-            trackManager = new TrackManagerImpl(storage);
-            userManager = new UserManagerImpl(storage, cache, eventBus, config.getDefaultGroup());
-
-            // Load data
-            groupManager.loadAll().join();
-            trackManager.loadAll().join();
-            userManager.loadAll().join();
-
-            // Load default groups on first run if no groups exist
-            if (groupManager.getLoadedGroups().isEmpty()) {
-                loadDefaultGroups();
-            }
-
-            // Ensure default group exists (fallback if default-groups.json missing)
-            if (config.shouldCreateDefaultGroup()) {
-                groupManager.ensureDefaultGroup(config.getDefaultGroup());
-            }
-
-            // Initialize resolver
-            resolver = new PermissionResolver(groupManager::getGroup);
-
-            // Initialize context system
-            contextManager = new ContextManager();
-            playerContextProvider = PlayerContextProvider.EMPTY; // Will be set by platform
-            registerDefaultContextCalculators();
-
-            // Initialize permission registry
-            permissionRegistry = com.hyperperms.registry.PermissionRegistry.getInstance();
-            permissionRegistry.registerBuiltInPermissions();
-
-            // Initialize runtime permission discovery
-            Logger.info("[Discovery] Initializing runtime permission discovery...");
-            // Derive plugins directory from dataDirectory (mods/com.hyperperms_HyperPerms/data -> mods/)
-            // Also supports "plugins" folder name for compatibility
-            Path pluginsDir = resolvePluginsDirectory(dataDirectory);
-            runtimeDiscovery = new RuntimePermissionDiscovery(dataDirectory, pluginsDir);
-            runtimeDiscovery.load();
-            java.util.Set<String> installedPlugins = runtimeDiscovery.scanInstalledPlugins();
-            runtimeDiscovery.buildNamespaceMapping();
-            runtimeDiscovery.scanJarPermissions(installedPlugins);
-            runtimeDiscovery.pruneRemovedPlugins(installedPlugins);
-            permissionRegistry.registerDiscoveredPermissions(runtimeDiscovery);
-
-            // Initialize chat manager
-            chatManager = new com.hyperperms.chat.ChatManager(this);
-            chatManager.loadConfig();
-
-            // Initialize tab list manager
-            tabListManager = new com.hyperperms.tablist.TabListManager(this);
-            tabListManager.loadConfig();
-
-            // Initialize faction integration (soft dependency on HyFactions)
-            Logger.debugIntegration("Initializing faction integration...");
-            factionIntegration = new FactionIntegration(this);
-            factionIntegration.setEnabled(config.isFactionIntegrationEnabled());
-            factionIntegration.setNoFactionDefault(config.getFactionNoFactionDefault());
-            factionIntegration.setNoRankDefault(config.getFactionNoRankDefault());
-            factionIntegration.setFactionFormat(config.getFactionFormat());
-            factionIntegration.setPrefixEnabled(config.isFactionPrefixEnabled());
-            factionIntegration.setPrefixFormat(config.getFactionPrefixFormat());
-            factionIntegration.setShowRank(config.isFactionShowRank());
-            factionIntegration.setPrefixWithRankFormat(config.getFactionPrefixWithRankFormat());
-            chatManager.setFactionIntegration(factionIntegration);
-            
-            // Initialize WerChat integration (soft dependency on WerChat)
-            Logger.debugIntegration("Initializing WerChat integration...");
-            werchatIntegration = new WerChatIntegration(this);
-            werchatIntegration.setEnabled(config.isWerChatIntegrationEnabled());
-            werchatIntegration.setNoChannelDefault(config.getWerChatNoChannelDefault());
-            werchatIntegration.setChannelFormat(config.getWerChatChannelFormat());
-            chatManager.setWerChatIntegration(werchatIntegration);
-
-            // Initialize PlaceholderAPI integration (soft dependency on PlaceholderAPI)
-            Logger.debugIntegration("Initializing PlaceholderAPI integration...");
-            placeholderApiIntegration = new PlaceholderAPIIntegration(this);
-            placeholderApiIntegration.setEnabled(config.isPlaceholderAPIEnabled());
-            placeholderApiIntegration.setParseExternal(config.isPlaceholderAPIParseExternal());
-            chatManager.setPlaceholderAPIIntegration(placeholderApiIntegration);
-            if (placeholderApiIntegration.isAvailable()) {
-                Logger.info("PlaceholderAPI integration enabled - placeholders available");
-            }
-
-            // Initialize MysticNameTags integration (soft dependency on MysticNameTags)
-            Logger.debugIntegration("Initializing MysticNameTags integration...");
-            mysticNameTagsIntegration = new MysticNameTagsIntegration(this);
-            mysticNameTagsIntegration.setEnabled(config.isMysticNameTagsEnabled());
-            mysticNameTagsIntegration.setRefreshOnPermissionChange(config.isMysticNameTagsRefreshOnPermissionChange());
-            mysticNameTagsIntegration.setRefreshOnGroupChange(config.isMysticNameTagsRefreshOnGroupChange());
-            mysticNameTagsIntegration.setTagPermissionPrefix(config.getMysticNameTagsPermissionPrefix());
-            if (mysticNameTagsIntegration.isAvailable()) {
-                Logger.info("MysticNameTags integration enabled - tag permission sync active");
-            }
-
-            // Initialize VaultUnlocked integration (soft dependency)
-            if (config.isVaultIntegrationEnabled()) {
-                Logger.debugIntegration("Initializing VaultUnlocked integration...");
-                VaultUnlockedIntegration.init(this);
-            } else {
-                Logger.debugIntegration("VaultUnlocked integration disabled in config");
-            }
-
-            // Initialize web editor service
-            webEditorService = new com.hyperperms.web.WebEditorService(this);
-
-            // Initialize backup manager
-            backupManager = new com.hyperperms.backup.BackupManager(this);
-            backupManager.start();
-
-            // Initialize update checker
-            if (config.isUpdateCheckEnabled()) {
-                updateChecker = new UpdateChecker(this, VERSION, config.getUpdateCheckUrl());
-                // Check for updates asynchronously
-                updateChecker.checkForUpdates().thenAccept(info -> {
-                    if (info != null) {
-                        Logger.info("[Update] A new version is available: v%s (current: v%s)", info.version(), VERSION);
-                        if (config.isUpdateChangelogEnabled() && info.changelog() != null && !info.changelog().isEmpty()) {
-                            Logger.info("[Update] Changelog: %s", info.changelog());
-                        }
-                    }
-                });
-            }
-
-            // Initialize update notification preferences
-            notificationPreferences = new com.hyperperms.update.UpdateNotificationPreferences(dataDirectory);
-            notificationPreferences.load();
-
-            // Start scheduled tasks
-            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "HyperPerms-Scheduler");
-                t.setDaemon(true);
-                return t;
-            });
-
-            expiryTask = scheduler.scheduleAtFixedRate(
-                    new ExpiryCleanupTask(userManager, groupManager, eventBus, cacheInvalidator),
-                    config.getExpiryCheckInterval(),
-                    config.getExpiryCheckInterval(),
-                    TimeUnit.SECONDS
-            );
-
-            // Schedule discovery auto-save (every 5 minutes)
-            scheduler.scheduleAtFixedRate(
-                    () -> {
-                        try {
-                            runtimeDiscovery.save();
-                        } catch (Exception e) {
-                            Logger.warn("Failed to auto-save discovered permissions: %s", e.getMessage());
-                        }
-                    },
-                    300, 300, TimeUnit.SECONDS
-            );
-
-            // Set verbose mode
-            verboseMode = config.isVerboseEnabledByDefault();
-
-            // Initialize console links settings
-            com.hyperperms.util.ConsoleLinks.setEnabled(config.isConsoleClickableLinksEnabled());
-            com.hyperperms.util.ConsoleLinks.setForceOsc8(config.isConsoleForceOsc8());
-            Logger.debug("Console links: enabled=%s, forceOsc8=%s, osc8Supported=%s",
-                    config.isConsoleClickableLinksEnabled(),
-                    config.isConsoleForceOsc8(),
-                    com.hyperperms.util.ConsoleLinks.isOsc8Supported());
-
-            // Initialize analytics manager
-            analyticsManager = new com.hyperperms.analytics.AnalyticsManager(this);
-            analyticsManager.start();
-
-            // Initialize API implementations
-            queryApi = new QueryAPIImpl(userManager, groupManager, () -> trackManager.getLoadedTracks());
-            if (analyticsManager.isEnabled()) {
-                metricsApi = new MetricsAPIImpl(
-                        analyticsManager,
-                        () -> cache.getStatistics(),
-                        () -> (int) cache.size()  // Safe cast - cache size won't exceed Integer.MAX_VALUE
-                );
-            }
+            // Populate fields from container for backward-compatible getter access
+            populateFieldsFromContainer();
 
             enabled = true;
             long elapsed = System.currentTimeMillis() - startTime;
@@ -415,80 +224,48 @@ public final class HyperPerms implements HyperPermsAPI {
 
         Logger.info("Disabling HyperPerms...");
 
-        // Shutdown VaultUnlocked integration
-        VaultUnlockedIntegration.shutdown();
-
-        // Unregister MysticNameTags integration
-        if (mysticNameTagsIntegration != null) {
-            mysticNameTagsIntegration.unregister();
-        }
-
-        // Unregister PlaceholderAPI expansion
-        if (placeholderApiIntegration != null) {
-            placeholderApiIntegration.unregister();
-        }
-
-        // Stop scheduled tasks FIRST to prevent new storage executor submissions
-        if (expiryTask != null) {
-            expiryTask.cancel(true);
-        }
-        if (scheduler != null) {
-            scheduler.shutdown();
-            try {
-                if (!scheduler.awaitTermination(3, TimeUnit.SECONDS)) {
-                    scheduler.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                scheduler.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        // Save all user data while storage executor is still clean
-        if (userManager != null) {
-            try {
-                userManager.saveAll().get(10, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                Logger.warn("Failed to save users on shutdown: %s", e.getMessage());
-            }
-        }
-
-        // Save discovered permissions
-        if (runtimeDiscovery != null) {
-            try {
-                runtimeDiscovery.save();
-            } catch (Exception e) {
-                Logger.warn("Failed to save discovered permissions on shutdown");
-            }
-        }
-
-        // Stop analytics manager
-        if (analyticsManager != null) {
-            analyticsManager.stop();
-        }
-
-        // Stop backup manager
-        if (backupManager != null) {
-            backupManager.shutdown();
-        }
-
-        // Shutdown storage
-        if (storage != null) {
-            try {
-                storage.shutdown().get(5, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                Logger.warn("Failed to shutdown storage cleanly: %s", e.getMessage());
-            }
-        }
-
-        // Clear event bus
-        if (eventBus != null) {
-            eventBus.clear();
+        if (lifecycle != null) {
+            lifecycle.shutdown();
         }
 
         enabled = false;
         instance = null;
         Logger.info("HyperPerms disabled");
+    }
+
+    /**
+     * Populate instance fields from the service container for backward-compatible getter access.
+     * This bridges the old field-based access pattern with the new container-based lifecycle.
+     */
+    private void populateFieldsFromContainer() {
+        this.config = container.get(HyperPermsConfig.class);
+        this.storage = container.get(StorageProvider.class);
+        this.cache = container.get(PermissionCache.class);
+        this.cacheInvalidator = container.get(CacheInvalidator.class);
+        this.eventBus = container.get(EventBus.class);
+        this.groupManager = container.get(GroupManagerImpl.class);
+        this.trackManager = container.get(TrackManagerImpl.class);
+        this.userManager = container.get(UserManagerImpl.class);
+        this.resolver = container.get(PermissionResolver.class);
+        this.contextManager = container.get(ContextManager.class);
+        this.playerContextProvider = container.get(PlayerContextProvider.class);
+        this.permissionRegistry = container.get(PermissionRegistry.class);
+        this.runtimeDiscovery = container.get(RuntimePermissionDiscovery.class);
+        this.chatManager = container.get(com.hyperperms.chat.ChatManager.class);
+        this.tabListManager = container.get(com.hyperperms.tablist.TabListManager.class);
+        this.webEditorService = container.get(com.hyperperms.web.WebEditorService.class);
+        this.backupManager = container.get(com.hyperperms.backup.BackupManager.class);
+        this.analyticsManager = container.getOptional(com.hyperperms.analytics.AnalyticsManager.class).orElse(null);
+        this.updateChecker = container.getOptional(UpdateChecker.class).orElse(null);
+        this.notificationPreferences = container.getOptional(com.hyperperms.update.UpdateNotificationPreferences.class).orElse(null);
+        this.queryApi = container.getOptional(QueryAPI.class).orElse(null);
+        this.metricsApi = container.getOptional(MetricsAPI.class).orElse(null);
+        this.factionIntegration = container.getOptional(FactionIntegration.class).orElse(null);
+        this.werchatIntegration = container.getOptional(WerChatIntegration.class).orElse(null);
+        this.placeholderApiIntegration = container.getOptional(PlaceholderAPIIntegration.class).orElse(null);
+        this.mysticNameTagsIntegration = container.getOptional(MysticNameTagsIntegration.class).orElse(null);
+        this.scheduler = container.getOptional(ScheduledExecutorService.class).orElse(null);
+        this.verboseMode = config.isVerboseEnabledByDefault();
     }
 
     /**
@@ -1138,61 +915,4 @@ public final class HyperPerms implements HyperPermsAPI {
         return dataDirectory;
     }
 
-    /**
-     * Resolves the plugins/mods directory from the data directory.
-     * Supports both "mods" and "plugins" folder names for compatibility.
-     * Logs warnings if the folder structure is unexpected.
-     *
-     * @param dataDirectory the plugin's data directory
-     * @return the resolved plugins directory path
-     */
-    @NotNull
-    private Path resolvePluginsDirectory(@NotNull Path dataDirectory) {
-        // Try to derive from dataDirectory structure: mods/com.hyperperms_HyperPerms/data -> mods/
-        Path derivedDir = null;
-        if (dataDirectory.getParent() != null && dataDirectory.getParent().getParent() != null) {
-            derivedDir = dataDirectory.getParent().getParent();
-        }
-
-        if (derivedDir != null && java.nio.file.Files.isDirectory(derivedDir)) {
-            String dirName = derivedDir.getFileName().toString().toLowerCase();
-            if (dirName.equals("mods") || dirName.equals("plugins")) {
-                Logger.debug("[Discovery] Using plugins directory: %s", derivedDir.toAbsolutePath());
-                return derivedDir;
-            } else {
-                // Directory exists but has unexpected name
-                Logger.warn("[Discovery] Plugin folder has unexpected name '%s'. Expected 'mods' or 'plugins'.", 
-                    derivedDir.getFileName().toString());
-                Logger.warn("[Discovery] Plugin discovery will still scan '%s', but consider renaming to 'mods' or 'plugins'.",
-                    derivedDir.toAbsolutePath());
-                return derivedDir;
-            }
-        }
-
-        // Fallback: try to find mods or plugins in working directory
-        Path workingDir = Path.of("").toAbsolutePath();
-        Path modsDir = workingDir.resolve("mods");
-        Path pluginsDir = workingDir.resolve("plugins");
-
-        if (java.nio.file.Files.isDirectory(modsDir)) {
-            Logger.debug("[Discovery] Using mods directory: %s", modsDir);
-            return modsDir;
-        } else if (java.nio.file.Files.isDirectory(pluginsDir)) {
-            Logger.debug("[Discovery] Using plugins directory: %s", pluginsDir);
-            return pluginsDir;
-        }
-
-        // Neither exists - log warning and return default
-        Logger.warn("[Discovery] Could not find 'mods' or 'plugins' directory!");
-        Logger.warn("[Discovery] Checked locations:");
-        if (derivedDir != null) {
-            Logger.warn("[Discovery]   - Derived: %s (does not exist)", derivedDir.toAbsolutePath());
-        }
-        Logger.warn("[Discovery]   - %s (does not exist)", modsDir);
-        Logger.warn("[Discovery]   - %s (does not exist)", pluginsDir);
-        Logger.warn("[Discovery] Plugin permission discovery will be limited. Please ensure your plugins are in a 'mods' or 'plugins' folder.");
-        
-        // Return mods as default even if it doesn't exist
-        return modsDir;
-    }
 }

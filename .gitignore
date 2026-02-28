@@ -25,6 +25,9 @@ CLAUDE.md
 .playwright-mcp/
 nul
 
+# Internal planning docs
+docs/plans/
+
 gradle/wrapper/gradle-wrapper.jar
 
 gradlew

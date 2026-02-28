@@ -5,45 +5,47 @@
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/aZaa5vcFYh)
 [![GitHub Stars](https://img.shields.io/github/stars/HyperSystemsDev/HyperPerms?style=social)](https://github.com/HyperSystemsDev/HyperPerms)
 
-**The permission system for Hytale.** Web editor, templates, and everything you need out of the box.
+**The permission system for Hytale.** Web editor, 11 server templates, plugin integrations, and everything you need out of the box.
 
-**[Documentation](https://www.hyperperms.com/wiki)** | **[Web Editor](https://hyperperms.com)** | **[Discord](https://discord.com/invite/aZaa5vcFYh)**
+**[Documentation](https://www.hyperperms.com/wiki)** | **[Web Editor](https://hyperperms.com)** | **[Discord](https://discord.com/invite/aZaa5vcFYh)** | **[CurseForge](https://www.curseforge.com/hytale/mods/hyperperms)**
 
 ![Web Editor](web-editor.png)
 
 ## Features
 
-**Web Editor** - Edit permissions in your browser at [hyperperms.com](https://hyperperms.com). No port forwarding needed.
+**Web Editor** — Edit permissions in your browser at [hyperperms.com](https://hyperperms.com). Drag-and-drop groups, visual inheritance graphs, smart autocomplete with 300+ permissions, and live chat preview. No port forwarding needed. Want to self-host? The editor is [open source](https://github.com/HyperSystemsDev/HyperPermsEditor) and can run offline on your own infrastructure.
 
-**Permission Templates** - Pre-built roles (admin, moderator, builder, member) ready to use.
+**11 Server Templates** — Survival, RPG, factions, skyblock, prison, creative, SMP, towny, minigames, vanilla, and staff. One command gives you groups, permissions, inheritance, prefixes, and tracks.
 
-**Contextual Permissions** - Scope permissions per-world, per-region, or per-server.
+**Plugin Integrations** — First-class support for VaultUnlocked, MMOSkillTree (200+ nodes), HyperFactions, PlaceholderAPI, MysticNameTags, and WerChat. Auto-detected, zero configuration.
 
-**Wildcard Support** - `plugin.command.*` matches all subpermissions automatically.
+**Storage Backends** — JSON (default), SQLite, or MariaDB/MySQL with HikariCP connection pooling for multi-server networks.
 
-**Tracks & Inheritance** - Promotion tracks with weight-based group priority.
+**Contextual Permissions** — Scope permissions per-world, per-gamemode, or per-server.
 
-**Timed Permissions** - Temporary permissions with automatic expiration and cleanup.
+**Wildcards & Negation** — `plugin.command.*` matches all subpermissions. `-hytale.command.spawn` denies explicitly.
 
-**VaultUnlocked Integration** - Economy and chat prefix/suffix support out of the box.
+**Tracks & Inheritance** — Promotion/demotion tracks with weight-based group priority and unlimited inheritance depth.
 
-**Analytics & Auditing** - Track permission usage, view hotspots, and audit change history.
+**Timed Permissions** — Temporary permissions and group membership with automatic expiration (`1d`, `2h30m`, `1w`).
 
-**High Performance** - LRU caching, async operations, and efficient permission resolution.
+**Analytics & Auditing** — Track permission usage, view hotspots, and audit change history (requires SQLite).
 
-**LuckPerms Migration** - One-command import from LuckPerms (YAML, JSON, H2, SQLite).
+**Runtime Discovery** — Automatically scans installed plugins and discovers their permission nodes. Discovered permissions appear in the web editor with "Installed" badges.
+
+**LuckPerms Migration** — One-command import from LuckPerms (YAML, JSON, H2, MySQL/MariaDB). Automatic backup before migration.
 
 ## Quick Start
 
-1. Drop `HyperPerms-2.7.7.jar` in your `mods/` folder
+1. Drop `HyperPerms.jar` in your `mods/` folder
 2. Start your server
 3. Run `/hp editor` to open the web editor, or use commands:
 
 ```
-/hp group create admin              # Create a group
-/hp group admin permission set *    # Grant all permissions
-/hp user Steve parent add admin     # Add player to group
-/hp template apply moderator        # Apply pre-built template
+/hp template apply survival          # Instant rank hierarchy
+/hp group create admin               # Create a group
+/hp group admin setperm *            # Grant all permissions
+/hp user Steve addgroup admin        # Add player to group
 ```
 
 ## Commands
@@ -51,14 +53,19 @@
 | Command | Description |
 |---------|-------------|
 | `/hp editor` | Open web-based permission editor |
-| `/hp user <player> info` | View player's permissions |
-| `/hp user <player> permission set <perm>` | Set a permission |
-| `/hp user <player> parent add <group>` | Add player to group |
+| `/hp user <player> info` | View player's groups and permissions |
+| `/hp user <player> setperm <perm> [value] [duration]` | Set a permission (optionally temporary) |
+| `/hp user <player> addgroup <group> [duration]` | Add player to group |
+| `/hp user <player> promote <track>` | Promote on a track |
 | `/hp group create <name>` | Create a new group |
-| `/hp group <name> permission set <perm>` | Set group permission |
-| `/hp track <name> promote <player>` | Promote on a track |
-| `/hp template apply <name>` | Apply permission template |
-| `/hp migrate luckperms` | Import from LuckPerms |
+| `/hp group <name> setperm <perm> [value] [duration]` | Set group permission |
+| `/hp group <name> parent add <parent> [duration]` | Add parent group |
+| `/hp template list` | List available templates |
+| `/hp template apply <name>` | Apply a server template |
+| `/hp check <player> <perm>` | Test a permission |
+| `/hp debug toggle <category>` | Toggle debug logging |
+| `/hp backup create [name]` | Create a backup |
+| `/hp migrate luckperms [--confirm]` | Import from LuckPerms |
 | `/hp reload` | Reload configuration |
 
 <details>
@@ -66,10 +73,12 @@
 
 | Permission | Description |
 |------------|-------------|
-| `hyperperms.admin.*` | Full admin access |
-| `hyperperms.user.*` | User management |
-| `hyperperms.group.*` | Group management |
-| `hyperperms.track.*` | Track management |
+| `hyperperms.command.*` | Full admin access |
+| `hyperperms.command.user.*` | User management |
+| `hyperperms.command.group.*` | Group management |
+| `hyperperms.command.track.*` | Track management |
+| `hyperperms.command.check.self` | Check own permissions |
+| `hyperperms.command.check.others` | Check other players' permissions |
 
 </details>
 
@@ -107,6 +116,24 @@ Config file: `mods/com.hyperperms_HyperPerms/config.json`
 }
 ```
 
+**Storage types:** `"json"` (default), `"sqlite"`, `"mariadb"`, `"mysql"`
+
+For MariaDB/MySQL, add connection details:
+```json
+{
+  "storage": {
+    "type": "mariadb",
+    "host": "localhost",
+    "port": 3306,
+    "database": "hyperperms",
+    "username": "root",
+    "password": "",
+    "poolSize": 10,
+    "useSSL": false
+  }
+}
+```
+
 </details>
 
 ## Important: Vanilla Group Overwrite
@@ -115,7 +142,7 @@ Hytale's built-in permission system forcibly resets the `OP` and `Default` group
 
 ## Optional: SQLite & Analytics
 
-SQLite enables analytics tracking and audit logs. It's **not bundled** to keep the JAR small (2.4MB vs 15MB).
+SQLite enables analytics tracking and audit logs. It's **not bundled** to keep the JAR small (~7MB vs ~20MB).
 
 <details>
 <summary><strong>Enable SQLite features</strong></summary>
@@ -124,12 +151,12 @@ SQLite enables analytics tracking and audit logs. It's **not bundled** to keep t
 2. Place the JAR in `mods/com.hyperperms_HyperPerms/lib/`
 3. Restart your server
 
-**Without SQLite:** Everything works fine - analytics is simply disabled and JSON storage is used.
+**Without SQLite:** Everything works fine — analytics is simply disabled and JSON storage is used.
 
 **Analytics commands:**
-- `/hp analytics summary` - Permission health overview
-- `/hp analytics hotspots` - Most checked permissions
-- `/hp analytics audit` - Change history
+- `/hp analytics summary` — Permission health overview
+- `/hp analytics hotspots` — Most checked permissions
+- `/hp analytics audit` — Change history
 
 </details>
 
@@ -146,7 +173,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'com.github.HyperSystemsDev:HyperPerms:v2.8.5'
+    compileOnly 'com.github.HyperSystemsDev:HyperPerms:2.8.9'
 }
 ```
 
@@ -197,10 +224,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup and contributi
 
 ## Links
 
-- [Documentation](https://www.hyperperms.com/wiki) - Full wiki and guides
-- [Discord](https://discord.com/invite/aZaa5vcFYh) - Support & community
-- [Issues](https://github.com/HyperSystemsDev/HyperPerms/issues) - Bug reports & features
-- [Releases](https://github.com/HyperSystemsDev/HyperPerms/releases) - Downloads
+- [Documentation](https://www.hyperperms.com/wiki) — Full wiki and guides
+- [Discord](https://discord.com/invite/aZaa5vcFYh) — Support & community
+- [Issues](https://github.com/HyperSystemsDev/HyperPerms/issues) — Bug reports & features
+- [Releases](https://github.com/HyperSystemsDev/HyperPerms/releases) — Downloads
+- [CurseForge](https://www.curseforge.com/hytale/mods/hyperperms) — CurseForge page
 
 ---
 

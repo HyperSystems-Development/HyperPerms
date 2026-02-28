@@ -1142,6 +1142,245 @@ public final class PermissionAliases {
             "hyperfactions.bypass.use",
             "com.hyperfactions.hyperfactions.command.faction",
             "com.hyperfactions.hyperfactions.command.f");
+
+        // ==================== MMOSkillTree Plugin ====================
+        // Alternate prefix aliases (ziggfreed.mmoskilltree.* → mmoskilltree.*)
+        // MMST's PermissionUtil.checkPermission() checks BOTH player.hasPermission(perm)
+        // AND player.hasPermission("ziggfreed." + perm), so we alias both directions.
+        alias("ziggfreed.mmoskilltree.admin", "mmoskilltree.admin");
+        alias("ziggfreed.mmoskilltree.skill.mining", "mmoskilltree.skill.mining");
+        alias("ziggfreed.mmoskilltree.skill.woodcutting", "mmoskilltree.skill.woodcutting");
+        alias("ziggfreed.mmoskilltree.skill.excavation", "mmoskilltree.skill.excavation");
+        alias("ziggfreed.mmoskilltree.skill.harvesting", "mmoskilltree.skill.harvesting");
+        alias("ziggfreed.mmoskilltree.skill.fishing", "mmoskilltree.skill.fishing");
+        alias("ziggfreed.mmoskilltree.skill.swords", "mmoskilltree.skill.swords");
+        alias("ziggfreed.mmoskilltree.skill.daggers", "mmoskilltree.skill.daggers");
+        alias("ziggfreed.mmoskilltree.skill.polearms", "mmoskilltree.skill.polearms");
+        alias("ziggfreed.mmoskilltree.skill.staves", "mmoskilltree.skill.staves");
+        alias("ziggfreed.mmoskilltree.skill.axes", "mmoskilltree.skill.axes");
+        alias("ziggfreed.mmoskilltree.skill.blunt", "mmoskilltree.skill.blunt");
+        alias("ziggfreed.mmoskilltree.skill.archery", "mmoskilltree.skill.archery");
+        alias("ziggfreed.mmoskilltree.skill.unarmed", "mmoskilltree.skill.unarmed");
+        alias("ziggfreed.mmoskilltree.skill.defense", "mmoskilltree.skill.defense");
+        alias("ziggfreed.mmoskilltree.skill.taming", "mmoskilltree.skill.taming");
+        alias("ziggfreed.mmoskilltree.skill.acrobatics", "mmoskilltree.skill.acrobatics");
+        alias("ziggfreed.mmoskilltree.skill.crafting", "mmoskilltree.skill.crafting");
+        alias("ziggfreed.mmoskilltree.skill.repair", "mmoskilltree.skill.repair");
+        alias("ziggfreed.mmoskilltree.skill.alchemy", "mmoskilltree.skill.alchemy");
+        alias("ziggfreed.mmoskilltree.skill.enchanting", "mmoskilltree.skill.enchanting");
+        alias("ziggfreed.mmoskilltree.skill.cooking", "mmoskilltree.skill.cooking");
+        alias("ziggfreed.mmoskilltree.skill.smithing", "mmoskilltree.skill.smithing");
+        alias("ziggfreed.mmoskilltree.skill.building", "mmoskilltree.skill.building");
+        alias("ziggfreed.mmoskilltree.command.xp", "mmoskilltree.command.xp");
+        alias("ziggfreed.mmoskilltree.command.skilltree", "mmoskilltree.command.skilltree");
+        alias("ziggfreed.mmoskilltree.command.xpdisplay", "mmoskilltree.command.xpdisplay");
+        alias("ziggfreed.mmoskilltree.command.setxp", "mmoskilltree.command.setxp");
+        alias("ziggfreed.mmoskilltree.command.setxp.others", "mmoskilltree.command.setxp.others");
+        alias("ziggfreed.mmoskilltree.command.quest", "mmoskilltree.command.quest");
+        alias("ziggfreed.mmoskilltree.command.config", "mmoskilltree.command.config");
+
+        // Hytale command path aliases
+        alias("com.ziggfreed.mmoskilltree.command.skilltree", "mmoskilltree.command.skilltree");
+        alias("com.ziggfreed.mmoskilltree.command.mmoxp", "mmoskilltree.command.xp");
+        alias("com.ziggfreed.mmoskilltree.command.xpdisplay", "mmoskilltree.command.xpdisplay");
+        alias("com.ziggfreed.mmoskilltree.command.setmmoxp", "mmoskilltree.command.setxp");
+        alias("com.ziggfreed.mmoskilltree.command.quest", "mmoskilltree.command.quest");
+        alias("com.ziggfreed.mmoskilltree.command.mmoconfig", "mmoskilltree.admin");
+        alias("com.ziggfreed.mmoskilltree.command.mmoadmin", "mmoskilltree.admin");
+        alias("com.ziggfreed.mmoskilltree.command.mmoboost", "mmoskilltree.admin");
+
+        // MMOSkillTree wildcard expansions
+        aliasWildcard("mmoskilltree.*",
+            "mmoskilltree.admin",
+            "mmoskilltree.command.xp",
+            "mmoskilltree.command.skilltree",
+            "mmoskilltree.command.xpdisplay",
+            "mmoskilltree.command.setxp",
+            "mmoskilltree.command.setxp.others",
+            "mmoskilltree.command.quest",
+            "mmoskilltree.command.config",
+            "mmoskilltree.skill.mining",
+            "mmoskilltree.skill.woodcutting",
+            "mmoskilltree.skill.excavation",
+            "mmoskilltree.skill.harvesting",
+            "mmoskilltree.skill.fishing",
+            "mmoskilltree.skill.swords",
+            "mmoskilltree.skill.daggers",
+            "mmoskilltree.skill.polearms",
+            "mmoskilltree.skill.staves",
+            "mmoskilltree.skill.axes",
+            "mmoskilltree.skill.blunt",
+            "mmoskilltree.skill.archery",
+            "mmoskilltree.skill.unarmed",
+            "mmoskilltree.skill.defense",
+            "mmoskilltree.skill.taming",
+            "mmoskilltree.skill.acrobatics",
+            "mmoskilltree.skill.crafting",
+            "mmoskilltree.skill.repair",
+            "mmoskilltree.skill.alchemy",
+            "mmoskilltree.skill.enchanting",
+            "mmoskilltree.skill.cooking",
+            "mmoskilltree.skill.smithing",
+            "mmoskilltree.skill.building",
+            "mmoskilltree.xpboosts.all.self.1_25.15.120",
+            "mmoskilltree.xpboosts.all.self.1_5.30.120",
+            "mmoskilltree.xpboosts.all.self.2_0.30.180",
+            "mmoskilltree.xpboosts.all.all.1_5.30.300",
+            "mmoskilltree.xpboosts.all.all.2_0.60.600");
+
+        aliasWildcard("mmoskilltree.skill.*",
+            "mmoskilltree.skill.mining",
+            "mmoskilltree.skill.woodcutting",
+            "mmoskilltree.skill.excavation",
+            "mmoskilltree.skill.harvesting",
+            "mmoskilltree.skill.fishing",
+            "mmoskilltree.skill.swords",
+            "mmoskilltree.skill.daggers",
+            "mmoskilltree.skill.polearms",
+            "mmoskilltree.skill.staves",
+            "mmoskilltree.skill.axes",
+            "mmoskilltree.skill.blunt",
+            "mmoskilltree.skill.archery",
+            "mmoskilltree.skill.unarmed",
+            "mmoskilltree.skill.defense",
+            "mmoskilltree.skill.taming",
+            "mmoskilltree.skill.acrobatics",
+            "mmoskilltree.skill.crafting",
+            "mmoskilltree.skill.repair",
+            "mmoskilltree.skill.alchemy",
+            "mmoskilltree.skill.enchanting",
+            "mmoskilltree.skill.cooking",
+            "mmoskilltree.skill.smithing",
+            "mmoskilltree.skill.building");
+
+        aliasWildcard("mmoskilltree.command.*",
+            "mmoskilltree.command.xp",
+            "mmoskilltree.command.skilltree",
+            "mmoskilltree.command.xpdisplay",
+            "mmoskilltree.command.setxp",
+            "mmoskilltree.command.setxp.others",
+            "mmoskilltree.command.quest",
+            "mmoskilltree.command.config");
+
+        aliasWildcard("mmoskilltree.xpboosts.*",
+            "mmoskilltree.xpboosts.all.self.1_25.15.120",
+            "mmoskilltree.xpboosts.all.self.1_5.30.120",
+            "mmoskilltree.xpboosts.all.self.2_0.30.180",
+            "mmoskilltree.xpboosts.all.all.1_5.30.300",
+            "mmoskilltree.xpboosts.all.all.2_0.60.600");
+
+        aliasWildcard("ziggfreed.*",
+            "ziggfreed.mmoskilltree.admin",
+            "ziggfreed.mmoskilltree.skill.mining",
+            "ziggfreed.mmoskilltree.skill.woodcutting",
+            "ziggfreed.mmoskilltree.skill.excavation",
+            "ziggfreed.mmoskilltree.skill.harvesting",
+            "ziggfreed.mmoskilltree.skill.fishing",
+            "ziggfreed.mmoskilltree.skill.swords",
+            "ziggfreed.mmoskilltree.skill.daggers",
+            "ziggfreed.mmoskilltree.skill.polearms",
+            "ziggfreed.mmoskilltree.skill.staves",
+            "ziggfreed.mmoskilltree.skill.axes",
+            "ziggfreed.mmoskilltree.skill.blunt",
+            "ziggfreed.mmoskilltree.skill.archery",
+            "ziggfreed.mmoskilltree.skill.unarmed",
+            "ziggfreed.mmoskilltree.skill.defense",
+            "ziggfreed.mmoskilltree.skill.taming",
+            "ziggfreed.mmoskilltree.skill.acrobatics",
+            "ziggfreed.mmoskilltree.skill.crafting",
+            "ziggfreed.mmoskilltree.skill.repair",
+            "ziggfreed.mmoskilltree.skill.alchemy",
+            "ziggfreed.mmoskilltree.skill.enchanting",
+            "ziggfreed.mmoskilltree.skill.cooking",
+            "ziggfreed.mmoskilltree.skill.smithing",
+            "ziggfreed.mmoskilltree.skill.building",
+            "ziggfreed.mmoskilltree.command.xp",
+            "ziggfreed.mmoskilltree.command.skilltree",
+            "ziggfreed.mmoskilltree.command.xpdisplay",
+            "ziggfreed.mmoskilltree.command.setxp",
+            "ziggfreed.mmoskilltree.command.setxp.others",
+            "ziggfreed.mmoskilltree.command.quest",
+            "ziggfreed.mmoskilltree.command.config");
+
+        aliasWildcard("ziggfreed.mmoskilltree.*",
+            "mmoskilltree.admin",
+            "mmoskilltree.skill.mining",
+            "mmoskilltree.skill.woodcutting",
+            "mmoskilltree.skill.excavation",
+            "mmoskilltree.skill.harvesting",
+            "mmoskilltree.skill.fishing",
+            "mmoskilltree.skill.swords",
+            "mmoskilltree.skill.daggers",
+            "mmoskilltree.skill.polearms",
+            "mmoskilltree.skill.staves",
+            "mmoskilltree.skill.axes",
+            "mmoskilltree.skill.blunt",
+            "mmoskilltree.skill.archery",
+            "mmoskilltree.skill.unarmed",
+            "mmoskilltree.skill.defense",
+            "mmoskilltree.skill.taming",
+            "mmoskilltree.skill.acrobatics",
+            "mmoskilltree.skill.crafting",
+            "mmoskilltree.skill.repair",
+            "mmoskilltree.skill.alchemy",
+            "mmoskilltree.skill.enchanting",
+            "mmoskilltree.skill.cooking",
+            "mmoskilltree.skill.smithing",
+            "mmoskilltree.skill.building",
+            "mmoskilltree.command.xp",
+            "mmoskilltree.command.skilltree",
+            "mmoskilltree.command.xpdisplay",
+            "mmoskilltree.command.setxp",
+            "mmoskilltree.command.setxp.others",
+            "mmoskilltree.command.quest",
+            "mmoskilltree.command.config",
+            "mmoskilltree.xpboosts.all.self.1_25.15.120",
+            "mmoskilltree.xpboosts.all.self.1_5.30.120",
+            "mmoskilltree.xpboosts.all.self.2_0.30.180",
+            "mmoskilltree.xpboosts.all.all.1_5.30.300",
+            "mmoskilltree.xpboosts.all.all.2_0.60.600");
+
+        aliasWildcard("ziggfreed.mmoskilltree.skill.*",
+            "mmoskilltree.skill.mining",
+            "mmoskilltree.skill.woodcutting",
+            "mmoskilltree.skill.excavation",
+            "mmoskilltree.skill.harvesting",
+            "mmoskilltree.skill.fishing",
+            "mmoskilltree.skill.swords",
+            "mmoskilltree.skill.daggers",
+            "mmoskilltree.skill.polearms",
+            "mmoskilltree.skill.staves",
+            "mmoskilltree.skill.axes",
+            "mmoskilltree.skill.blunt",
+            "mmoskilltree.skill.archery",
+            "mmoskilltree.skill.unarmed",
+            "mmoskilltree.skill.defense",
+            "mmoskilltree.skill.taming",
+            "mmoskilltree.skill.acrobatics",
+            "mmoskilltree.skill.crafting",
+            "mmoskilltree.skill.repair",
+            "mmoskilltree.skill.alchemy",
+            "mmoskilltree.skill.enchanting",
+            "mmoskilltree.skill.cooking",
+            "mmoskilltree.skill.smithing",
+            "mmoskilltree.skill.building");
+
+        aliasWildcard("ziggfreed.mmoskilltree.command.*",
+            "mmoskilltree.command.xp",
+            "mmoskilltree.command.skilltree",
+            "mmoskilltree.command.xpdisplay",
+            "mmoskilltree.command.setxp",
+            "mmoskilltree.command.setxp.others",
+            "mmoskilltree.command.quest",
+            "mmoskilltree.command.config");
+
+        aliasWildcard("com.ziggfreed.mmoskilltree.command.*",
+            "mmoskilltree.command.skilltree",
+            "mmoskilltree.command.xp",
+            "mmoskilltree.command.xpdisplay",
+            "mmoskilltree.command.setxp",
+            "mmoskilltree.command.quest",
+            "mmoskilltree.admin");
     }
 
     /**

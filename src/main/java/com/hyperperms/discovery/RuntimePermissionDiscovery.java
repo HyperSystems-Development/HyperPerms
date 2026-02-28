@@ -76,7 +76,8 @@ public final class RuntimePermissionDiscovery {
     /** Set of built-in namespaces that should never be discovered at runtime */
     private static final Set<String> BUILT_IN_NAMESPACES = Set.of(
         "hyperperms", "hytale",
-        "com" // com.* packages are handled by built-in registrations
+        "com", // com.* packages are handled by built-in registrations
+        "mmoskilltree", "ziggfreed" // MMOSkillTree pre-registered
     );
 
     private static final Pattern JAR_NAME_PATTERN = Pattern.compile("^([A-Za-z][A-Za-z0-9_-]*?)(?:-\\d.*)?(?:\\.jar)?$");
@@ -452,7 +453,9 @@ public final class RuntimePermissionDiscovery {
         "worldedit.", "worldguard.", "griefprevention.", "towny.",
         // Common namespaces
         "player.", "user.", "server.", "world.", "game.", "item.", "block.",
-        "inventory.", "gui.", "menu.", "command.", "cmd."
+        "inventory.", "gui.", "menu.", "command.", "cmd.",
+        // MMOSkillTree
+        "mmoskilltree.", "ziggfreed."
     );
 
     /**

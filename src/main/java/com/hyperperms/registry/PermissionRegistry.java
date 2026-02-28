@@ -416,6 +416,9 @@ public final class PermissionRegistry {
         // Register HyperFactions permissions for wildcard expansion
         registerHyperFactionsPermissions();
 
+        // Register MMOSkillTree permissions for wildcard expansion
+        registerMMOSkillTreePermissions();
+
         // Snapshot all currently registered permissions as built-in
         builtInPermissions.addAll(permissions.keySet());
 
@@ -995,5 +998,89 @@ public final class PermissionRegistry {
         register("com.hyperfactions.hyperfactions.command.f.*", "All /f subcommands", "hyperfactions", "HyperFactions");
 
         Logger.debug("Registered HyperFactions permissions for wildcard expansion");
+    }
+
+    /**
+     * Registers known MMOSkillTree permissions for wildcard expansion.
+     * <p>
+     * MMOSkillTree (by Ziggfreed) uses two permission prefixes:
+     * <ul>
+     *   <li>{@code mmoskilltree.*} - Primary permission prefix</li>
+     *   <li>{@code ziggfreed.mmoskilltree.*} - Alternate prefix (checked by PermissionUtil.checkPermission())</li>
+     * </ul>
+     * <p>
+     * MMST also registers commands via Hytale's command system as:
+     * {@code com.ziggfreed.mmoskilltree.command.*}
+     */
+    private void registerMMOSkillTreePermissions() {
+        // ==================== Admin (mmoskilltree-admin) ====================
+        register("mmoskilltree.admin", "MMOSkillTree admin access (mmoconfig, mmoadmin, mmoboost)", "mmoskilltree-admin", "MMOSkillTree");
+
+        // ==================== Commands (mmoskilltree-command) ====================
+        register("mmoskilltree.command.*", "Access to all MMOSkillTree commands", "mmoskilltree-command", "MMOSkillTree");
+        register("mmoskilltree.command.xp", "/mmoxp command", "mmoskilltree-command", "MMOSkillTree");
+        register("mmoskilltree.command.skilltree", "/skilltree command", "mmoskilltree-command", "MMOSkillTree");
+        register("mmoskilltree.command.xpdisplay", "/xpdisplay command", "mmoskilltree-command", "MMOSkillTree");
+        register("mmoskilltree.command.setxp", "/setmmoxp command", "mmoskilltree-command", "MMOSkillTree");
+        register("mmoskilltree.command.setxp.others", "Set other players' XP", "mmoskilltree-command", "MMOSkillTree");
+        register("mmoskilltree.command.quest", "/quest command", "mmoskilltree-command", "MMOSkillTree");
+        register("mmoskilltree.command.config", "/mmoconfig command", "mmoskilltree-command", "MMOSkillTree");
+
+        // ==================== Skills (mmoskilltree-skill) ====================
+        register("mmoskilltree.skill.*", "Gain XP in all skills", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.mining", "Gain Mining XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.woodcutting", "Gain Woodcutting XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.excavation", "Gain Excavation XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.harvesting", "Gain Harvesting XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.fishing", "Gain Fishing XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.swords", "Gain Swords XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.daggers", "Gain Daggers XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.polearms", "Gain Polearms XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.staves", "Gain Staves XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.axes", "Gain Axes XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.blunt", "Gain Blunt XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.archery", "Gain Archery XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.unarmed", "Gain Unarmed XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.defense", "Gain Defense XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.taming", "Gain Taming XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.acrobatics", "Gain Acrobatics XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.crafting", "Gain Crafting XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.repair", "Gain Repair XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.alchemy", "Gain Alchemy XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.enchanting", "Gain Enchanting XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.cooking", "Gain Cooking XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.smithing", "Gain Smithing XP", "mmoskilltree-skill", "MMOSkillTree");
+        register("mmoskilltree.skill.building", "Gain Building XP", "mmoskilltree-skill", "MMOSkillTree");
+
+        // ==================== XP Boosts (mmoskilltree-boost) ====================
+        register("mmoskilltree.xpboosts.*", "All XP boosts", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.*.self.*", "All personal XP boosts", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.*.all.*", "All global/server XP boosts", "mmoskilltree-boost", "MMOSkillTree");
+        // Representative boost nodes for discoverability (format: target.scope.multiplier.duration.cooldown)
+        register("mmoskilltree.xpboosts.all.self.1_25.15.120", "Personal 1.25x boost, 15min, 2hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.1_5.30.120", "Personal 1.5x boost, 30min, 2hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.2_0.30.180", "Personal 2x boost, 30min, 3hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.1_5.30.300", "Global 1.5x boost, 30min, 5hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.2_0.60.600", "Global 2x boost, 60min, 10hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
+
+        // ==================== Hytale Command Paths (mmoskilltree-command) ====================
+        register("com.ziggfreed.mmoskilltree.command.*", "All MMST Hytale command paths", "mmoskilltree-command", "MMOSkillTree");
+        register("com.ziggfreed.mmoskilltree.command.skilltree", "/skilltree command (Hytale path)", "mmoskilltree-command", "MMOSkillTree");
+        register("com.ziggfreed.mmoskilltree.command.mmoxp", "/mmoxp command (Hytale path)", "mmoskilltree-command", "MMOSkillTree");
+        register("com.ziggfreed.mmoskilltree.command.xpdisplay", "/xpdisplay command (Hytale path)", "mmoskilltree-command", "MMOSkillTree");
+        register("com.ziggfreed.mmoskilltree.command.setmmoxp", "/setmmoxp command (Hytale path)", "mmoskilltree-command", "MMOSkillTree");
+        register("com.ziggfreed.mmoskilltree.command.quest", "/quest command (Hytale path)", "mmoskilltree-command", "MMOSkillTree");
+        register("com.ziggfreed.mmoskilltree.command.mmoconfig", "/mmoconfig command (Hytale path)", "mmoskilltree-command", "MMOSkillTree");
+        register("com.ziggfreed.mmoskilltree.command.mmoadmin", "/mmoadmin command (Hytale path)", "mmoskilltree-command", "MMOSkillTree");
+        register("com.ziggfreed.mmoskilltree.command.mmoboost", "/mmoboost command (Hytale path)", "mmoskilltree-command", "MMOSkillTree");
+
+        // ==================== Alternate Prefix (mmoskilltree-alternate) ====================
+        register("ziggfreed.mmoskilltree.*", "Alternate prefix wildcard", "mmoskilltree-alternate", "MMOSkillTree");
+        register("ziggfreed.mmoskilltree.skill.*", "Alternate prefix - all skills", "mmoskilltree-alternate", "MMOSkillTree");
+        register("ziggfreed.mmoskilltree.command.*", "Alternate prefix - all commands", "mmoskilltree-alternate", "MMOSkillTree");
+        register("ziggfreed.mmoskilltree.admin", "Alternate prefix - admin access", "mmoskilltree-alternate", "MMOSkillTree");
+        register("ziggfreed.mmoskilltree.xpboosts.*", "Alternate prefix - all XP boosts", "mmoskilltree-alternate", "MMOSkillTree");
+
+        Logger.debug("Registered MMOSkillTree permissions for wildcard expansion");
     }
 }

@@ -12,7 +12,11 @@
         { "node": "rpg.class.select", "description": "Select class" },
         { "node": "rpg.quest.view", "description": "View quests" },
         { "node": "rpg.quest.accept", "description": "Accept quests" },
-        { "node": "rpg.party.join", "description": "Join parties" }
+        { "node": "rpg.party.join", "description": "Join parties" },
+        { "node": "mmoskilltree.skill.*", "description": "Gain XP in all skills" },
+        { "node": "mmoskilltree.command.xp", "description": "View XP stats" },
+        { "node": "mmoskilltree.command.skilltree", "description": "Open skill tree" },
+        { "node": "mmoskilltree.command.xpdisplay", "description": "Toggle XP display" }
       ],
       "weight": 0,
       "prefix": "&7",
@@ -23,7 +27,8 @@
       "permissions": [
         { "node": "rpg.party.create", "description": "Create parties" },
         { "node": "rpg.guild.join", "description": "Join guilds" },
-        { "node": "rpg.dungeon.normal", "description": "Normal dungeons" }
+        { "node": "rpg.dungeon.normal", "description": "Normal dungeons" },
+        { "node": "mmoskilltree.xpboosts.all.self.1_25.15.120", "description": "Small personal XP boost (1.25x, 15min)" }
       ],
       "weight": 10,
       "prefix": "&a[Adventurer] ",
@@ -34,7 +39,8 @@
       "permissions": [
         { "node": "rpg.guild.create", "description": "Create guilds" },
         { "node": "rpg.dungeon.hard", "description": "Hard dungeons" },
-        { "node": "rpg.mount.basic", "description": "Basic mounts" }
+        { "node": "rpg.mount.basic", "description": "Basic mounts" },
+        { "node": "mmoskilltree.xpboosts.all.self.1_5.30.120", "description": "Medium personal XP boost (1.5x, 30min)" }
       ],
       "weight": 20,
       "prefix": "&2[Hero] ",
@@ -45,7 +51,8 @@
       "permissions": [
         { "node": "rpg.dungeon.legendary", "description": "Legendary dungeons" },
         { "node": "rpg.mount.epic", "description": "Epic mounts" },
-        { "node": "rpg.title.custom", "description": "Custom titles" }
+        { "node": "rpg.title.custom", "description": "Custom titles" },
+        { "node": "mmoskilltree.xpboosts.all.self.2_0.30.180", "description": "Large personal XP boost (2x, 30min)" }
       ],
       "weight": 30,
       "prefix": "&6[Champion] ",
@@ -56,7 +63,8 @@
       "permissions": [
         { "node": "rpg.dungeon.*", "description": "All dungeons" },
         { "node": "rpg.mount.*", "description": "All mounts" },
-        { "node": "rpg.cosmetic.*", "description": "All cosmetics" }
+        { "node": "rpg.cosmetic.*", "description": "All cosmetics" },
+        { "node": "mmoskilltree.xpboosts.*.self.*", "description": "All personal XP boosts" }
       ],
       "weight": 40,
       "prefix": "&d[Legend] ",
@@ -67,7 +75,9 @@
       "permissions": [
         { "node": "hyperperms.command.check.others", "description": "Check others" },
         { "node": "rpg.admin.spawn", "description": "Spawn mobs" },
-        { "node": "rpg.admin.quest", "description": "Quest management" }
+        { "node": "rpg.admin.quest", "description": "Quest management" },
+        { "node": "mmoskilltree.command.setxp", "description": "Set player XP" },
+        { "node": "mmoskilltree.command.quest", "description": "MMST quest management" }
       ],
       "weight": 60,
       "prefix": "&b[GM] ",
@@ -78,7 +88,9 @@
       "permissions": [
         { "node": "hyperperms.command.*", "description": "All perms commands" },
         { "node": "hytale.command.server.*", "description": "Server commands" },
-        { "node": "rpg.admin.*", "description": "RPG admin" }
+        { "node": "rpg.admin.*", "description": "RPG admin" },
+        { "node": "mmoskilltree.admin", "description": "MMOSkillTree admin" },
+        { "node": "mmoskilltree.xpboosts.*", "description": "All XP boosts" }
       ],
       "weight": 90,
       "prefix": "&c[Admin] ",
@@ -98,7 +110,7 @@
     "staff": ["gamemaster", "admin", "owner"]
   },
   "metadata": {
-    "recommendedPlugins": [],
+    "recommendedPlugins": ["MMOSkillTree"],
     "notes": "MMORPG server with classes, dungeons, and guilds"
   }
 }

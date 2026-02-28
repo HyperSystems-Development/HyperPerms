@@ -66,21 +66,28 @@ public final class WebEditorService {
 
         Logger.debug("Creating web editor session at: " + url);
 
-        // Try to gzip compress the request body to avoid 413 errors on large servers
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(hyperPerms.getConfig().getWebEditorTimeoutSeconds()))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json");
 
-        try {
-            byte[] compressed = gzipCompress(json);
-            Logger.debugWeb("Compressed session payload: " + json.length() + " -> " + compressed.length
-                    + " bytes (" + (compressed.length * 100 / json.length()) + "%)");
-            requestBuilder.header("Content-Encoding", "gzip")
-                    .POST(HttpRequest.BodyPublishers.ofByteArray(compressed));
-        } catch (IOException e) {
-            Logger.warn("Gzip compression failed, sending uncompressed: " + e.getMessage());
+        // Only gzip compress large payloads (>500KB) to avoid 413 errors on servers
+        // with many groups/permissions. Smaller payloads are sent uncompressed since
+        // not all API endpoints support Content-Encoding: gzip on requests.
+        byte[] rawBytes = json.getBytes(StandardCharsets.UTF_8);
+        if (rawBytes.length > 512_000) {
+            try {
+                byte[] compressed = gzipCompress(json);
+                Logger.debugWeb("Compressed session payload: " + rawBytes.length + " -> " + compressed.length
+                        + " bytes (" + (compressed.length * 100 / rawBytes.length) + "%)");
+                requestBuilder.header("Content-Encoding", "gzip")
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(compressed));
+            } catch (IOException e) {
+                Logger.warn("Gzip compression failed, sending uncompressed: " + e.getMessage());
+                requestBuilder.POST(HttpRequest.BodyPublishers.ofString(json));
+            }
+        } else {
             requestBuilder.POST(HttpRequest.BodyPublishers.ofString(json));
         }
 

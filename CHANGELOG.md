@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.8.9] - 2026-02-28
+
+**Server Version:** `2026.02.19-1a311a592`
+
+### Added
+
+- **First-Class MMOSkillTree Integration** - Full permission support for MMOSkillTree, one of the biggest plugins on Hytale
+  - 200+ permission nodes registered across admin, command, skill, boost, and alternate prefix categories
+  - All 23 individual skill nodes (`mmoskilltree.skill.mining`, `.woodcutting`, `.excavation`, etc.)
+  - All 140 XP boost permission nodes with the encoded format `mmoskilltree.xpboosts.<target>.<scope>.<multiplier>.<duration>.<cooldown>`
+  - Full alias support for MMOSkillTree's `ziggfreed.*` alternate prefix pattern — granting `mmoskilltree.skill.mining` also resolves `ziggfreed.mmoskilltree.skill.mining` checks
+  - Hytale command path aliases (`com.ziggfreed.mmoskilltree.command.*` → `mmoskilltree.command.*`)
+  - Wildcard expansion for all MMST permission categories
+  - Tab completion and web editor support for all MMST permissions
+  - Updated RPG and Survival permission templates with appropriate MMST permissions per rank tier
+- **Annotation-Based Command Framework** - New declarative command system replacing the old individual command class pattern
+  - `@CommandGroup`, `@Command`, `@Arg`, `@OptionalArg`, `@Permission`, `@Confirm` annotations
+  - `CommandScanner` automatically discovers and registers annotated command methods
+  - `CommandDispatcher` handles argument parsing, permission checks, and confirmation flows
+  - 5 annotated command groups: `GroupCommands`, `UserCommands`, `DebugCommands`, `RootCommands`, `PermsCommands`, `BackupCommands`
+- **Staged Plugin Lifecycle** - New `PluginLifecycle` orchestrator with `ServiceContainer` dependency injection
+  - 11 ordered stages: Config, Storage, CoreManager, Resolver, Registry, Chat, Integration, Web, Scheduler, Analytics, DefaultGroups
+  - Stages initialize in order and shut down in reverse — if any stage fails, previously initialized stages are safely torn down
+  - `ServiceContainer` provides typed service registration and retrieval across stages
+- **Gzip Compressed Web Editor Sessions** - Session create requests are now gzip compressed before sending to the API, preventing HTTP 413 errors on servers with many groups/permissions
+
+### Refactored
+
+- **Plugin Initialization** - `HyperPerms.java` reduced from ~400 lines of monolithic initialization to a clean staged lifecycle (~25 lines). All setup logic moved to dedicated `Stage` implementations in `com.hyperperms.lifecycle.stages`
+- **Command System** - Removed 42 old individual command classes (3,500+ lines). Replaced with 5 annotated command group classes (~2,000 lines) — net reduction of ~1,500 lines with better maintainability
+
+### Fixed
+
+- **Config null during stage initialization** - Resolved a race condition where config was not yet available when stages attempted to read it during early lifecycle setup
+- **Default groups created before storage ready** - Moved `loadDefaultGroups()` into its own `DefaultGroupsStage` that runs after storage and managers are fully initialized
+
 ## [2.8.8] - 2026-02-23
 
 **Server Version:** `2026.02.19-1a311a592`

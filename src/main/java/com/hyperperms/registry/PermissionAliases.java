@@ -1221,12 +1221,9 @@ public final class PermissionAliases {
             "mmoskilltree.skill.enchanting",
             "mmoskilltree.skill.cooking",
             "mmoskilltree.skill.smithing",
-            "mmoskilltree.skill.building",
-            "mmoskilltree.xpboosts.all.self.1_25.15.120",
-            "mmoskilltree.xpboosts.all.self.1_5.30.120",
-            "mmoskilltree.xpboosts.all.self.2_0.30.180",
-            "mmoskilltree.xpboosts.all.all.1_5.30.300",
-            "mmoskilltree.xpboosts.all.all.2_0.60.600");
+            "mmoskilltree.skill.building");
+        // Note: mmoskilltree.xpboosts.* nodes are covered by prefix matching in the registry
+        // and by the dedicated mmoskilltree.xpboosts.* alias wildcard above.
 
         aliasWildcard("mmoskilltree.skill.*",
             "mmoskilltree.skill.mining",
@@ -1263,11 +1260,80 @@ public final class PermissionAliases {
             "mmoskilltree.command.config");
 
         aliasWildcard("mmoskilltree.xpboosts.*",
-            "mmoskilltree.xpboosts.all.self.1_25.15.120",
-            "mmoskilltree.xpboosts.all.self.1_5.30.120",
-            "mmoskilltree.xpboosts.all.self.2_0.30.180",
-            "mmoskilltree.xpboosts.all.all.1_5.30.300",
-            "mmoskilltree.xpboosts.all.all.2_0.60.600");
+            // Personal - All Skills
+            "mmoskilltree.xpboosts.all.self.1_25.15.30", "mmoskilltree.xpboosts.all.self.1_25.30.60",
+            "mmoskilltree.xpboosts.all.self.1_5.15.60", "mmoskilltree.xpboosts.all.self.1_5.30.120",
+            "mmoskilltree.xpboosts.all.self.1_5.60.180", "mmoskilltree.xpboosts.all.self.2_0.15.120",
+            "mmoskilltree.xpboosts.all.self.2_0.30.180", "mmoskilltree.xpboosts.all.self.2_0.60.360",
+            "mmoskilltree.xpboosts.all.self.3_0.15.240", "mmoskilltree.xpboosts.all.self.3_0.30.360",
+            "mmoskilltree.xpboosts.all.self.4_0.15.360", "mmoskilltree.xpboosts.all.self.5_0.10.480",
+            // Personal - Category
+            "mmoskilltree.xpboosts.gathering.self.1_5.30.60", "mmoskilltree.xpboosts.gathering.self.1_5.60.120",
+            "mmoskilltree.xpboosts.gathering.self.2_0.30.120", "mmoskilltree.xpboosts.gathering.self.2_0.60.240",
+            "mmoskilltree.xpboosts.combat.self.1_5.30.60", "mmoskilltree.xpboosts.combat.self.1_5.60.120",
+            "mmoskilltree.xpboosts.combat.self.2_0.30.120", "mmoskilltree.xpboosts.combat.self.2_0.60.240",
+            "mmoskilltree.xpboosts.crafting.self.1_5.30.60", "mmoskilltree.xpboosts.crafting.self.1_5.60.120",
+            "mmoskilltree.xpboosts.crafting.self.2_0.30.120", "mmoskilltree.xpboosts.crafting.self.2_0.60.240",
+            // Personal - Per Skill (1.5x and 2x for each)
+            "mmoskilltree.xpboosts.mining.self.1_5.30.60", "mmoskilltree.xpboosts.mining.self.2_0.30.120",
+            "mmoskilltree.xpboosts.woodcutting.self.1_5.30.60", "mmoskilltree.xpboosts.woodcutting.self.2_0.30.120",
+            "mmoskilltree.xpboosts.excavation.self.1_5.30.60", "mmoskilltree.xpboosts.excavation.self.2_0.30.120",
+            "mmoskilltree.xpboosts.harvesting.self.1_5.30.60", "mmoskilltree.xpboosts.harvesting.self.2_0.30.120",
+            "mmoskilltree.xpboosts.fishing.self.1_5.30.60", "mmoskilltree.xpboosts.fishing.self.2_0.30.120",
+            "mmoskilltree.xpboosts.swords.self.1_5.30.60", "mmoskilltree.xpboosts.swords.self.2_0.30.120",
+            "mmoskilltree.xpboosts.daggers.self.1_5.30.60", "mmoskilltree.xpboosts.daggers.self.2_0.30.120",
+            "mmoskilltree.xpboosts.polearms.self.1_5.30.60", "mmoskilltree.xpboosts.polearms.self.2_0.30.120",
+            "mmoskilltree.xpboosts.staves.self.1_5.30.60", "mmoskilltree.xpboosts.staves.self.2_0.30.120",
+            "mmoskilltree.xpboosts.axes.self.1_5.30.60", "mmoskilltree.xpboosts.axes.self.2_0.30.120",
+            "mmoskilltree.xpboosts.blunt.self.1_5.30.60", "mmoskilltree.xpboosts.blunt.self.2_0.30.120",
+            "mmoskilltree.xpboosts.archery.self.1_5.30.60", "mmoskilltree.xpboosts.archery.self.2_0.30.120",
+            "mmoskilltree.xpboosts.unarmed.self.1_5.30.60", "mmoskilltree.xpboosts.unarmed.self.2_0.30.120",
+            "mmoskilltree.xpboosts.defense.self.1_5.30.60", "mmoskilltree.xpboosts.defense.self.2_0.30.120",
+            "mmoskilltree.xpboosts.taming.self.1_5.30.60", "mmoskilltree.xpboosts.taming.self.2_0.30.120",
+            "mmoskilltree.xpboosts.acrobatics.self.1_5.30.60", "mmoskilltree.xpboosts.acrobatics.self.2_0.30.120",
+            "mmoskilltree.xpboosts.repair.self.1_5.30.60", "mmoskilltree.xpboosts.repair.self.2_0.30.120",
+            "mmoskilltree.xpboosts.alchemy.self.1_5.30.60", "mmoskilltree.xpboosts.alchemy.self.2_0.30.120",
+            "mmoskilltree.xpboosts.enchanting.self.1_5.30.60", "mmoskilltree.xpboosts.enchanting.self.2_0.30.120",
+            "mmoskilltree.xpboosts.cooking.self.1_5.30.60", "mmoskilltree.xpboosts.cooking.self.2_0.30.120",
+            "mmoskilltree.xpboosts.smithing.self.1_5.30.60", "mmoskilltree.xpboosts.smithing.self.2_0.30.120",
+            "mmoskilltree.xpboosts.building.self.1_5.30.60", "mmoskilltree.xpboosts.building.self.2_0.30.120",
+            // Global - All Skills
+            "mmoskilltree.xpboosts.all.all.1_25.15.120", "mmoskilltree.xpboosts.all.all.1_25.30.180",
+            "mmoskilltree.xpboosts.all.all.1_25.60.360", "mmoskilltree.xpboosts.all.all.1_5.15.240",
+            "mmoskilltree.xpboosts.all.all.1_5.30.360", "mmoskilltree.xpboosts.all.all.1_5.60.480",
+            "mmoskilltree.xpboosts.all.all.2_0.15.480", "mmoskilltree.xpboosts.all.all.2_0.30.720",
+            "mmoskilltree.xpboosts.all.all.2_0.60.1440", "mmoskilltree.xpboosts.all.all.3_0.15.720",
+            "mmoskilltree.xpboosts.all.all.3_0.30.1440", "mmoskilltree.xpboosts.all.all.5_0.15.1440",
+            // Global - Category
+            "mmoskilltree.xpboosts.gathering.all.1_5.30.240", "mmoskilltree.xpboosts.gathering.all.1_5.60.480",
+            "mmoskilltree.xpboosts.gathering.all.2_0.30.480", "mmoskilltree.xpboosts.gathering.all.2_0.60.720",
+            "mmoskilltree.xpboosts.combat.all.1_5.30.240", "mmoskilltree.xpboosts.combat.all.1_5.60.480",
+            "mmoskilltree.xpboosts.combat.all.2_0.30.480", "mmoskilltree.xpboosts.combat.all.2_0.60.720",
+            "mmoskilltree.xpboosts.crafting.all.1_5.30.240", "mmoskilltree.xpboosts.crafting.all.1_5.60.480",
+            "mmoskilltree.xpboosts.crafting.all.2_0.30.480", "mmoskilltree.xpboosts.crafting.all.2_0.60.720",
+            // Global - Per Skill
+            "mmoskilltree.xpboosts.mining.all.1_5.30.360", "mmoskilltree.xpboosts.mining.all.2_0.30.720",
+            "mmoskilltree.xpboosts.woodcutting.all.1_5.30.360", "mmoskilltree.xpboosts.woodcutting.all.2_0.30.720",
+            "mmoskilltree.xpboosts.excavation.all.1_5.30.360", "mmoskilltree.xpboosts.excavation.all.2_0.30.720",
+            "mmoskilltree.xpboosts.harvesting.all.1_5.30.360", "mmoskilltree.xpboosts.harvesting.all.2_0.30.720",
+            "mmoskilltree.xpboosts.fishing.all.1_5.30.360", "mmoskilltree.xpboosts.fishing.all.2_0.30.720",
+            "mmoskilltree.xpboosts.swords.all.1_5.30.360", "mmoskilltree.xpboosts.swords.all.2_0.30.720",
+            "mmoskilltree.xpboosts.daggers.all.1_5.30.360", "mmoskilltree.xpboosts.daggers.all.2_0.30.720",
+            "mmoskilltree.xpboosts.polearms.all.1_5.30.360", "mmoskilltree.xpboosts.polearms.all.2_0.30.720",
+            "mmoskilltree.xpboosts.staves.all.1_5.30.360", "mmoskilltree.xpboosts.staves.all.2_0.30.720",
+            "mmoskilltree.xpboosts.axes.all.1_5.30.360", "mmoskilltree.xpboosts.axes.all.2_0.30.720",
+            "mmoskilltree.xpboosts.blunt.all.1_5.30.360", "mmoskilltree.xpboosts.blunt.all.2_0.30.720",
+            "mmoskilltree.xpboosts.archery.all.1_5.30.360", "mmoskilltree.xpboosts.archery.all.2_0.30.720",
+            "mmoskilltree.xpboosts.unarmed.all.1_5.30.360", "mmoskilltree.xpboosts.unarmed.all.2_0.30.720",
+            "mmoskilltree.xpboosts.defense.all.1_5.30.360", "mmoskilltree.xpboosts.defense.all.2_0.30.720",
+            "mmoskilltree.xpboosts.taming.all.1_5.30.360", "mmoskilltree.xpboosts.taming.all.2_0.30.720",
+            "mmoskilltree.xpboosts.acrobatics.all.1_5.30.360", "mmoskilltree.xpboosts.acrobatics.all.2_0.30.720",
+            "mmoskilltree.xpboosts.repair.all.1_5.30.360", "mmoskilltree.xpboosts.repair.all.2_0.30.720",
+            "mmoskilltree.xpboosts.alchemy.all.1_5.30.360", "mmoskilltree.xpboosts.alchemy.all.2_0.30.720",
+            "mmoskilltree.xpboosts.enchanting.all.1_5.30.360", "mmoskilltree.xpboosts.enchanting.all.2_0.30.720",
+            "mmoskilltree.xpboosts.cooking.all.1_5.30.360", "mmoskilltree.xpboosts.cooking.all.2_0.30.720",
+            "mmoskilltree.xpboosts.smithing.all.1_5.30.360", "mmoskilltree.xpboosts.smithing.all.2_0.30.720",
+            "mmoskilltree.xpboosts.building.all.1_5.30.360", "mmoskilltree.xpboosts.building.all.2_0.30.720");
 
         aliasWildcard("ziggfreed.*",
             "ziggfreed.mmoskilltree.admin",
@@ -1333,12 +1399,8 @@ public final class PermissionAliases {
             "mmoskilltree.command.setxp",
             "mmoskilltree.command.setxp.others",
             "mmoskilltree.command.quest",
-            "mmoskilltree.command.config",
-            "mmoskilltree.xpboosts.all.self.1_25.15.120",
-            "mmoskilltree.xpboosts.all.self.1_5.30.120",
-            "mmoskilltree.xpboosts.all.self.2_0.30.180",
-            "mmoskilltree.xpboosts.all.all.1_5.30.300",
-            "mmoskilltree.xpboosts.all.all.2_0.60.600");
+            "mmoskilltree.command.config");
+        // Note: boost nodes are resolved via mmoskilltree.xpboosts.* alias wildcard + registry prefix matching.
 
         aliasWildcard("ziggfreed.mmoskilltree.skill.*",
             "mmoskilltree.skill.mining",

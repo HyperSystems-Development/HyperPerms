@@ -28,7 +28,7 @@
         { "node": "rpg.party.create", "description": "Create parties" },
         { "node": "rpg.guild.join", "description": "Join guilds" },
         { "node": "rpg.dungeon.normal", "description": "Normal dungeons" },
-        { "node": "mmoskilltree.xpboosts.all.self.1_25.15.120", "description": "Small personal XP boost (1.25x, 15min)" }
+        { "node": "mmoskilltree.xpboosts.all.self.1_25.15.30", "description": "Small personal XP boost (1.25x, 15min)" }
       ],
       "weight": 10,
       "prefix": "&a[Adventurer] ",

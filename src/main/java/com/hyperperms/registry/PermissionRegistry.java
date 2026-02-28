@@ -1053,15 +1053,163 @@ public final class PermissionRegistry {
         register("mmoskilltree.skill.building", "Gain Building XP", "mmoskilltree-skill", "MMOSkillTree");
 
         // ==================== XP Boosts (mmoskilltree-boost) ====================
+        // Format: mmoskilltree.xpboosts.<target>.<scope>.<multiplier>.<duration>.<cooldown>
+        // All 140 nodes from https://mmo-skill-tree-docs.ziggfreed.com/docs/permissions/boost-permissions/
         register("mmoskilltree.xpboosts.*", "All XP boosts", "mmoskilltree-boost", "MMOSkillTree");
         register("mmoskilltree.xpboosts.*.self.*", "All personal XP boosts", "mmoskilltree-boost", "MMOSkillTree");
         register("mmoskilltree.xpboosts.*.all.*", "All global/server XP boosts", "mmoskilltree-boost", "MMOSkillTree");
-        // Representative boost nodes for discoverability (format: target.scope.multiplier.duration.cooldown)
-        register("mmoskilltree.xpboosts.all.self.1_25.15.120", "Personal 1.25x boost, 15min, 2hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
-        register("mmoskilltree.xpboosts.all.self.1_5.30.120", "Personal 1.5x boost, 30min, 2hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
-        register("mmoskilltree.xpboosts.all.self.2_0.30.180", "Personal 2x boost, 30min, 3hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
-        register("mmoskilltree.xpboosts.all.all.1_5.30.300", "Global 1.5x boost, 30min, 5hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
-        register("mmoskilltree.xpboosts.all.all.2_0.60.600", "Global 2x boost, 60min, 10hr cooldown", "mmoskilltree-boost", "MMOSkillTree");
+
+        // ---- Personal - All Skills (12 nodes) ----
+        register("mmoskilltree.xpboosts.all.self.1_25.15.30", "Personal 1.25x all skills, 15min, 30min cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.1_25.30.60", "Personal 1.25x all skills, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.1_5.15.60", "Personal 1.5x all skills, 15min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.1_5.30.120", "Personal 1.5x all skills, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.1_5.60.180", "Personal 1.5x all skills, 60min, 3hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.2_0.15.120", "Personal 2x all skills, 15min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.2_0.30.180", "Personal 2x all skills, 30min, 3hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.2_0.60.360", "Personal 2x all skills, 60min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.3_0.15.240", "Personal 3x all skills, 15min, 4hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.3_0.30.360", "Personal 3x all skills, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.4_0.15.360", "Personal 4x all skills, 15min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.self.5_0.10.480", "Personal 5x all skills, 10min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+
+        // ---- Personal - Category: Gathering (4 nodes) ----
+        register("mmoskilltree.xpboosts.gathering.self.1_5.30.60", "Personal 1.5x gathering, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.gathering.self.1_5.60.120", "Personal 1.5x gathering, 60min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.gathering.self.2_0.30.120", "Personal 2x gathering, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.gathering.self.2_0.60.240", "Personal 2x gathering, 60min, 4hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        // ---- Personal - Category: Combat (4 nodes) ----
+        register("mmoskilltree.xpboosts.combat.self.1_5.30.60", "Personal 1.5x combat, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.combat.self.1_5.60.120", "Personal 1.5x combat, 60min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.combat.self.2_0.30.120", "Personal 2x combat, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.combat.self.2_0.60.240", "Personal 2x combat, 60min, 4hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        // ---- Personal - Category: Crafting (4 nodes) ----
+        register("mmoskilltree.xpboosts.crafting.self.1_5.30.60", "Personal 1.5x crafting, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.crafting.self.1_5.60.120", "Personal 1.5x crafting, 60min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.crafting.self.2_0.30.120", "Personal 2x crafting, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.crafting.self.2_0.60.240", "Personal 2x crafting, 60min, 4hr cd", "mmoskilltree-boost", "MMOSkillTree");
+
+        // ---- Personal - Per Skill (44 nodes: 22 skills x 2 variants) ----
+        register("mmoskilltree.xpboosts.mining.self.1_5.30.60", "Personal 1.5x mining, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.mining.self.2_0.30.120", "Personal 2x mining, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.woodcutting.self.1_5.30.60", "Personal 1.5x woodcutting, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.woodcutting.self.2_0.30.120", "Personal 2x woodcutting, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.excavation.self.1_5.30.60", "Personal 1.5x excavation, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.excavation.self.2_0.30.120", "Personal 2x excavation, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.harvesting.self.1_5.30.60", "Personal 1.5x harvesting, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.harvesting.self.2_0.30.120", "Personal 2x harvesting, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.fishing.self.1_5.30.60", "Personal 1.5x fishing, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.fishing.self.2_0.30.120", "Personal 2x fishing, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.swords.self.1_5.30.60", "Personal 1.5x swords, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.swords.self.2_0.30.120", "Personal 2x swords, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.daggers.self.1_5.30.60", "Personal 1.5x daggers, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.daggers.self.2_0.30.120", "Personal 2x daggers, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.polearms.self.1_5.30.60", "Personal 1.5x polearms, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.polearms.self.2_0.30.120", "Personal 2x polearms, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.staves.self.1_5.30.60", "Personal 1.5x staves, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.staves.self.2_0.30.120", "Personal 2x staves, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.axes.self.1_5.30.60", "Personal 1.5x axes, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.axes.self.2_0.30.120", "Personal 2x axes, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.blunt.self.1_5.30.60", "Personal 1.5x blunt, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.blunt.self.2_0.30.120", "Personal 2x blunt, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.archery.self.1_5.30.60", "Personal 1.5x archery, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.archery.self.2_0.30.120", "Personal 2x archery, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.unarmed.self.1_5.30.60", "Personal 1.5x unarmed, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.unarmed.self.2_0.30.120", "Personal 2x unarmed, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.defense.self.1_5.30.60", "Personal 1.5x defense, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.defense.self.2_0.30.120", "Personal 2x defense, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.taming.self.1_5.30.60", "Personal 1.5x taming, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.taming.self.2_0.30.120", "Personal 2x taming, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.acrobatics.self.1_5.30.60", "Personal 1.5x acrobatics, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.acrobatics.self.2_0.30.120", "Personal 2x acrobatics, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.repair.self.1_5.30.60", "Personal 1.5x repair, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.repair.self.2_0.30.120", "Personal 2x repair, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.alchemy.self.1_5.30.60", "Personal 1.5x alchemy, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.alchemy.self.2_0.30.120", "Personal 2x alchemy, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.enchanting.self.1_5.30.60", "Personal 1.5x enchanting, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.enchanting.self.2_0.30.120", "Personal 2x enchanting, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.cooking.self.1_5.30.60", "Personal 1.5x cooking, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.cooking.self.2_0.30.120", "Personal 2x cooking, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.smithing.self.1_5.30.60", "Personal 1.5x smithing, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.smithing.self.2_0.30.120", "Personal 2x smithing, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.building.self.1_5.30.60", "Personal 1.5x building, 30min, 1hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.building.self.2_0.30.120", "Personal 2x building, 30min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+
+        // ---- Global - All Skills (12 nodes) ----
+        register("mmoskilltree.xpboosts.all.all.1_25.15.120", "Global 1.25x all skills, 15min, 2hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.1_25.30.180", "Global 1.25x all skills, 30min, 3hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.1_25.60.360", "Global 1.25x all skills, 60min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.1_5.15.240", "Global 1.5x all skills, 15min, 4hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.1_5.30.360", "Global 1.5x all skills, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.1_5.60.480", "Global 1.5x all skills, 60min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.2_0.15.480", "Global 2x all skills, 15min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.2_0.30.720", "Global 2x all skills, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.2_0.60.1440", "Global 2x all skills, 60min, 24hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.3_0.15.720", "Global 3x all skills, 15min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.3_0.30.1440", "Global 3x all skills, 30min, 24hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.all.all.5_0.15.1440", "Global 5x all skills, 15min, 24hr cd", "mmoskilltree-boost", "MMOSkillTree");
+
+        // ---- Global - Category: Gathering (4 nodes) ----
+        register("mmoskilltree.xpboosts.gathering.all.1_5.30.240", "Global 1.5x gathering, 30min, 4hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.gathering.all.1_5.60.480", "Global 1.5x gathering, 60min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.gathering.all.2_0.30.480", "Global 2x gathering, 30min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.gathering.all.2_0.60.720", "Global 2x gathering, 60min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        // ---- Global - Category: Combat (4 nodes) ----
+        register("mmoskilltree.xpboosts.combat.all.1_5.30.240", "Global 1.5x combat, 30min, 4hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.combat.all.1_5.60.480", "Global 1.5x combat, 60min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.combat.all.2_0.30.480", "Global 2x combat, 30min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.combat.all.2_0.60.720", "Global 2x combat, 60min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        // ---- Global - Category: Crafting (4 nodes) ----
+        register("mmoskilltree.xpboosts.crafting.all.1_5.30.240", "Global 1.5x crafting, 30min, 4hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.crafting.all.1_5.60.480", "Global 1.5x crafting, 60min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.crafting.all.2_0.30.480", "Global 2x crafting, 30min, 8hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.crafting.all.2_0.60.720", "Global 2x crafting, 60min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+
+        // ---- Global - Per Skill (44 nodes: 22 skills x 2 variants) ----
+        register("mmoskilltree.xpboosts.mining.all.1_5.30.360", "Global 1.5x mining, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.mining.all.2_0.30.720", "Global 2x mining, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.woodcutting.all.1_5.30.360", "Global 1.5x woodcutting, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.woodcutting.all.2_0.30.720", "Global 2x woodcutting, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.excavation.all.1_5.30.360", "Global 1.5x excavation, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.excavation.all.2_0.30.720", "Global 2x excavation, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.harvesting.all.1_5.30.360", "Global 1.5x harvesting, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.harvesting.all.2_0.30.720", "Global 2x harvesting, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.fishing.all.1_5.30.360", "Global 1.5x fishing, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.fishing.all.2_0.30.720", "Global 2x fishing, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.swords.all.1_5.30.360", "Global 1.5x swords, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.swords.all.2_0.30.720", "Global 2x swords, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.daggers.all.1_5.30.360", "Global 1.5x daggers, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.daggers.all.2_0.30.720", "Global 2x daggers, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.polearms.all.1_5.30.360", "Global 1.5x polearms, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.polearms.all.2_0.30.720", "Global 2x polearms, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.staves.all.1_5.30.360", "Global 1.5x staves, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.staves.all.2_0.30.720", "Global 2x staves, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.axes.all.1_5.30.360", "Global 1.5x axes, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.axes.all.2_0.30.720", "Global 2x axes, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.blunt.all.1_5.30.360", "Global 1.5x blunt, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.blunt.all.2_0.30.720", "Global 2x blunt, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.archery.all.1_5.30.360", "Global 1.5x archery, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.archery.all.2_0.30.720", "Global 2x archery, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.unarmed.all.1_5.30.360", "Global 1.5x unarmed, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.unarmed.all.2_0.30.720", "Global 2x unarmed, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.defense.all.1_5.30.360", "Global 1.5x defense, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.defense.all.2_0.30.720", "Global 2x defense, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.taming.all.1_5.30.360", "Global 1.5x taming, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.taming.all.2_0.30.720", "Global 2x taming, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.acrobatics.all.1_5.30.360", "Global 1.5x acrobatics, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.acrobatics.all.2_0.30.720", "Global 2x acrobatics, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.repair.all.1_5.30.360", "Global 1.5x repair, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.repair.all.2_0.30.720", "Global 2x repair, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.alchemy.all.1_5.30.360", "Global 1.5x alchemy, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.alchemy.all.2_0.30.720", "Global 2x alchemy, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.enchanting.all.1_5.30.360", "Global 1.5x enchanting, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.enchanting.all.2_0.30.720", "Global 2x enchanting, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.cooking.all.1_5.30.360", "Global 1.5x cooking, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.cooking.all.2_0.30.720", "Global 2x cooking, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.smithing.all.1_5.30.360", "Global 1.5x smithing, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.smithing.all.2_0.30.720", "Global 2x smithing, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.building.all.1_5.30.360", "Global 1.5x building, 30min, 6hr cd", "mmoskilltree-boost", "MMOSkillTree");
+        register("mmoskilltree.xpboosts.building.all.2_0.30.720", "Global 2x building, 30min, 12hr cd", "mmoskilltree-boost", "MMOSkillTree");
 
         // ==================== Hytale Command Paths (mmoskilltree-command) ====================
         register("com.ziggfreed.mmoskilltree.command.*", "All MMST Hytale command paths", "mmoskilltree-command", "MMOSkillTree");

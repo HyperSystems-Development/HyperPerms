@@ -905,7 +905,7 @@ public final class HyperPerms implements HyperPermsAPI {
      * This is called on first run when no groups exist in storage.
      * It creates a standard group hierarchy: default -> member -> builder -> moderator -> admin -> owner
      */
-    private void loadDefaultGroups() {
+    public void loadDefaultGroups() {
         Logger.info("No groups found, loading default groups...");
         
         try (var inputStream = getClass().getClassLoader().getResourceAsStream("default-groups.json")) {

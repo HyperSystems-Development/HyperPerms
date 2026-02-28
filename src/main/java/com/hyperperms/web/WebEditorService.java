@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.hyperperms.HyperPerms;
+import com.hyperperms.config.HyperPermsConfig;
 import com.hyperperms.util.Logger;
 import com.hyperperms.web.dto.Change;
 import com.hyperperms.web.dto.SessionCreateResponse;
@@ -38,11 +39,11 @@ public final class WebEditorService {
     private final HyperPerms hyperPerms;
     private final HttpClient httpClient;
 
-    public WebEditorService(@NotNull HyperPerms hyperPerms) {
+    public WebEditorService(@NotNull HyperPerms hyperPerms, @NotNull HyperPermsConfig config) {
         this.hyperPerms = hyperPerms;
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
-                .connectTimeout(Duration.ofSeconds(hyperPerms.getConfig().getWebEditorTimeoutSeconds()))
+                .connectTimeout(Duration.ofSeconds(config.getWebEditorTimeoutSeconds()))
                 .build();
     }
 

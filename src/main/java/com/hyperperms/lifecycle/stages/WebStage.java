@@ -2,6 +2,7 @@ package com.hyperperms.lifecycle.stages;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.backup.BackupManager;
+import com.hyperperms.config.HyperPermsConfig;
 import com.hyperperms.lifecycle.ServiceContainer;
 import com.hyperperms.lifecycle.Stage;
 import com.hyperperms.web.WebEditorService;
@@ -30,7 +31,8 @@ public final class WebStage implements Stage {
 
     @Override
     public void initialize(@NotNull ServiceContainer container) throws Exception {
-        WebEditorService webEditorService = new WebEditorService(plugin);
+        HyperPermsConfig config = container.get(HyperPermsConfig.class);
+        WebEditorService webEditorService = new WebEditorService(plugin, config);
         container.register(WebEditorService.class, webEditorService);
 
         BackupManager backupManager = new BackupManager(plugin);

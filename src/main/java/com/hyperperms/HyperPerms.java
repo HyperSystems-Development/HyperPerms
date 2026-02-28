@@ -516,6 +516,9 @@ public final class HyperPerms implements HyperPermsAPI {
      */
     @NotNull
     public HyperPermsConfig getConfig() {
+        if (config == null && container != null) {
+            config = container.get(HyperPermsConfig.class);
+        }
         return config;
     }
 

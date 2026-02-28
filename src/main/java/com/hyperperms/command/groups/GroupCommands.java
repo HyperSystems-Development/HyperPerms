@@ -238,7 +238,7 @@ public class GroupCommands {
         Node node = builder.build();
         group.setNode(node);
         plugin.getGroupManager().saveGroup(group);
-        plugin.getCache().invalidateAll();
+        plugin.getCacheInvalidator().invalidateGroup(groupName);
 
         String displayPerm = node.getBasePermission();
         boolean granted = node.getValue() && !node.isNegated();
@@ -263,7 +263,7 @@ public class GroupCommands {
         var result = group.removeNode(permission);
         if (result == com.hyperperms.api.PermissionHolder.DataMutateResult.SUCCESS) {
             plugin.getGroupManager().saveGroup(group);
-            plugin.getCache().invalidateAll();
+            plugin.getCacheInvalidator().invalidateGroup(groupName);
             ctx.sender().sendMessage(Message.raw("Removed " + permission + " from group " + groupName));
         } else {
             ctx.sender().sendMessage(Message.raw("Group " + groupName + " does not have permission " + permission));
@@ -310,7 +310,7 @@ public class GroupCommands {
         Node newNode = existingNode.withExpiry(newExpiry);
         group.setNode(newNode);
         plugin.getGroupManager().saveGroup(group);
-        plugin.getCache().invalidateAll();
+        plugin.getCacheInvalidator().invalidateGroup(groupName);
 
         String expiryDisplay = newExpiry != null ? TimeUtil.formatExpiry(newExpiry) : "permanent";
         ctx.sender().sendMessage(Message.raw("Set expiry on " + permission + " in group " + groupName + " to " + expiryDisplay));
@@ -339,7 +339,7 @@ public class GroupCommands {
 
         group.setWeight(weight);
         plugin.getGroupManager().saveGroup(group);
-        plugin.getCache().invalidateAll();
+        plugin.getCacheInvalidator().invalidateGroup(groupName);
 
         ctx.sender().sendMessage(Message.raw("Set weight of group " + groupName + " to " + weight));
         return CompletableFuture.completedFuture(null);
@@ -378,7 +378,7 @@ public class GroupCommands {
         }
 
         plugin.getGroupManager().saveGroup(group);
-        plugin.getCache().invalidateAll();
+        plugin.getCacheInvalidator().invalidateGroup(groupName);
 
         return CompletableFuture.completedFuture(null);
     }
@@ -416,7 +416,7 @@ public class GroupCommands {
         }
 
         plugin.getGroupManager().saveGroup(group);
-        plugin.getCache().invalidateAll();
+        plugin.getCacheInvalidator().invalidateGroup(groupName);
 
         return CompletableFuture.completedFuture(null);
     }
@@ -499,7 +499,7 @@ public class GroupCommands {
             }
         }
 
-        plugin.getCache().invalidateAll();
+        plugin.getCacheInvalidator().invalidateAll();
         ctx.sender().sendMessage(Message.raw("Renamed group " + oldName + " to " + newName));
         return CompletableFuture.completedFuture(null);
     }
@@ -574,7 +574,7 @@ public class GroupCommands {
 
             group.addParent(parentName, expiry);
             plugin.getGroupManager().saveGroup(group);
-            plugin.getCache().invalidateAll();
+            plugin.getCacheInvalidator().invalidateGroup(groupName);
             String expiryMsg = expiry != null ? " (" + TimeUtil.formatExpiry(expiry) + ")" : "";
             ctx.sender().sendMessage(Message.raw("Group " + groupName + " now inherits from " + parentName + expiryMsg));
             return CompletableFuture.completedFuture(null);
@@ -607,7 +607,7 @@ public class GroupCommands {
             var result = group.removeParent(parentName);
             if (result == com.hyperperms.api.PermissionHolder.DataMutateResult.SUCCESS) {
                 plugin.getGroupManager().saveGroup(group);
-                plugin.getCache().invalidateAll();
+                plugin.getCacheInvalidator().invalidateGroup(groupName);
                 ctx.sender().sendMessage(Message.raw("Group " + groupName + " no longer inherits from " + parentName));
             } else {
                 ctx.sender().sendMessage(Message.raw("Group " + groupName + " does not inherit from " + parentName));

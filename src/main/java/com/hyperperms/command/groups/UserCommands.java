@@ -177,7 +177,7 @@ public class UserCommands {
         Node node = builder.build();
         user.setNode(node);
         plugin.getUserManager().saveUser(user).join();
-        plugin.getCache().invalidate(user.getUuid());
+        plugin.getCacheInvalidator().invalidate(user.getUuid());
 
         String displayPerm = node.getBasePermission();
         boolean granted = node.getValue() && !node.isNegated();
@@ -202,7 +202,7 @@ public class UserCommands {
         var result = user.removeNode(permission);
         if (result == PermissionHolder.DataMutateResult.SUCCESS) {
             plugin.getUserManager().saveUser(user).join();
-            plugin.getCache().invalidate(user.getUuid());
+            plugin.getCacheInvalidator().invalidate(user.getUuid());
             ctx.sender().sendMessage(Message.raw("Removed " + permission + " from user " + user.getFriendlyName()));
         } else {
             ctx.sender().sendMessage(Message.raw("User " + user.getFriendlyName() + " does not have permission " + permission));
@@ -249,7 +249,7 @@ public class UserCommands {
         Node newNode = existingNode.withExpiry(newExpiry);
         user.setNode(newNode);
         plugin.getUserManager().saveUser(user).join();
-        plugin.getCache().invalidate(user.getUuid());
+        plugin.getCacheInvalidator().invalidate(user.getUuid());
 
         String expiryDisplay = newExpiry != null ? TimeUtil.formatExpiry(newExpiry) : "permanent";
         ctx.sender().sendMessage(Message.raw("Set expiry on " + permission + " for user " + user.getFriendlyName() + " to " + expiryDisplay));
@@ -292,10 +292,6 @@ public class UserCommands {
         user.addGroup(groupName, expiry);
         plugin.getUserManager().saveUser(user).join();
         plugin.getCacheInvalidator().invalidate(user.getUuid());
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin p) {
-            p.syncPermissionsToHytale(user.getUuid(), user);
-        }
         String expiryMsg = expiry != null ? " (" + TimeUtil.formatExpiry(expiry) + ")" : "";
         ctx.sender().sendMessage(Message.raw("Added user " + user.getFriendlyName() + " to group " + groupName + expiryMsg));
         return CompletableFuture.completedFuture(null);
@@ -317,10 +313,6 @@ public class UserCommands {
         if (result == PermissionHolder.DataMutateResult.SUCCESS) {
             plugin.getUserManager().saveUser(user).join();
             plugin.getCacheInvalidator().invalidate(user.getUuid());
-            var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-            if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin p) {
-                p.syncPermissionsToHytale(user.getUuid(), user);
-            }
             ctx.sender().sendMessage(Message.raw("Removed user " + user.getFriendlyName() + " from group " + groupName));
         } else {
             ctx.sender().sendMessage(Message.raw("User " + user.getFriendlyName() + " is not in group " + groupName));
@@ -354,10 +346,6 @@ public class UserCommands {
         user.setPrimaryGroup(groupName.toLowerCase());
         plugin.getUserManager().saveUser(user).join();
         plugin.getCacheInvalidator().invalidate(user.getUuid());
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin p) {
-            p.syncPermissionsToHytale(user.getUuid(), user);
-        }
 
         ctx.sender().sendMessage(Message.raw("Set primary group of " + user.getFriendlyName() + " to " + groupName));
         return CompletableFuture.completedFuture(null);
@@ -427,10 +415,6 @@ public class UserCommands {
         user.addGroup(targetGroup);
         plugin.getUserManager().saveUser(user).join();
         plugin.getCacheInvalidator().invalidate(user.getUuid());
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin p) {
-            p.syncPermissionsToHytale(user.getUuid(), user);
-        }
 
         ctx.sender().sendMessage(
             Message.raw(actionMessage + " ").color(GRAY)
@@ -502,10 +486,6 @@ public class UserCommands {
 
         plugin.getUserManager().saveUser(user).join();
         plugin.getCacheInvalidator().invalidate(user.getUuid());
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin p) {
-            p.syncPermissionsToHytale(user.getUuid(), user);
-        }
 
         ctx.sender().sendMessage(
             Message.raw("Demoted from " + currentGroupOnTrack + " to ").color(GRAY)
@@ -541,7 +521,7 @@ public class UserCommands {
         }
 
         plugin.getUserManager().saveUser(user).join();
-        plugin.getCache().invalidate(user.getUuid());
+        plugin.getCacheInvalidator().invalidate(user.getUuid());
 
         return CompletableFuture.completedFuture(null);
     }
@@ -568,7 +548,7 @@ public class UserCommands {
         }
 
         plugin.getUserManager().saveUser(user).join();
-        plugin.getCache().invalidate(user.getUuid());
+        plugin.getCacheInvalidator().invalidate(user.getUuid());
 
         return CompletableFuture.completedFuture(null);
     }
@@ -597,7 +577,7 @@ public class UserCommands {
             user.setCustomSuffix(null);
 
             plugin.getUserManager().saveUser(user).join();
-            plugin.getCache().invalidate(user.getUuid());
+            plugin.getCacheInvalidator().invalidate(user.getUuid());
 
             ctx.sender().sendMessage(Message.raw("Cleared all data for " + user.getFriendlyName()));
             return CompletableFuture.completedFuture(null);
@@ -653,10 +633,6 @@ public class UserCommands {
 
         plugin.getUserManager().saveUser(target);
         plugin.getCacheInvalidator().invalidate(target.getUuid());
-        var pluginObj = com.hyperperms.HyperPermsBootstrap.getPlugin();
-        if (pluginObj instanceof com.hyperperms.platform.HyperPermsPlugin p) {
-            p.syncPermissionsToHytale(target.getUuid(), target);
-        }
 
         ctx.sender().sendMessage(Message.raw("Cloned permissions from " + source.getFriendlyName() + " to " + target.getFriendlyName()));
         return CompletableFuture.completedFuture(null);

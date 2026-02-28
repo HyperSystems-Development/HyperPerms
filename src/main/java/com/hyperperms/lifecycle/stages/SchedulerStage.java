@@ -7,6 +7,7 @@ import com.hyperperms.lifecycle.ServiceContainer;
 import com.hyperperms.lifecycle.Stage;
 import com.hyperperms.manager.GroupManagerImpl;
 import com.hyperperms.manager.UserManagerImpl;
+import com.hyperperms.cache.CacheInvalidator;
 import com.hyperperms.task.ExpiryCleanupTask;
 import com.hyperperms.util.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -38,6 +39,7 @@ public final class SchedulerStage implements Stage {
         UserManagerImpl userManager = container.get(UserManagerImpl.class);
         GroupManagerImpl groupManager = container.get(GroupManagerImpl.class);
         EventBus eventBus = container.get(EventBus.class);
+        CacheInvalidator cacheInvalidator = container.get(CacheInvalidator.class);
         RuntimePermissionDiscovery runtimeDiscovery = container.get(RuntimePermissionDiscovery.class);
 
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -47,7 +49,7 @@ public final class SchedulerStage implements Stage {
         });
 
         scheduler.scheduleAtFixedRate(
-                new ExpiryCleanupTask(userManager, groupManager, eventBus),
+                new ExpiryCleanupTask(userManager, groupManager, eventBus, cacheInvalidator),
                 config.getExpiryCheckInterval(),
                 config.getExpiryCheckInterval(),
                 TimeUnit.SECONDS

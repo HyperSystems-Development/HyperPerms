@@ -464,7 +464,7 @@ public class HyperPermsPlugin extends JavaPlugin {
         }
 
         // Clear from cache
-        hyperPerms.getCache().invalidate(uuid);
+        hyperPerms.getCacheInvalidator().invalidate(uuid);
 
         // Clear ChatAPI cache for external plugins
         com.hyperperms.api.ChatAPI.invalidate(uuid);

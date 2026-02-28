@@ -13,6 +13,8 @@ import com.hyperperms.web.dto.Change;
 import com.hyperperms.web.dto.SessionCreateResponse;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -27,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Service for communicating with the web editor API.
@@ -63,13 +66,25 @@ public final class WebEditorService {
 
         Logger.debug("Creating web editor session at: " + url);
 
-        HttpRequest request = HttpRequest.newBuilder()
+        // Try to gzip compress the request body to avoid 413 errors on large servers
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(hyperPerms.getConfig().getWebEditorTimeoutSeconds()))
                 .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
+                .header("Accept", "application/json");
+
+        try {
+            byte[] compressed = gzipCompress(json);
+            Logger.debugWeb("Compressed session payload: " + json.length() + " -> " + compressed.length
+                    + " bytes (" + (compressed.length * 100 / json.length()) + "%)");
+            requestBuilder.header("Content-Encoding", "gzip")
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(compressed));
+        } catch (IOException e) {
+            Logger.warn("Gzip compression failed, sending uncompressed: " + e.getMessage());
+            requestBuilder.POST(HttpRequest.BodyPublishers.ofString(json));
+        }
+
+        HttpRequest request = requestBuilder.build();
 
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
@@ -95,6 +110,18 @@ public final class WebEditorService {
                 });
     }
 
+
+    /**
+     * Compresses a string using gzip.
+     */
+    private static byte[] gzipCompress(String data) throws IOException {
+        byte[] input = data.getBytes(StandardCharsets.UTF_8);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(input.length);
+        try (GZIPOutputStream gzip = new GZIPOutputStream(bos)) {
+            gzip.write(input);
+        }
+        return bos.toByteArray();
+    }
 
     /**
      * Fetches changes from the web editor API using a session ID.

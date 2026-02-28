@@ -2,9 +2,7 @@ package com.hyperperms.platform;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.command.*;
-import com.hyperperms.command.debug.DebugCommand;
-import com.hyperperms.command.group.GroupCommand;
-import com.hyperperms.command.user.UserCommand;
+import com.hyperperms.command.groups.*;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -26,20 +24,28 @@ public class HyperPermsCommand extends AbstractCommand {
     public HyperPermsCommand(HyperPerms hyperPerms) {
         super("hp", "HyperPerms management command");
 
-        // Core commands (extracted from inner classes)
-        addSubCommand(new HelpCommand(this));
-        addSubCommand(new GroupCommand(hyperPerms));
-        addSubCommand(new UserCommand(hyperPerms));
-        addSubCommand(new CheckCommand(hyperPerms));
-        addSubCommand(new BackupCommand(hyperPerms));
-        addSubCommand(new ExportCommand(hyperPerms));
-        addSubCommand(new ImportCommand(hyperPerms));
-        addSubCommand(new ReloadCommand(hyperPerms));
-        addSubCommand(new ResetGroupsCommand(hyperPerms));
-        addSubCommand(new DebugCommand(hyperPerms));
-        addSubCommand(new PermsCommand(hyperPerms));
+        CommandScanner scanner = new CommandScanner(hyperPerms);
 
-        // Existing separate commands (commands/ package)
+        // Scanned container groups
+        GroupCommands groupCommands = new GroupCommands(hyperPerms);
+        var groupContainer = scanner.scanGroup(groupCommands);
+        groupContainer.addSubCommand(groupCommands.createParentCommand());
+        addSubCommand(groupContainer);
+
+        addSubCommand(scanner.scanGroup(new UserCommands(hyperPerms)));
+        addSubCommand(scanner.scanGroup(new DebugCommands(hyperPerms)));
+        addSubCommand(scanner.scanGroup(new PermsCommands(hyperPerms)));
+        addSubCommand(scanner.scanGroup(new BackupCommands(hyperPerms)));
+
+        // Scanned root-level commands
+        for (var cmd : scanner.scanRootCommands(new RootCommands(hyperPerms))) {
+            addSubCommand(cmd);
+        }
+
+        // Manual registrations (complex commands kept as-is)
+        addSubCommand(new HelpCommand(this));
+        addSubCommand(new ImportCommand(hyperPerms));
+        addSubCommand(new ResetGroupsCommand(hyperPerms));
         addSubCommand(new com.hyperperms.commands.MigrateSubCommand(hyperPerms));
 
         // Web editor commands (conditional)

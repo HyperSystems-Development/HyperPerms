@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.9.0] - 2026-02-28
+
+**Server Version:** `2026.02.19-1a311a592`
+
+### Fixed
+
+- **Web editor session create returning 500** - The gzip compression added in 2.8.9 was applied to all session create requests, but the Cloudflare Worker API does not support `Content-Encoding: gzip` on incoming request bodies. All `/hp editor` commands failed with "Server returned status 500". Compression is now only applied to payloads exceeding 500KB to protect very large servers from HTTP 413 errors while keeping normal requests uncompressed.
+
 ## [2.8.9] - 2026-02-28
 
 **Server Version:** `2026.02.19-1a311a592`

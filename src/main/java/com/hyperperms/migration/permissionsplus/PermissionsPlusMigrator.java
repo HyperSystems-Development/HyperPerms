@@ -6,7 +6,6 @@ import com.hyperperms.migration.*;
 import com.hyperperms.migration.permissionsplus.PermissionsPlusData.*;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
-import com.hyperperms.model.Track;
 import com.hyperperms.model.User;
 import com.hyperperms.util.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -51,12 +50,10 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
 
     private final HyperPerms plugin;
     private final Path modsDir;
-    private final Gson gson;
 
     public PermissionsPlusMigrator(@NotNull HyperPerms plugin) {
         this.plugin = plugin;
         this.modsDir = resolveModsDirectory(plugin);
-        this.gson = new GsonBuilder().create();
     }
 
     @Nullable
@@ -101,7 +98,7 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
 
     // ==================== JSON Reading ====================
 
-    PPDataSet readPermissionsPlusData() throws IOException {
+    private PPDataSet readPermissionsPlusData() throws IOException {
         if (modsDir == null) {
             throw new IOException("Mods directory not available");
         }
@@ -220,7 +217,7 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
     // ==================== Permission Cleaning ====================
 
     @Nullable
-    String cleanPermission(@NotNull String rawPermission, @NotNull List<String> warnings, @NotNull String context) {
+    static String cleanPermission(@NotNull String rawPermission, @NotNull List<String> warnings, @NotNull String context) {
         if (rawPermission.startsWith("/")) {
             warnings.add(context + ": Skipped command-style permission '" + rawPermission + "'");
             return null;
@@ -245,7 +242,7 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
     }
 
     @Nullable
-    String validatePermission(@NotNull String permission, @NotNull List<String> warnings, @NotNull String context) {
+    static String validatePermission(@NotNull String permission, @NotNull List<String> warnings, @NotNull String context) {
         if (!permission.chars().allMatch(c -> c < 128)) {
             warnings.add(context + ": Permission '" + permission + "' contains non-ASCII characters, skipping");
             return null;
@@ -472,20 +469,20 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
                         stats.skipped++;
                         continue;
                     case MERGE:
-                        Group merged = mergeGroup(existing.get(lowerName), ppGroup, warnings);
-                        saveGroup(merged);
+                        int mergedPerms = mergeGroup(existing.get(lowerName), ppGroup, warnings);
+                        saveGroup(existing.get(lowerName));
                         stats.merged++;
-                        stats.permissions += countValidPermissions(ppGroup, warnings);
+                        stats.permissions += mergedPerms;
                         continue;
                     case OVERWRITE:
                         break;
                 }
             }
 
-            Group hpGroup = transformGroup(ppGroup, warnings);
-            saveGroup(hpGroup);
+            TransformResult result = transformGroup(ppGroup, warnings);
+            saveGroup(result.group);
             stats.imported++;
-            stats.permissions += countValidPermissions(ppGroup, warnings);
+            stats.permissions += result.permissionCount;
         }
 
         return stats;
@@ -518,20 +515,20 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
                         stats.skipped++;
                         continue;
                     case MERGE:
-                        User merged = mergeUser(existing.get(ppUser.uuid()), ppUser, config, warnings);
-                        saveUser(merged);
+                        int mergedPerms = mergeUser(existing.get(ppUser.uuid()), ppUser, config, warnings);
+                        saveUser(existing.get(ppUser.uuid()));
                         stats.merged++;
-                        stats.permissions += countValidUserPermissions(ppUser, warnings);
+                        stats.permissions += mergedPerms;
                         continue;
                     case OVERWRITE:
                         break;
                 }
             }
 
-            User hpUser = transformUser(ppUser, config, warnings);
-            saveUser(hpUser);
+            TransformResult result = transformUser(ppUser, config, warnings);
+            saveUser(result.user);
             stats.imported++;
-            stats.permissions += countValidUserPermissions(ppUser, warnings);
+            stats.permissions += result.permissionCount;
         }
 
         return stats;
@@ -539,23 +536,32 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
 
     // ==================== Data Transformation ====================
 
-    private Group transformGroup(PPGroup ppGroup, List<String> warnings) {
+    private TransformResult transformGroup(PPGroup ppGroup, List<String> warnings) {
         Group group = new Group(ppGroup.name().toLowerCase());
+        int permCount = 0;
 
         for (String rawPerm : ppGroup.permissions()) {
             Node node = transformPermission(rawPerm, warnings, "group:" + ppGroup.name());
             if (node != null) {
                 group.addNode(node);
+                permCount++;
             }
         }
 
-        return group;
+        return new TransformResult(group, null, permCount);
     }
 
-    private Group mergeGroup(Group existing, PPGroup ppGroup, List<String> warnings) {
+    /**
+     * Merges permissions from a PP group into an existing HyperPerms group.
+     *
+     * @return the number of valid permissions processed
+     */
+    private int mergeGroup(Group existing, PPGroup ppGroup, List<String> warnings) {
+        int permCount = 0;
         for (String rawPerm : ppGroup.permissions()) {
             Node node = transformPermission(rawPerm, warnings, "group:" + ppGroup.name());
             if (node != null) {
+                permCount++;
                 boolean nodeExists = existing.getNodes().stream()
                     .anyMatch(n -> n.equalsIgnoringExpiry(node));
                 if (!nodeExists) {
@@ -563,11 +569,12 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
                 }
             }
         }
-        return existing;
+        return permCount;
     }
 
-    private User transformUser(PPUser ppUser, PPConfig config, List<String> warnings) {
+    private TransformResult transformUser(PPUser ppUser, PPConfig config, List<String> warnings) {
         User user = new User(ppUser.uuid(), ppUser.username());
+        int permCount = 0;
 
         if (!ppUser.groups().isEmpty()) {
             user.setPrimaryGroup(ppUser.groups().get(0).toLowerCase());
@@ -583,13 +590,21 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
             Node node = transformPermission(rawPerm, warnings, "user:" + ppUser.uuid());
             if (node != null) {
                 user.addNode(node);
+                permCount++;
             }
         }
 
-        return user;
+        return new TransformResult(null, user, permCount);
     }
 
-    private User mergeUser(User existing, PPUser ppUser, PPConfig config, List<String> warnings) {
+    /**
+     * Merges permissions from a PP user into an existing HyperPerms user.
+     *
+     * @return the number of valid permissions processed
+     */
+    private int mergeUser(User existing, PPUser ppUser, PPConfig config, List<String> warnings) {
+        int permCount = 0;
+
         for (String groupName : ppUser.groups()) {
             Node groupNode = Node.group(groupName);
             boolean nodeExists = existing.getNodes().stream()
@@ -602,6 +617,7 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
         for (String rawPerm : ppUser.permissions()) {
             Node node = transformPermission(rawPerm, warnings, "user:" + ppUser.uuid());
             if (node != null) {
+                permCount++;
                 boolean nodeExists = existing.getNodes().stream()
                     .anyMatch(n -> n.equalsIgnoringExpiry(node));
                 if (!nodeExists) {
@@ -610,7 +626,7 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
             }
         }
 
-        return existing;
+        return permCount;
     }
 
     @Nullable
@@ -626,26 +642,6 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
         }
 
         return Node.of(validated);
-    }
-
-    private int countValidPermissions(PPGroup ppGroup, List<String> warnings) {
-        List<String> throwaway = new ArrayList<>();
-        return (int) ppGroup.permissions().stream()
-            .map(p -> cleanPermission(p, throwaway, "count"))
-            .filter(Objects::nonNull)
-            .map(p -> validatePermission(p, throwaway, "count"))
-            .filter(Objects::nonNull)
-            .count();
-    }
-
-    private int countValidUserPermissions(PPUser ppUser, List<String> warnings) {
-        List<String> throwaway = new ArrayList<>();
-        return (int) ppUser.permissions().stream()
-            .map(p -> cleanPermission(p, throwaway, "count"))
-            .filter(Objects::nonNull)
-            .map(p -> validatePermission(p, throwaway, "count"))
-            .filter(Objects::nonNull)
-            .count();
     }
 
     // ==================== Storage Operations ====================
@@ -706,6 +702,18 @@ public final class PermissionsPlusMigrator implements PermissionMigrator {
             plugin.getStorage().saveAll().join();
         } catch (Exception e) {
             throw new RuntimeException("Failed to save all data", e);
+        }
+    }
+
+    private static class TransformResult {
+        final Group group;
+        final User user;
+        final int permissionCount;
+
+        TransformResult(Group group, User user, int permissionCount) {
+            this.group = group;
+            this.user = user;
+            this.permissionCount = permissionCount;
         }
     }
 

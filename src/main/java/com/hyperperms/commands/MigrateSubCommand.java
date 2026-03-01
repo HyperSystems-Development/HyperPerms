@@ -3,6 +3,7 @@ package com.hyperperms.commands;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.migration.*;
 import com.hyperperms.migration.luckperms.LuckPermsMigrator;
+import com.hyperperms.migration.permissionsplus.PermissionsPlusMigrator;
 import com.hyperperms.util.Logger;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -21,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
  * Supports migrating from:
  * <ul>
  *   <li>luckperms - LuckPerms permission plugin</li>
+ *   <li>permissionsplus - PermissionsPlus permission plugin</li>
  * </ul>
  * <p>
  * Options:
@@ -47,6 +49,7 @@ public class MigrateSubCommand extends HpCommand {
 
         // Register available migrators
         migrators.put("luckperms", new LuckPermsMigrator(hyperPerms));
+        migrators.put("permissionsplus", new PermissionsPlusMigrator(hyperPerms));
 
         // Register arguments - source with options embedded (e.g., "luckperms-confirm-verbose")
         this.sourceArg = describeArg("source", "Source and options (e.g., luckperms-confirm)", ArgTypes.STRING);
@@ -80,8 +83,8 @@ public class MigrateSubCommand extends HpCommand {
         if (!migrator.canMigrate()) {
             sendError(ctx, "Cannot migrate from " + migrator.getSourceName() + ":");
             sendError(ctx, "  - Data not found or not accessible");
-            sendInfo(ctx, "Ensure the LuckPerms data folder exists in /mods/LuckPerms/");
-            sendInfo(ctx, "The folder should contain json-storage/, yaml-storage/, or database files.");
+            sendInfo(ctx, "Ensure the source plugin's data folder exists in /mods/");
+            sendInfo(ctx, "Run /hp migrate help for available sources and requirements.");
             return CompletableFuture.completedFuture(null);
         }
         

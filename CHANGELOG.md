@@ -91,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Debug traces for integration setup (Factions, WerChat, PlaceholderAPI, MysticNameTags, VaultUnlocked)
 - **Missing `hytale.mods.outdated.notify` permission** - Registered in PermissionRegistry and PermissionAliases, matching the constant defined in Hytale's `HytalePermissions` class
 - **Vanilla OP/Default overwrite warning** - Startup check warns server operators if custom permissions are detected in vanilla's OP or Default groups, which are forcibly reset on every server restart by `HytalePermissionsProvider.read()`
-- **JitPack publishing** - Other developers can now depend on HyperPerms via `com.github.HyperSystemsDev:HyperPerms:<version>` from JitPack
+- **JitPack publishing** - Other developers can now depend on HyperPerms via `com.github.HyperSystems-Development:HyperPerms:<version>` from JitPack
 - **CONTRIBUTING.md** - New contributor guide with build setup, soft dependency instructions, code style, and branch strategy
 - **Update permission constants** - Added `UPDATES_ALL`, `UPDATES_TOGGLE`, `UPDATES_NOTIFY` to `Permissions` utility class
 

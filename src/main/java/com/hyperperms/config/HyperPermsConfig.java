@@ -738,7 +738,7 @@ public final class HyperPermsConfig {
      */
     @NotNull
     public String getUpdateCheckUrl() {
-        return getNestedString("updates", "checkUrl", "https://api.github.com/repos/HyperSystemsDev/HyperPerms/releases/latest");
+        return getNestedString("updates", "checkUrl", "https://api.github.com/repos/HyperSystems-Development/HyperPerms/releases/latest");
     }
 
     /**

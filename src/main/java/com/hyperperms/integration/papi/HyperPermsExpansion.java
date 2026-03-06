@@ -54,7 +54,7 @@ public class HyperPermsExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getAuthor() {
-        return "HyperSystemsDev";
+        return "HyperSystems-Development";
     }
 
     @Override

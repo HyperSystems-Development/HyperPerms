@@ -1,9 +1,9 @@
 # HyperPerms
 
-[![Latest Release](https://img.shields.io/github/v/release/HyperSystemsDev/HyperPerms?label=version)](https://github.com/HyperSystemsDev/HyperPerms/releases)
+[![Latest Release](https://img.shields.io/github/v/release/HyperSystems-Development/HyperPerms?label=version)](https://github.com/HyperSystems-Development/HyperPerms/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-green)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/aZaa5vcFYh)
-[![GitHub Stars](https://img.shields.io/github/stars/HyperSystemsDev/HyperPerms?style=social)](https://github.com/HyperSystemsDev/HyperPerms)
+[![GitHub Stars](https://img.shields.io/github/stars/HyperSystems-Development/HyperPerms?style=social)](https://github.com/HyperSystems-Development/HyperPerms)
 
 **The permission system for Hytale.** Web editor, 11 server templates, plugin integrations, and everything you need out of the box.
 
@@ -224,12 +224,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup and contributi
 
 ## Links
 
-- [Documentation](https://www.hyperperms.com/wiki) — Full wiki and guides
-- [Discord](https://discord.com/invite/aZaa5vcFYh) — Support & community
-- [Issues](https://github.com/HyperSystemsDev/HyperPerms/issues) — Bug reports & features
-- [Releases](https://github.com/HyperSystemsDev/HyperPerms/releases) — Downloads
-- [CurseForge](https://www.curseforge.com/hytale/mods/hyperperms) — CurseForge page
+- [Documentation](https://www.hyperperms.com/wiki) - Full wiki and guides
+- [Discord](https://discord.com/invite/aZaa5vcFYh) - Support & community
+- [Issues](https://github.com/HyperSystems-Development/HyperPerms/issues) - Bug reports & features
+- [Releases](https://github.com/HyperSystems-Development/HyperPerms/releases) - Downloads
 
 ---
 
-Part of the **HyperSystems** suite: [HyperPerms](https://github.com/HyperSystemsDev/HyperPerms) | [HyperHomes](https://github.com/HyperSystemsDev/HyperHomes) | [HyperFactions](https://github.com/HyperSystemsDev/HyperFactions) | [HyperWarp](https://github.com/HyperSystemsDev/HyperWarp)
+Part of the **[HyperSystems](https://github.com/HyperSystems-Development)** suite: [HyperPerms](https://github.com/HyperSystems-Development/HyperPerms) | [HyperEssentials](https://github.com/HyperSystems-Development/HyperEssentials) | [HyperFactions](https://github.com/HyperSystems-Development/HyperFactions)

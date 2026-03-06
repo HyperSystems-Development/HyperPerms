@@ -92,7 +92,7 @@ public final class CoreConfig extends ConfigFile {
         forceOsc8 = false;
         templatesCustomDirectory = "templates";
         updateCheckEnabled = true;
-        updateCheckUrl = "https://api.github.com/repos/HyperSystemsDev/HyperPerms/releases/latest";
+        updateCheckUrl = "https://api.github.com/repos/HyperSystems-Development/HyperPerms/releases/latest";
         updateShowChangelog = true;
     }
 
@@ -155,7 +155,7 @@ public final class CoreConfig extends ConfigFile {
         JsonObject updates = getSection(root, "updates");
         updateCheckEnabled = getBool(updates, "enabled", true);
         updateCheckUrl = getString(updates, "checkUrl",
-                "https://api.github.com/repos/HyperSystemsDev/HyperPerms/releases/latest");
+                "https://api.github.com/repos/HyperSystems-Development/HyperPerms/releases/latest");
         updateShowChangelog = getBool(updates, "showChangelog", true);
     }
 

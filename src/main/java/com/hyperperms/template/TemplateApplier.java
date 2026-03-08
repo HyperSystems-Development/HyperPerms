@@ -6,7 +6,6 @@ import com.hyperperms.manager.GroupManagerImpl;
 import com.hyperperms.manager.TrackManagerImpl;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
-import com.hyperperms.model.Node;
 import com.hyperperms.model.Track;
 import com.hyperperms.util.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -269,31 +268,19 @@ public final class TemplateApplier {
      * Creates a new group from a template group.
      */
     private void createGroup(GroupManagerImpl groupManager, TemplateGroup templateGroup) {
-        Group group = new Group(templateGroup.getName());
-        
-        // Set basic properties
-        group.setWeight(templateGroup.getWeight());
-        group.setPrefix(templateGroup.getPrefix());
-        group.setSuffix(templateGroup.getSuffix());
-        if (templateGroup.getDisplayName() != null) {
-            group.setDisplayName(templateGroup.getDisplayName());
+        try {
+            Group createdGroup = groupManager.createGroup(templateGroup.getName());
+            updateGroup(createdGroup, templateGroup);
+            groupManager.saveGroup(createdGroup).join();
+        } catch (IllegalArgumentException e) {
+            // Group already exists - fall back to update
+            Logger.debug("[Template] Group '%s' already exists, updating instead", templateGroup.getName());
+            Group existing = groupManager.getGroup(templateGroup.getName());
+            if (existing != null) {
+                updateGroup(existing, templateGroup);
+                groupManager.saveGroup(existing).join();
+            }
         }
-
-        // Add permissions
-        for (TemplatePermission perm : templateGroup.getPermissions()) {
-            Node node = Node.builder(perm.node()).build();
-            group.addNode(node);
-        }
-
-        // Add parent inheritance
-        for (String parent : templateGroup.getParents()) {
-            Node parentNode = Node.builder("group." + parent).build();
-            group.addNode(parentNode);
-        }
-
-        Group createdGroup = groupManager.createGroup(templateGroup.getName());
-        updateGroup(createdGroup, templateGroup);
-        groupManager.saveGroup(createdGroup).join();
     }
 
     /**

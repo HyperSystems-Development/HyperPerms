@@ -124,8 +124,9 @@ public final class TemplateApplier {
                 }
 
             } catch (Exception e) {
-                Logger.severe("[Template] Failed to apply template: %s", e.getMessage());
-                return ApplyResult.failure("Failed to apply template: " + e.getMessage());
+                String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                Logger.severe("[Template] Failed to apply template: %s", errorMsg);
+                return ApplyResult.failure("Failed to apply template: " + errorMsg);
             }
         });
     }
@@ -172,8 +173,7 @@ public final class TemplateApplier {
                 Logger.debug("[Template] Created track: %s", templateTrack.name());
             } else {
                 // Update existing track
-                existingTrack.getGroups().clear();
-                existingTrack.getGroups().addAll(templateTrack.groups());
+                existingTrack.setGroups(templateTrack.groups());
                 trackManager.saveTrack(existingTrack).join();
                 tracksUpdated++;
                 Logger.debug("[Template] Updated track: %s", templateTrack.name());
@@ -249,8 +249,7 @@ public final class TemplateApplier {
                 tracksCreated++;
                 Logger.debug("[Template] Created track: %s", templateTrack.name());
             } else {
-                existingTrack.getGroups().clear();
-                existingTrack.getGroups().addAll(templateTrack.groups());
+                existingTrack.setGroups(templateTrack.groups());
                 trackManager.saveTrack(existingTrack).join();
                 tracksUpdated++;
                 Logger.debug("[Template] Updated track: %s", templateTrack.name());
@@ -296,7 +295,7 @@ public final class TemplateApplier {
         }
 
         // Clear existing permissions and re-add from template
-        group.getNodes().clear();
+        group.clearNodes();
 
         // Add permissions
         for (TemplatePermission perm : templateGroup.getPermissions()) {

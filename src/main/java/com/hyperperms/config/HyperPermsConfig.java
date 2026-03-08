@@ -432,6 +432,16 @@ public final class HyperPermsConfig {
     }
 
     /**
+     * Gets the owner group name assigned to the first player.
+     *
+     * @return the owner group name
+     */
+    @NotNull
+    public String getOwnerGroup() {
+        return getNestedString("defaults", "ownerGroup", "owner");
+    }
+
+    /**
      * Gets the default prefix for users without a group prefix.
      *
      * @return the default prefix

@@ -29,6 +29,7 @@ public final class CoreConfig extends ConfigFile {
     private boolean createDefaultGroup;
     private String defaultPrefix;
     private String defaultSuffix;
+    private String ownerGroup;
 
     // Server
     private String serverName;
@@ -79,6 +80,7 @@ public final class CoreConfig extends ConfigFile {
         createDefaultGroup = true;
         defaultPrefix = "&7";
         defaultSuffix = "";
+        ownerGroup = "owner";
         serverName = "";
         autoBackup = true;
         maxBackups = 10;
@@ -120,6 +122,7 @@ public final class CoreConfig extends ConfigFile {
         createDefaultGroup = getBool(defaults, "createDefaultGroup", true);
         defaultPrefix = getString(defaults, "prefix", "&7");
         defaultSuffix = getString(defaults, "suffix", "");
+        ownerGroup = getString(defaults, "ownerGroup", "owner");
 
         // Server
         JsonObject server = getSection(root, "server");
@@ -190,6 +193,7 @@ public final class CoreConfig extends ConfigFile {
         defaults.addProperty("createDefaultGroup", createDefaultGroup);
         defaults.addProperty("prefix", defaultPrefix);
         defaults.addProperty("suffix", defaultSuffix);
+        defaults.addProperty("ownerGroup", ownerGroup);
         root.add("defaults", defaults);
 
         // Server
@@ -254,6 +258,7 @@ public final class CoreConfig extends ConfigFile {
     public boolean shouldCreateDefaultGroup() { return createDefaultGroup; }
     @NotNull public String getDefaultPrefix() { return defaultPrefix; }
     @NotNull public String getDefaultSuffix() { return defaultSuffix; }
+    @NotNull public String getOwnerGroup() { return ownerGroup; }
     @NotNull public String getServerName() { return serverName; }
     public boolean isAutoBackupEnabled() { return autoBackup; }
     public int getMaxBackups() { return maxBackups; }

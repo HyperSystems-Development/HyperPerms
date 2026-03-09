@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.9.1] - 2026-03-08
+
+**Server Version:** `2026.02.19-1a311a592`
+
+### Added
+
+- **PermissionsPlus Migration Tool** - Migrate from PermissionsPlus with a single command
+  - `/hp migrate permissionsplus` - Preview migration (dry-run)
+  - `/hp migrate permissionsplus --confirm` - Execute migration
+  - Reads PermissionsPlus JSON data files and transforms groups, users, and permissions into HyperPerms format
+  - Permission cleaning and validation for PermissionsPlus-specific formats
+- **SSP Auto-Owner Assignment** - First player to join an SSP world is automatically assigned the owner group
+
+### Fixed
+
+- **Permission resolution order** - Changed to most-specific-first resolution, so `a.b.c` is evaluated before `a.b.*` before `a.*` before `*`
+- **Template application with existing groups** - Templates now gracefully handle groups that already exist instead of failing
+- **Template clearing nodes and tracks** - Use proper mutable methods when clearing nodes and tracks during template application, preventing `UnsupportedOperationException`
+- **SSP owner assignment race condition** - Prevent race condition when multiple players join simultaneously during first-player owner assignment
+
 ## [2.9.0] - 2026-02-28
 
 **Server Version:** `2026.02.19-1a311a592`
@@ -91,7 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Debug traces for integration setup (Factions, WerChat, PlaceholderAPI, MysticNameTags, VaultUnlocked)
 - **Missing `hytale.mods.outdated.notify` permission** - Registered in PermissionRegistry and PermissionAliases, matching the constant defined in Hytale's `HytalePermissions` class
 - **Vanilla OP/Default overwrite warning** - Startup check warns server operators if custom permissions are detected in vanilla's OP or Default groups, which are forcibly reset on every server restart by `HytalePermissionsProvider.read()`
-- **JitPack publishing** - Other developers can now depend on HyperPerms via `com.github.HyperSystemsDev:HyperPerms:<version>` from JitPack
+- **JitPack publishing** - Other developers can now depend on HyperPerms via `com.github.HyperSystems-Development:HyperPerms:<version>` from JitPack
 - **CONTRIBUTING.md** - New contributor guide with build setup, soft dependency instructions, code style, and branch strategy
 - **Update permission constants** - Added `UPDATES_ALL`, `UPDATES_TOGGLE`, `UPDATES_NOTIFY` to `Permissions` utility class
 

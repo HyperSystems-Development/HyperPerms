@@ -44,7 +44,7 @@ public final class CoreManagerStage implements Stage {
         // Create managers
         GroupManagerImpl groupManager = new GroupManagerImpl(storage, cacheInvalidator, eventBus);
         TrackManagerImpl trackManager = new TrackManagerImpl(storage);
-        UserManagerImpl userManager = new UserManagerImpl(storage, cache, eventBus, config.getDefaultGroup());
+        UserManagerImpl userManager = new UserManagerImpl(storage, cache, eventBus, config.getDefaultGroup(), config.getOwnerGroup());
 
         container.register(GroupManagerImpl.class, groupManager);
         container.register(TrackManagerImpl.class, trackManager);

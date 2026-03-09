@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -29,14 +30,18 @@ public final class UserManagerImpl implements UserManager {
     private final Map<UUID, User> loadedUsers = new ConcurrentHashMap<>();
     private final Map<UUID, Object> userLocks = new ConcurrentHashMap<>();
     private final String defaultGroup;
+    private final String ownerGroup;
+    private final AtomicBoolean ownerAssigned = new AtomicBoolean(false);
     private final UserPermissionListener permissionListener;
 
     public UserManagerImpl(@NotNull StorageProvider storage, @NotNull PermissionCache cache,
-                           @NotNull EventBus eventBus, @NotNull String defaultGroup) {
+                           @NotNull EventBus eventBus, @NotNull String defaultGroup,
+                           @NotNull String ownerGroup) {
         this.storage = storage;
         this.cache = cache;
         this.eventBus = eventBus;
         this.defaultGroup = defaultGroup;
+        this.ownerGroup = ownerGroup;
         this.permissionListener = new UserPermissionListener();
     }
 
@@ -61,8 +66,13 @@ public final class UserManagerImpl implements UserManager {
             } else {
                 // Create a new user with default settings
                 loaded = new User(uuid, null);
-                loaded.setPrimaryGroup(defaultGroup);
-                Logger.debug("loadUser: no storage entry for %s, created new user with group '%s'", uuid, defaultGroup);
+                if (loadedUsers.isEmpty() && ownerAssigned.compareAndSet(false, true)) {
+                    loaded.setPrimaryGroup(ownerGroup);
+                    Logger.info("First player detected, assigning owner group '%s' to %s", ownerGroup, uuid);
+                } else {
+                    loaded.setPrimaryGroup(defaultGroup);
+                }
+                Logger.debug("loadUser: no storage entry for %s, created new user with group '%s'", uuid, loaded.getPrimaryGroup());
             }
 
             // Set the listener on the user
@@ -178,6 +188,9 @@ public final class UserManagerImpl implements UserManager {
                 user.setListener(permissionListener);
             }
             loadedUsers.putAll(users);
+            if (!users.isEmpty()) {
+                ownerAssigned.set(true);
+            }
             Logger.info("Loaded %d users from storage", users.size());
         });
     }

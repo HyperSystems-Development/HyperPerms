@@ -432,6 +432,16 @@ public final class HyperPermsConfig {
     }
 
     /**
+     * Gets the owner group name assigned to the first player.
+     *
+     * @return the owner group name
+     */
+    @NotNull
+    public String getOwnerGroup() {
+        return getNestedString("defaults", "ownerGroup", "owner");
+    }
+
+    /**
      * Gets the default prefix for users without a group prefix.
      *
      * @return the default prefix
@@ -738,7 +748,7 @@ public final class HyperPermsConfig {
      */
     @NotNull
     public String getUpdateCheckUrl() {
-        return getNestedString("updates", "checkUrl", "https://api.github.com/repos/HyperSystemsDev/HyperPerms/releases/latest");
+        return getNestedString("updates", "checkUrl", "https://api.github.com/repos/HyperSystems-Development/HyperPerms/releases/latest");
     }
 
     /**

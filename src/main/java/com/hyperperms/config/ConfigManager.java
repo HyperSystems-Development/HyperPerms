@@ -234,6 +234,7 @@ public final class ConfigManager {
     public int getCacheExpirySeconds() { return cache.getExpirySeconds(); }
     public int getCacheMaxSize() { return cache.getMaxSize(); }
     @NotNull public String getDefaultGroup() { return core.getDefaultGroup(); }
+    @NotNull public String getOwnerGroup() { return core.getOwnerGroup(); }
     public boolean shouldCreateDefaultGroup() { return core.shouldCreateDefaultGroup(); }
     @NotNull public String getDefaultPrefix() { return core.getDefaultPrefix(); }
     @NotNull public String getDefaultSuffix() { return core.getDefaultSuffix(); }

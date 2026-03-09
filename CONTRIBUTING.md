@@ -42,7 +42,7 @@ Each plugin has its own Git repository with independent versioning.
 
 ```bash
 # Clone the HyperPerms repository
-git clone git@github.com:HyperSystemsDev/HyperPerms.git
+git clone git@github.com:HyperSystems-Development/HyperPerms.git
 ```
 
 ## Building
@@ -167,8 +167,8 @@ Tests use **JUnit Jupiter 5.10.2**. Place test files in `src/test/java/`.
 
 ## Reporting Issues
 
-- **Bug reports:** Use the [Bug Report template](https://github.com/HyperSystemsDev/HyperPerms/issues/new?template=bug_report.md) on GitHub
-- **Feature requests:** Use the [Feature Request template](https://github.com/HyperSystemsDev/HyperPerms/issues/new?template=feature_request.md) on GitHub
+- **Bug reports:** Use the [Bug Report template](https://github.com/HyperSystems-Development/HyperPerms/issues/new?template=bug_report.md) on GitHub
+- **Feature requests:** Use the [Feature Request template](https://github.com/HyperSystems-Development/HyperPerms/issues/new?template=feature_request.md) on GitHub
 - **Discord:** Join [our server](https://discord.com/invite/aZaa5vcFYh) for discussion
 
 ## License

@@ -6,7 +6,6 @@ import com.hyperperms.manager.GroupManagerImpl;
 import com.hyperperms.manager.TrackManagerImpl;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
-import com.hyperperms.model.Node;
 import com.hyperperms.model.Track;
 import com.hyperperms.util.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -125,8 +124,9 @@ public final class TemplateApplier {
                 }
 
             } catch (Exception e) {
-                Logger.severe("[Template] Failed to apply template: %s", e.getMessage());
-                return ApplyResult.failure("Failed to apply template: " + e.getMessage());
+                String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                Logger.severe("[Template] Failed to apply template: %s", errorMsg);
+                return ApplyResult.failure("Failed to apply template: " + errorMsg);
             }
         });
     }
@@ -173,8 +173,7 @@ public final class TemplateApplier {
                 Logger.debug("[Template] Created track: %s", templateTrack.name());
             } else {
                 // Update existing track
-                existingTrack.getGroups().clear();
-                existingTrack.getGroups().addAll(templateTrack.groups());
+                existingTrack.setGroups(templateTrack.groups());
                 trackManager.saveTrack(existingTrack).join();
                 tracksUpdated++;
                 Logger.debug("[Template] Updated track: %s", templateTrack.name());
@@ -250,8 +249,7 @@ public final class TemplateApplier {
                 tracksCreated++;
                 Logger.debug("[Template] Created track: %s", templateTrack.name());
             } else {
-                existingTrack.getGroups().clear();
-                existingTrack.getGroups().addAll(templateTrack.groups());
+                existingTrack.setGroups(templateTrack.groups());
                 trackManager.saveTrack(existingTrack).join();
                 tracksUpdated++;
                 Logger.debug("[Template] Updated track: %s", templateTrack.name());
@@ -269,31 +267,19 @@ public final class TemplateApplier {
      * Creates a new group from a template group.
      */
     private void createGroup(GroupManagerImpl groupManager, TemplateGroup templateGroup) {
-        Group group = new Group(templateGroup.getName());
-        
-        // Set basic properties
-        group.setWeight(templateGroup.getWeight());
-        group.setPrefix(templateGroup.getPrefix());
-        group.setSuffix(templateGroup.getSuffix());
-        if (templateGroup.getDisplayName() != null) {
-            group.setDisplayName(templateGroup.getDisplayName());
+        try {
+            Group createdGroup = groupManager.createGroup(templateGroup.getName());
+            updateGroup(createdGroup, templateGroup);
+            groupManager.saveGroup(createdGroup).join();
+        } catch (IllegalArgumentException e) {
+            // Group already exists - fall back to update
+            Logger.debug("[Template] Group '%s' already exists, updating instead", templateGroup.getName());
+            Group existing = groupManager.getGroup(templateGroup.getName());
+            if (existing != null) {
+                updateGroup(existing, templateGroup);
+                groupManager.saveGroup(existing).join();
+            }
         }
-
-        // Add permissions
-        for (TemplatePermission perm : templateGroup.getPermissions()) {
-            Node node = Node.builder(perm.node()).build();
-            group.addNode(node);
-        }
-
-        // Add parent inheritance
-        for (String parent : templateGroup.getParents()) {
-            Node parentNode = Node.builder("group." + parent).build();
-            group.addNode(parentNode);
-        }
-
-        Group createdGroup = groupManager.createGroup(templateGroup.getName());
-        updateGroup(createdGroup, templateGroup);
-        groupManager.saveGroup(createdGroup).join();
     }
 
     /**
@@ -309,7 +295,7 @@ public final class TemplateApplier {
         }
 
         // Clear existing permissions and re-add from template
-        group.getNodes().clear();
+        group.clearNodes();
 
         // Add permissions
         for (TemplatePermission perm : templateGroup.getPermissions()) {

@@ -26,12 +26,12 @@ import java.util.Objects;
  *   <li>{@code -*} - universal negation (denies everything)</li>
  * </ul>
  * <p>
- * <strong>Resolution Order (Hytale-native):</strong>
+ * <strong>Resolution Order (most-specific-first):</strong>
  * <ol>
- *   <li>Global wildcard (*) - grants everything, checked FIRST</li>
- *   <li>Global negation (-*) - denies everything</li>
- *   <li>Exact permissions (grant checked before deny)</li>
- *   <li>Prefix wildcards (shortest prefix first: "a.*" before "a.b.*")</li>
+ *   <li>Exact permissions (grant before deny) — original + stripped prefix versions</li>
+ *   <li>Prefix wildcards (longest prefix first: "a.b.*" before "a.*") — grant before deny at each level — original + stripped versions</li>
+ *   <li>Global wildcard (*) grant — least specific, checked LAST</li>
+ *   <li>Global negation (-*) deny — also detects {@code "*" -> false} as deny-all</li>
  * </ol>
  * <p>
  * <strong>Wildcard Restrictions:</strong> Middle wildcards (e.g., {@code hytale.*.ban})
@@ -43,10 +43,9 @@ import java.util.Objects;
  *   <li>Trailing: {@code prefix.*} (grant all under prefix) or {@code -prefix.*} (deny all under prefix)</li>
  * </ul>
  * <p>
- * <strong>Important:</strong> With this resolution order, {@code ["*", "-ban"]} checking
- * {@code ban} returns TRUE because global {@code *} is checked first and wins.
- * To deny specific permissions, avoid using global {@code *} and use more specific
- * grants like {@code admin.*} combined with negations.
+ * <strong>Important:</strong> With this resolution order, {@code ["-*", "+perm"]} checking
+ * {@code perm} returns TRUE because the specific grant is checked before the global deny.
+ * This enables the common "deny-by-default + grant specific" pattern.
  */
 public final class WildcardMatcher {
 
@@ -111,28 +110,18 @@ public final class WildcardMatcher {
             }
         }
 
-        // === HYTALE RESOLUTION ORDER ===
+        // === MOST-SPECIFIC-FIRST RESOLUTION ORDER ===
 
-        // 1. Global wildcard (*) - checked FIRST, grants everything
-        if (values.getOrDefault("*", false)) {
-            return TriState.TRUE;
-        }
-
-        // 2. Global negation (-*) - denies everything
-        if (values.getOrDefault("-*", false)) {
-            return TriState.FALSE;
-        }
-
-        // 3. Exact permissions (grant first, then deny)
-        // 3a. Exact grant (original)
+        // 1. Exact permissions (grant before deny)
+        // 1a. Exact grant (original)
         if (values.containsKey(lowerPerm)) {
             return values.get(lowerPerm) ? TriState.TRUE : TriState.FALSE;
         }
-        // 3b. Exact negation (original)
+        // 1b. Exact negation (original)
         if (values.containsKey("-" + lowerPerm)) {
             return values.get("-" + lowerPerm) ? TriState.FALSE : TriState.TRUE;
         }
-        // 3c. Exact grant/deny (stripped versions)
+        // 1c. Exact grant/deny (stripped versions)
         for (String stripped : strippedVersions) {
             if (values.containsKey(stripped)) {
                 return values.get(stripped) ? TriState.TRUE : TriState.FALSE;
@@ -142,12 +131,12 @@ public final class WildcardMatcher {
             }
         }
 
-        // 4. Prefix wildcards (shortest prefix first: "a.*" before "a.b.*")
+        // 2. Prefix wildcards (LONGEST prefix first: "a.b.*" before "a.*")
         String[] parts = lowerPerm.split("\\.");
-        for (int prefixLen = 1; prefixLen < parts.length; prefixLen++) {
+        for (int prefixLen = parts.length - 1; prefixLen >= 1; prefixLen--) {
             String prefix = buildWildcardFromLength(parts, prefixLen);
 
-            // Grant first, then deny at each level
+            // Grant before deny at each level
             if (values.getOrDefault(prefix, false)) {
                 return TriState.TRUE;
             }
@@ -160,10 +149,10 @@ public final class WildcardMatcher {
             }
         }
 
-        // 4b. Prefix wildcards (stripped versions, shortest first)
+        // 2b. Prefix wildcards (stripped versions, longest first)
         for (String stripped : strippedVersions) {
             String[] strippedParts = stripped.split("\\.");
-            for (int prefixLen = 1; prefixLen < strippedParts.length; prefixLen++) {
+            for (int prefixLen = strippedParts.length - 1; prefixLen >= 1; prefixLen--) {
                 String prefix = buildWildcardFromLength(strippedParts, prefixLen);
 
                 if (values.getOrDefault(prefix, false)) {
@@ -176,6 +165,19 @@ public final class WildcardMatcher {
                     return TriState.FALSE;
                 }
             }
+        }
+
+        // 3. Global wildcard (*) grant - least specific, checked LAST
+        if (values.getOrDefault("*", false)) {
+            return TriState.TRUE;
+        }
+
+        // 4. Global negation (-*) deny - also detect "*" -> false as deny-all
+        if (values.getOrDefault("-*", false)) {
+            return TriState.FALSE;
+        }
+        if (values.containsKey("*") && !values.get("*")) {
+            return TriState.FALSE;
         }
 
         return TriState.UNDEFINED;
@@ -199,12 +201,12 @@ public final class WildcardMatcher {
     /**
      * Checks a permission with detailed match information for tracing.
      * <p>
-     * Follows Hytale's resolution order:
+     * Follows the most-specific-first resolution order:
      * <ol>
-     *   <li>Global wildcard (*) - checked FIRST</li>
-     *   <li>Global negation (-*)</li>
      *   <li>Exact permissions (grant before deny)</li>
-     *   <li>Prefix wildcards (shortest prefix first)</li>
+     *   <li>Prefix wildcards (longest prefix first)</li>
+     *   <li>Global wildcard (*) grant</li>
+     *   <li>Global negation (-*) deny</li>
      * </ol>
      *
      * @param permission the permission to check
@@ -222,19 +224,9 @@ public final class WildcardMatcher {
 
         String lowerPerm = permission.toLowerCase();
 
-        // === HYTALE RESOLUTION ORDER ===
+        // === MOST-SPECIFIC-FIRST RESOLUTION ORDER ===
 
-        // 1. Global wildcard (*) - checked FIRST
-        if (values.getOrDefault("*", false)) {
-            return new MatchResult(TriState.TRUE, "*", MatchType.UNIVERSAL);
-        }
-
-        // 2. Global negation (-*)
-        if (values.getOrDefault("-*", false)) {
-            return new MatchResult(TriState.FALSE, "-*", MatchType.UNIVERSAL_NEGATION);
-        }
-
-        // 3. Exact permissions (grant first, then deny)
+        // 1. Exact permissions (grant first, then deny)
         if (values.containsKey(lowerPerm)) {
             boolean val = values.get(lowerPerm);
             return new MatchResult(
@@ -254,9 +246,9 @@ public final class WildcardMatcher {
             );
         }
 
-        // 4. Prefix wildcards (shortest prefix first)
+        // 2. Prefix wildcards (LONGEST prefix first)
         String[] parts = lowerPerm.split("\\.");
-        for (int prefixLen = 1; prefixLen < parts.length; prefixLen++) {
+        for (int prefixLen = parts.length - 1; prefixLen >= 1; prefixLen--) {
             String wildcard = buildWildcardFromLength(parts, prefixLen);
 
             // Grant first at each level
@@ -274,6 +266,19 @@ public final class WildcardMatcher {
             if (values.containsKey(wildcard) && !values.get(wildcard)) {
                 return new MatchResult(TriState.FALSE, wildcard, MatchType.WILDCARD);
             }
+        }
+
+        // 3. Global wildcard (*) grant - least specific
+        if (values.getOrDefault("*", false)) {
+            return new MatchResult(TriState.TRUE, "*", MatchType.UNIVERSAL);
+        }
+
+        // 4. Global negation (-*) deny - also detect "*" -> false as deny-all
+        if (values.getOrDefault("-*", false)) {
+            return new MatchResult(TriState.FALSE, "-*", MatchType.UNIVERSAL_NEGATION);
+        }
+        if (values.containsKey("*") && !values.get("*")) {
+            return new MatchResult(TriState.FALSE, "*", MatchType.UNIVERSAL_NEGATION);
         }
 
         return new MatchResult(TriState.UNDEFINED, null, MatchType.NONE);

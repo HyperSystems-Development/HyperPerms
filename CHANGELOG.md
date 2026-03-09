@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.9.1] - 2026-03-08
+
+**Server Version:** `2026.02.19-1a311a592`
+
+### Added
+
+- **PermissionsPlus Migration Tool** - Migrate from PermissionsPlus with a single command
+  - `/hp migrate permissionsplus` - Preview migration (dry-run)
+  - `/hp migrate permissionsplus --confirm` - Execute migration
+  - Reads PermissionsPlus JSON data files and transforms groups, users, and permissions into HyperPerms format
+  - Permission cleaning and validation for PermissionsPlus-specific formats
+- **SSP Auto-Owner Assignment** - First player to join an SSP world is automatically assigned the owner group
+
+### Fixed
+
+- **Permission resolution order** - Changed to most-specific-first resolution, so `a.b.c` is evaluated before `a.b.*` before `a.*` before `*`
+- **Template application with existing groups** - Templates now gracefully handle groups that already exist instead of failing
+- **Template clearing nodes and tracks** - Use proper mutable methods when clearing nodes and tracks during template application, preventing `UnsupportedOperationException`
+- **SSP owner assignment race condition** - Prevent race condition when multiple players join simultaneously during first-player owner assignment
+
 ## [2.9.0] - 2026-02-28
 
 **Server Version:** `2026.02.19-1a311a592`

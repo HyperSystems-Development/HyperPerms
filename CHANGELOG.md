@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No changes yet*
+### Fixed
+
+- **LuckPerms H2 migration version mismatch** - Use isolated classloader (platform classloader as parent) when loading H2 driver from LuckPerms libs, preventing other plugins' H2 versions from being picked up via parent-first delegation
+- **H2 driver selection** - Prefer modern H2 driver (`h2-driver-2.1.214.jar`) over legacy (`h2-driver-legacy-1.4.199.jar`) to match the current LuckPerms database format (`luckperms-h2-v2.mv.db`)
 
 ## [2.9.1] - 2026-03-08
 

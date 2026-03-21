@@ -122,6 +122,10 @@ public final class H2StorageReader extends AbstractSqlLuckPermsReader {
      * <p>
      * H2 migration requires LuckPerms to be installed with its H2 driver in the libs folder.
      * We dynamically load from LuckPerms to ensure version compatibility with their database format.
+     * <p>
+     * Uses an isolated classloader (parent = platform classloader) to prevent other plugins'
+     * H2 versions from being loaded via parent-first delegation. This mirrors LuckPerms's own
+     * {@code IsolatedClassLoader} approach.
      *
      * @return true if driver was loaded successfully
      */
@@ -145,9 +149,12 @@ public final class H2StorageReader extends AbstractSqlLuckPermsReader {
 
         try {
             Logger.info("Loading H2 driver from LuckPerms: %s", h2Jar.getFileName());
+            // Use platform classloader as parent to isolate from other plugins' H2 versions.
+            // Without this, parent-first delegation loads H2 from whichever plugin (e.g. RPGLeveling)
+            // has it on the classpath, causing version mismatches with the LuckPerms database format.
             h2ClassLoader = new URLClassLoader(
                 new URL[]{h2Jar.toUri().toURL()},
-                getClass().getClassLoader()
+                ClassLoader.getPlatformClassLoader()
             );
             Class<?> driverClass = h2ClassLoader.loadClass(H2_DRIVER);
             h2Driver = (Driver) driverClass.getDeclaredConstructor().newInstance();
@@ -162,17 +169,37 @@ public final class H2StorageReader extends AbstractSqlLuckPermsReader {
 
     /**
      * Finds the H2 driver JAR in the libs directory.
+     * <p>
+     * Prefers the modern H2 driver (h2-driver-*.jar) over the legacy one (h2-driver-legacy-*.jar)
+     * since LuckPerms's current database format (luckperms-h2-v2.mv.db) is created with the modern
+     * H2 2.1.214 driver. Falls back to legacy if modern is not found.
      */
     @Nullable
     private Path findH2JarInLibs(Path libsDir) {
         try (Stream<Path> files = Files.list(libsDir)) {
-            return files
+            List<Path> h2Jars = files
                 .filter(p -> {
                     String name = p.getFileName().toString().toLowerCase();
                     return name.startsWith("h2") && name.endsWith(".jar");
                 })
-                .findFirst()
-                .orElse(null);
+                .toList();
+
+            if (h2Jars.isEmpty()) {
+                return null;
+            }
+
+            // Prefer modern driver over legacy
+            Path modern = null;
+            Path legacy = null;
+            for (Path jar : h2Jars) {
+                String name = jar.getFileName().toString().toLowerCase();
+                if (name.contains("legacy")) {
+                    legacy = jar;
+                } else {
+                    modern = jar;
+                }
+            }
+            return modern != null ? modern : legacy;
         } catch (IOException e) {
             Logger.debug("Error searching for H2 jar: %s", e.getMessage());
             return null;

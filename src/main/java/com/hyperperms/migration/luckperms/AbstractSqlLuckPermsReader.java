@@ -49,12 +49,15 @@ public abstract class AbstractSqlLuckPermsReader implements LuckPermsStorageRead
     }
 
     /**
-     * Gets the column name for the permission value column.
+     * Gets the column name for the permission value column in SQL queries.
      * <p>
-     * H2 reserves VALUE as a keyword, so it must be quoted. Override this
-     * in subclasses that need different quoting (e.g., H2 uses {@code "VALUE"}).
+     * H2 reserves VALUE as a keyword, so it must be quoted in SQL statements.
+     * Override this in subclasses that need different quoting (e.g., H2 uses {@code "VALUE"}).
+     * <p>
+     * <b>Note:</b> This is only for SQL query construction. For {@link ResultSet} column
+     * access, use {@code "value"} directly — JDBC does not need SQL keyword quoting.
      *
-     * @return the value column name (e.g., "value" or "\"VALUE\"")
+     * @return the value column name for SQL (e.g., "value" or "\"VALUE\"")
      */
     @NotNull
     protected String getValueColumnName() {
@@ -122,8 +125,8 @@ public abstract class AbstractSqlLuckPermsReader implements LuckPermsStorageRead
         int prefixPriority = 0;
         int suffixPriority = 0;
 
-        String valueCol = getValueColumnName();
-        String permQuery = "SELECT permission, " + valueCol + ", expiry, server, world FROM " +
+        String valueSqlCol = getValueColumnName();
+        String permQuery = "SELECT permission, " + valueSqlCol + ", expiry, server, world FROM " +
                 getTablePrefix() + "group_permissions WHERE name = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(permQuery)) {
@@ -131,7 +134,7 @@ public abstract class AbstractSqlLuckPermsReader implements LuckPermsStorageRead
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String permission = rs.getString("permission");
-                    boolean value = rs.getBoolean(valueCol);
+                    boolean value = rs.getBoolean("value");
                     long expiry = rs.getLong("expiry");
                     String server = rs.getString("server");
                     String world = rs.getString("world");
@@ -235,8 +238,8 @@ public abstract class AbstractSqlLuckPermsReader implements LuckPermsStorageRead
             throws SQLException {
         List<LPNode> nodes = new ArrayList<>();
 
-        String valueCol = getValueColumnName();
-        String permQuery = "SELECT permission, " + valueCol + ", expiry, server, world FROM " +
+        String valueSqlCol = getValueColumnName();
+        String permQuery = "SELECT permission, " + valueSqlCol + ", expiry, server, world FROM " +
                 getTablePrefix() + "user_permissions WHERE uuid = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(permQuery)) {
@@ -244,7 +247,7 @@ public abstract class AbstractSqlLuckPermsReader implements LuckPermsStorageRead
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String permission = rs.getString("permission");
-                    boolean value = rs.getBoolean(valueCol);
+                    boolean value = rs.getBoolean("value");
                     long expiry = rs.getLong("expiry");
                     String server = rs.getString("server");
                     String world = rs.getString("world");

@@ -224,9 +224,17 @@ public final class WildcardMatcher {
 
         String lowerPerm = permission.toLowerCase();
 
+        // Build stripped versions upfront (e.g., com.plugin.cmd -> plugin.cmd)
+        java.util.List<String> strippedVersions = new java.util.ArrayList<>();
+        for (String prefix : COMMON_PREFIXES) {
+            if (lowerPerm.startsWith(prefix)) {
+                strippedVersions.add(lowerPerm.substring(prefix.length()));
+            }
+        }
+
         // === MOST-SPECIFIC-FIRST RESOLUTION ORDER ===
 
-        // 1. Exact permissions (grant first, then deny)
+        // 1a. Exact grant (original)
         if (values.containsKey(lowerPerm)) {
             boolean val = values.get(lowerPerm);
             return new MatchResult(
@@ -236,6 +244,7 @@ public final class WildcardMatcher {
             );
         }
 
+        // 1b. Exact negation (original)
         String negated = "-" + lowerPerm;
         if (values.containsKey(negated)) {
             boolean val = values.get(negated);
@@ -244,6 +253,26 @@ public final class WildcardMatcher {
                     negated,
                     MatchType.EXACT_NEGATION
             );
+        }
+
+        // 1c. Exact grant/deny (stripped versions)
+        for (String stripped : strippedVersions) {
+            if (values.containsKey(stripped)) {
+                boolean val = values.get(stripped);
+                return new MatchResult(
+                        val ? TriState.TRUE : TriState.FALSE,
+                        stripped,
+                        MatchType.EXACT
+                );
+            }
+            if (values.containsKey("-" + stripped)) {
+                boolean val = values.get("-" + stripped);
+                return new MatchResult(
+                        val ? TriState.FALSE : TriState.TRUE,
+                        "-" + stripped,
+                        MatchType.EXACT_NEGATION
+                );
+            }
         }
 
         // 2. Prefix wildcards (LONGEST prefix first)
@@ -265,6 +294,25 @@ public final class WildcardMatcher {
             // Also check value=false format
             if (values.containsKey(wildcard) && !values.get(wildcard)) {
                 return new MatchResult(TriState.FALSE, wildcard, MatchType.WILDCARD);
+            }
+        }
+
+        // 2b. Prefix wildcards (stripped versions, longest first)
+        for (String stripped : strippedVersions) {
+            String[] strippedParts = stripped.split("\\.");
+            for (int prefixLen = strippedParts.length - 1; prefixLen >= 1; prefixLen--) {
+                String wildcard = buildWildcardFromLength(strippedParts, prefixLen);
+
+                if (values.getOrDefault(wildcard, false)) {
+                    return new MatchResult(TriState.TRUE, wildcard, MatchType.WILDCARD);
+                }
+                String negWild = "-" + wildcard;
+                if (values.getOrDefault(negWild, false)) {
+                    return new MatchResult(TriState.FALSE, negWild, MatchType.WILDCARD_NEGATION);
+                }
+                if (values.containsKey(wildcard) && !values.get(wildcard)) {
+                    return new MatchResult(TriState.FALSE, wildcard, MatchType.WILDCARD);
+                }
             }
         }
 

@@ -71,6 +71,10 @@ public class GroupCommands {
 
         String confirmationKey = "group-delete:" + groupName.toLowerCase();
 
+        // Clean up expired confirmations to prevent unbounded growth
+        long now = System.currentTimeMillis();
+        pendingConfirmations.entrySet().removeIf(e -> (now - e.getValue()) > CONFIRMATION_TIMEOUT_MS * 5);
+
         // Check if this is a confirmation
         Long timestamp = pendingConfirmations.get(confirmationKey);
         if (timestamp != null && System.currentTimeMillis() - timestamp <= CONFIRMATION_TIMEOUT_MS) {
@@ -487,8 +491,8 @@ public class GroupCommands {
             return CompletableFuture.completedFuture(null);
         }
 
-        plugin.getGroupManager().deleteGroup(oldName);
-
+        // Create the new group first, THEN delete the old one — ensures
+        // no data is lost if the server crashes mid-rename.
         Group newGroup = new Group(newName);
         newGroup.setDisplayName(group.getDisplayName());
         newGroup.setWeight(group.getWeight());
@@ -506,23 +510,32 @@ public class GroupCommands {
         }
 
         plugin.getGroupManager().createGroup(newName);
-        plugin.getGroupManager().saveGroup(newGroup);
+        plugin.getGroupManager().saveGroup(newGroup).join();
 
+        // Update loaded users' group membership
+        List<CompletableFuture<Void>> saveFutures = new ArrayList<>();
         for (User user : plugin.getUserManager().getLoadedUsers()) {
             if (user.getInheritedGroups().contains(oldName.toLowerCase())) {
                 user.removeGroup(oldName);
                 user.addGroup(newName);
-                plugin.getUserManager().saveUser(user);
+                saveFutures.add(plugin.getUserManager().saveUser(user));
             }
         }
 
+        // Update loaded groups' parent references
         for (Group g : plugin.getGroupManager().getLoadedGroups()) {
             if (g.getParentGroups().contains(oldName.toLowerCase())) {
                 g.removeParent(oldName);
                 g.addParent(newName);
-                plugin.getGroupManager().saveGroup(g);
+                saveFutures.add(plugin.getGroupManager().saveGroup(g));
             }
         }
+
+        // Wait for all user/group saves to complete
+        CompletableFuture.allOf(saveFutures.toArray(CompletableFuture[]::new)).join();
+
+        // Now safe to delete the old group
+        plugin.getGroupManager().deleteGroup(oldName).join();
 
         plugin.getCacheInvalidator().invalidateAll();
         ctx.sender().sendMessage(Message.raw("Renamed group " + oldName + " to " + newName));

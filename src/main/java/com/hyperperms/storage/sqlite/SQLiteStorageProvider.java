@@ -339,7 +339,10 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
             Logger.debugStorage("Loading all users from SQLite");
             Map<UUID, User> users = new HashMap<>();
             try {
+                // Collect all user rows first, then load nodes separately.
+                // SQLite does not support multiple open ResultSets on one connection.
                 String sql = "SELECT * FROM users";
+                List<User> userRows = new ArrayList<>();
                 try (Statement stmt = connection.createStatement();
                      ResultSet rs = stmt.executeQuery(sql)) {
                     while (rs.next()) {
@@ -349,9 +352,12 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
                         user.setPrimaryGroup(rs.getString("primary_group"));
                         user.setCustomPrefix(rs.getString("custom_prefix"));
                         user.setCustomSuffix(rs.getString("custom_suffix"));
-                        loadUserNodes(user);
-                        users.put(uuid, user);
+                        userRows.add(user);
                     }
+                }
+                for (User user : userRows) {
+                    loadUserNodes(user);
+                    users.put(user.getUuid(), user);
                 }
             } catch (SQLException e) {
                 Logger.severe("Failed to load all users", e);
@@ -548,7 +554,10 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
             Logger.debugStorage("Loading all groups from SQLite");
             Map<String, Group> groups = new HashMap<>();
             try {
+                // Collect all group rows first, then load nodes separately.
+                // SQLite does not support multiple open ResultSets on one connection.
                 String sql = "SELECT * FROM groups";
+                List<Group> groupRows = new ArrayList<>();
                 try (Statement stmt = connection.createStatement();
                      ResultSet rs = stmt.executeQuery(sql)) {
                     while (rs.next()) {
@@ -559,9 +568,12 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
                         group.setSuffix(rs.getString("suffix"));
                         group.setPrefixPriority(rs.getInt("prefix_priority"));
                         group.setSuffixPriority(rs.getInt("suffix_priority"));
-                        loadGroupNodes(group);
-                        groups.put(name, group);
+                        groupRows.add(group);
                     }
+                }
+                for (Group group : groupRows) {
+                    loadGroupNodes(group);
+                    groups.put(group.getName(), group);
                 }
             } catch (SQLException e) {
                 Logger.severe("Failed to load all groups", e);
@@ -702,6 +714,14 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
             Path backupFile = resolveBackupPath(backupName + ".db");
 
             try {
+                // Flush WAL to main database file before copying, otherwise
+                // the backup may miss recent committed writes still in the WAL.
+                try (Statement stmt = connection.createStatement()) {
+                    stmt.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+                } catch (SQLException e) {
+                    Logger.warn("WAL checkpoint before backup failed (non-fatal): %s", e.getMessage());
+                }
+
                 Files.createDirectories(backupsDirectory);
                 Files.copy(databaseFile, backupFile, StandardCopyOption.REPLACE_EXISTING);
                 Logger.info("SQLite backup created: " + backupName);
@@ -742,6 +762,12 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
                 // Reopen connection using the dynamically loaded driver
                 String url = "jdbc:sqlite:" + databaseFile.toAbsolutePath();
                 connection = SQLiteDriverLoader.getConnection(url);
+
+                // Re-enable PRAGMAs that were set during init()
+                try (Statement stmt = connection.createStatement()) {
+                    stmt.execute("PRAGMA journal_mode=WAL");
+                    stmt.execute("PRAGMA foreign_keys=ON");
+                }
 
                 Logger.info("SQLite backup restored: " + name);
                 return true;

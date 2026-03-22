@@ -591,6 +591,10 @@ public class UserCommands {
 
         String confirmationKey = "user-clear:" + user.getUuid();
 
+        // Clean up expired confirmations to prevent unbounded growth
+        long now = System.currentTimeMillis();
+        pendingConfirmations.entrySet().removeIf(e -> (now - e.getValue()) > CONFIRMATION_TIMEOUT_MS * 5);
+
         // Check if this is a confirmation
         Long timestamp = pendingConfirmations.get(confirmationKey);
         if (timestamp != null && System.currentTimeMillis() - timestamp <= CONFIRMATION_TIMEOUT_MS) {
@@ -656,7 +660,7 @@ public class UserCommands {
         target.setCustomPrefix(source.getCustomPrefix());
         target.setCustomSuffix(source.getCustomSuffix());
 
-        plugin.getUserManager().saveUser(target);
+        plugin.getUserManager().saveUser(target).join();
         plugin.getCacheInvalidator().invalidate(target.getUuid());
 
         ctx.sender().sendMessage(Message.raw("Cloned permissions from " + source.getFriendlyName() + " to " + target.getFriendlyName()));

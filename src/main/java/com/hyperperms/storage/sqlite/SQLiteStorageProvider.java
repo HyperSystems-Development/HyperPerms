@@ -714,6 +714,14 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
             Path backupFile = resolveBackupPath(backupName + ".db");
 
             try {
+                // Flush WAL to main database file before copying, otherwise
+                // the backup may miss recent committed writes still in the WAL.
+                try (Statement stmt = connection.createStatement()) {
+                    stmt.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+                } catch (SQLException e) {
+                    Logger.warn("WAL checkpoint before backup failed (non-fatal): %s", e.getMessage());
+                }
+
                 Files.createDirectories(backupsDirectory);
                 Files.copy(databaseFile, backupFile, StandardCopyOption.REPLACE_EXISTING);
                 Logger.info("SQLite backup created: " + backupName);
@@ -754,6 +762,12 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
                 // Reopen connection using the dynamically loaded driver
                 String url = "jdbc:sqlite:" + databaseFile.toAbsolutePath();
                 connection = SQLiteDriverLoader.getConnection(url);
+
+                // Re-enable PRAGMAs that were set during init()
+                try (Statement stmt = connection.createStatement()) {
+                    stmt.execute("PRAGMA journal_mode=WAL");
+                    stmt.execute("PRAGMA foreign_keys=ON");
+                }
 
                 Logger.info("SQLite backup restored: " + name);
                 return true;

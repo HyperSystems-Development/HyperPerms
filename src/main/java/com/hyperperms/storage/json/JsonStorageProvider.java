@@ -198,6 +198,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Optional<Group>> loadGroup(@NotNull String name) {
         return executeAsync(() -> {
+            validateName(name);
             Logger.debugStorage("Loading group: %s", name);
             Path file = groupsDirectory.resolve(name.toLowerCase() + ".json");
             if (!Files.exists(file)) {
@@ -235,6 +236,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Void> deleteGroup(@NotNull String name) {
         return runAsync(() -> {
+            validateName(name);
             Logger.debugStorage("Deleting group: %s", name);
             Path file = groupsDirectory.resolve(name.toLowerCase() + ".json");
             try {
@@ -294,6 +296,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Optional<Track>> loadTrack(@NotNull String name) {
         return executeAsync(() -> {
+            validateName(name);
             Logger.debugStorage("Loading track: %s", name);
             Path file = tracksDirectory.resolve(name.toLowerCase() + ".json");
             if (!Files.exists(file)) {
@@ -330,6 +333,7 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
     @Override
     public CompletableFuture<Void> deleteTrack(@NotNull String name) {
         return runAsync(() -> {
+            validateName(name);
             Logger.debugStorage("Deleting track: %s", name);
             Path file = tracksDirectory.resolve(name.toLowerCase() + ".json");
             try {

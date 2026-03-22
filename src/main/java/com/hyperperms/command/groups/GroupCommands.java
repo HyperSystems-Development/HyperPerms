@@ -5,6 +5,8 @@ import com.hyperperms.command.HpContainerCommand;
 import com.hyperperms.command.HpSubCommand;
 import com.hyperperms.command.annotation.*;
 import com.hyperperms.command.annotation.Command;
+import com.hyperperms.api.context.Context;
+import com.hyperperms.api.context.ContextSet;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
 import com.hyperperms.model.User;
@@ -32,6 +34,7 @@ import static com.hyperperms.command.util.CommandUtil.*;
 public class GroupCommands {
 
     private static final Color AMBER = new Color(255, 200, 0);
+    private static final Color CYAN = new Color(85, 255, 255);
     private static final Map<String, Long> pendingConfirmations = new ConcurrentHashMap<>();
     private static final long CONFIRMATION_TIMEOUT_MS = 60_000;
 
@@ -182,6 +185,9 @@ public class GroupCommands {
                     String displayPerm = node.getBasePermission();
                     Color permColor = granted ? GREEN : RED;
                     parts.add(Message.raw("    " + prefix + " " + displayPerm).color(permColor));
+                    if (!node.getContexts().isEmpty()) {
+                        parts.add(Message.raw(" " + formatContexts(node.getContexts())).color(CYAN));
+                    }
                     if (node.isTemporary()) {
                         if (node.isExpired()) {
                             parts.add(Message.raw(" (EXPIRED)").color(GRAY));
@@ -205,7 +211,8 @@ public class GroupCommands {
             @Arg(name = "group", description = "Group name") String groupName,
             @Arg(name = "permission", description = "Permission node") String permission,
             @OptionalArg(name = "value", description = "true or false (default: true)") String valueStr,
-            @OptionalArg(name = "duration", description = "Duration (e.g. 1d2h30m, permanent)") String durationStr) {
+            @OptionalArg(name = "duration", description = "Duration (e.g. 1d2h30m, permanent)") String durationStr,
+            @OptionalArg(name = "world", description = "World name (restricts permission to that world)") String world) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
             ctx.sender().sendMessage(Message.raw("Group not found: " + groupName));
@@ -235,6 +242,9 @@ public class GroupCommands {
         if (expiry != null) {
             builder.expiry(expiry);
         }
+        if (world != null && !world.isBlank()) {
+            builder.world(world);
+        }
         Node node = builder.build();
         group.setNode(node);
         plugin.getGroupManager().saveGroup(group);
@@ -244,7 +254,8 @@ public class GroupCommands {
         boolean granted = node.getValue() && !node.isNegated();
         String action = granted ? "Granted" : "Denied";
         String expiryMsg = node.isTemporary() ? " (" + TimeUtil.formatExpiry(node.getExpiry()) + ")" : "";
-        ctx.sender().sendMessage(Message.raw(action + " " + displayPerm + " on group " + groupName + expiryMsg));
+        String worldMsg = world != null && !world.isBlank() ? " [world=" + world + "]" : "";
+        ctx.sender().sendMessage(Message.raw(action + " " + displayPerm + " on group " + groupName + expiryMsg + worldMsg));
         return CompletableFuture.completedFuture(null);
     }
 
@@ -253,20 +264,34 @@ public class GroupCommands {
     @Command(name = "unsetperm", description = "Remove a permission from a group")
     public CompletableFuture<Void> unsetperm(CommandContext ctx,
             @Arg(name = "group", description = "Group name") String groupName,
-            @Arg(name = "permission", description = "Permission node") String permission) {
+            @Arg(name = "permission", description = "Permission node") String permission,
+            @OptionalArg(name = "world", description = "World name (remove only the world-specific entry)") String world) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
             ctx.sender().sendMessage(Message.raw("Group not found: " + groupName));
             return CompletableFuture.completedFuture(null);
         }
 
-        var result = group.removeNode(permission);
-        if (result == com.hyperperms.api.PermissionHolder.DataMutateResult.SUCCESS) {
-            plugin.getGroupManager().saveGroup(group);
-            plugin.getCacheInvalidator().invalidateGroup(groupName);
-            ctx.sender().sendMessage(Message.raw("Removed " + permission + " from group " + groupName));
+        if (world != null && !world.isBlank()) {
+            // Remove only the world-specific node
+            var node = findNodeWithWorld(group.getNodes(), permission, world);
+            if (node != null) {
+                group.removeNode(node);
+                plugin.getGroupManager().saveGroup(group);
+                plugin.getCacheInvalidator().invalidateGroup(groupName);
+                ctx.sender().sendMessage(Message.raw("Removed " + permission + " [world=" + world + "] from group " + groupName));
+            } else {
+                ctx.sender().sendMessage(Message.raw("Group " + groupName + " does not have permission " + permission + " in world " + world));
+            }
         } else {
-            ctx.sender().sendMessage(Message.raw("Group " + groupName + " does not have permission " + permission));
+            var result = group.removeNode(permission);
+            if (result == com.hyperperms.api.PermissionHolder.DataMutateResult.SUCCESS) {
+                plugin.getGroupManager().saveGroup(group);
+                plugin.getCacheInvalidator().invalidateGroup(groupName);
+                ctx.sender().sendMessage(Message.raw("Removed " + permission + " from group " + groupName));
+            } else {
+                ctx.sender().sendMessage(Message.raw("Group " + groupName + " does not have permission " + permission));
+            }
         }
         return CompletableFuture.completedFuture(null);
     }
@@ -624,5 +649,32 @@ public class GroupCommands {
             return value.substring(1, value.length() - 1);
         }
         return value;
+    }
+
+    /**
+     * Formats a context set for display, e.g. "[world=Survival]".
+     */
+    private static String formatContexts(ContextSet contexts) {
+        StringJoiner joiner = new StringJoiner(", ", "[", "]");
+        for (Context c : contexts) {
+            joiner.add(c.key() + "=" + c.value());
+        }
+        return joiner.toString();
+    }
+
+    /**
+     * Finds a node matching a permission and world context.
+     */
+    private static Node findNodeWithWorld(Set<Node> nodes, String permission, String world) {
+        String lowerPerm = permission.toLowerCase();
+        String lowerWorld = world.toLowerCase();
+        return nodes.stream()
+            .filter(n -> n.getPermission().equals(lowerPerm))
+            .filter(n -> {
+                String nodeWorld = n.getContexts().getValue(Context.WORLD_KEY);
+                return nodeWorld != null && nodeWorld.equalsIgnoreCase(lowerWorld);
+            })
+            .findFirst()
+            .orElse(null);
     }
 }

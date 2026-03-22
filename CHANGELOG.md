@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Per-world permissions** - `setperm` and `unsetperm` commands (group and user) now accept an optional `world` argument to restrict permissions to a specific world
+- **Context display in info commands** - Group and user info now shows context restrictions (e.g. `[world=Survival]`) on permission nodes in cyan
+
 ### Fixed
 
+- **Group inheritance priority** - Child group permissions now always take precedence over inherited parent group permissions, regardless of weight values. Weight only breaks ties between groups at the same inheritance depth.
 - **LuckPerms H2 migration version mismatch** - Use isolated classloader (platform classloader as parent) when loading H2 driver from LuckPerms libs, preventing other plugins' H2 versions from being picked up via parent-first delegation
 - **H2 driver selection** - Prefer modern H2 driver (`h2-driver-2.1.214.jar`) over legacy (`h2-driver-legacy-1.4.199.jar`) to match the current LuckPerms database format (`luckperms-h2-v2.mv.db`)
+- **H2 migration column access** - Use unquoted column name for ResultSet access (SQL quoting caused `Column """VALUE""" not found`)
 
 ## [2.9.1] - 2026-03-08
 

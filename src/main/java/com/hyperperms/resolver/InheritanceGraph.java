@@ -26,22 +26,34 @@ public final class InheritanceGraph {
 
     /**
      * Resolves all inherited groups for a starting set of group names.
-     * Groups are returned in inheritance order (lowest weight first).
+     * <p>
+     * Groups are returned in application order: parent groups first (lowest priority),
+     * then child groups (highest priority). Within the same inheritance depth, groups
+     * are sorted by weight ascending (higher weight = higher priority, applied later).
+     * <p>
+     * This ensures a group's own permissions always take precedence over permissions
+     * inherited from its parents, regardless of weight values.
      *
      * @param startGroups the initial group names
      * @param contexts    the current context for filtering
-     * @return ordered list of groups
+     * @return ordered list of groups (parents first, children last)
      */
     @NotNull
     public List<Group> resolveInheritance(@NotNull Set<String> startGroups, @NotNull ContextSet contexts) {
         Set<String> visited = new HashSet<>();
+        Map<String, Integer> depths = new HashMap<>();
         List<Group> result = new ArrayList<>();
 
-        // Use a priority queue to process groups by weight
-        Deque<String> queue = new ArrayDeque<>(startGroups);
+        // BFS with depth tracking — start groups are depth 0, their parents are depth 1, etc.
+        Deque<Map.Entry<String, Integer>> queue = new ArrayDeque<>();
+        for (String g : startGroups) {
+            queue.add(Map.entry(g, 0));
+        }
 
         while (!queue.isEmpty()) {
-            String groupName = queue.poll();
+            Map.Entry<String, Integer> entry = queue.poll();
+            String groupName = entry.getKey();
+            int depth = entry.getValue();
 
             if (visited.contains(groupName)) {
                 continue; // Skip cycles
@@ -54,17 +66,24 @@ public final class InheritanceGraph {
             }
 
             result.add(group);
+            depths.put(groupName, depth);
 
-            // Add parent groups to the queue
+            // Add parent groups to the queue at the next depth level
             for (String parent : group.getInheritedGroups(contexts)) {
                 if (!visited.contains(parent)) {
-                    queue.add(parent);
+                    queue.add(Map.entry(parent, depth + 1));
                 }
             }
         }
 
-        // Sort by weight (ascending - lowest weight = lowest priority)
-        result.sort(Comparator.comparingInt(Group::getWeight));
+        // Sort by: depth descending (parents first), then weight ascending within same depth.
+        // Parents (higher depth) are applied first and can be overridden by children (depth 0).
+        // Within the same depth level, higher weight groups are applied later and win conflicts.
+        result.sort(Comparator
+            .comparingInt((Group g) -> depths.getOrDefault(g.getName(), 0))
+            .reversed()
+            .thenComparingInt(Group::getWeight)
+        );
 
         return result;
     }

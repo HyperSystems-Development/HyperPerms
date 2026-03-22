@@ -123,8 +123,10 @@ public abstract class PermissionHolderBase implements PermissionHolder {
     @NotNull
     public DataMutateResult setNode(@NotNull Node node) {
         Objects.requireNonNull(node, "node cannot be null");
-        nodes.removeIf(existing -> existing.equalsIgnoringExpiry(node));
-        nodes.add(node);
+        synchronized (nodes) {
+            nodes.removeIf(existing -> existing.equalsIgnoringExpiry(node));
+            nodes.add(node);
+        }
         listener.onNodeSet(this, node, DataMutateResult.SUCCESS);
         return DataMutateResult.SUCCESS;
     }
@@ -179,8 +181,10 @@ public abstract class PermissionHolderBase implements PermissionHolder {
                 .value(true)
                 .expiry(expiry)
                 .build();
-        nodes.removeIf(existing -> existing.equalsIgnoringExpiry(groupNode));
-        nodes.add(groupNode);
+        synchronized (nodes) {
+            nodes.removeIf(existing -> existing.equalsIgnoringExpiry(groupNode));
+            nodes.add(groupNode);
+        }
         listener.onGroupAdded(this, groupName, DataMutateResult.SUCCESS);
         return DataMutateResult.SUCCESS;
     }

@@ -63,8 +63,10 @@ public final class TemplateLoader {
 
     /**
      * Loads all templates (bundled and custom).
+     * <p>
+     * Synchronized to prevent concurrent calls from clearing the map mid-load.
      */
-    public void loadAll() {
+    public synchronized void loadAll() {
         templates.clear();
         loadBundledTemplates();
         loadCustomTemplates();
@@ -307,6 +309,15 @@ public final class TemplateLoader {
     // ==================== Public API ====================
 
     /**
+     * Ensures templates are loaded (double-checked locking).
+     */
+    private void ensureLoaded() {
+        if (!loaded) {
+            loadAll();
+        }
+    }
+
+    /**
      * Gets a template by name.
      *
      * @param name the template name
@@ -314,9 +325,7 @@ public final class TemplateLoader {
      */
     @Nullable
     public PermissionTemplate getTemplate(@NotNull String name) {
-        if (!loaded) {
-            loadAll();
-        }
+        ensureLoaded();
         return templates.get(name.toLowerCase());
     }
 
@@ -327,9 +336,7 @@ public final class TemplateLoader {
      */
     @NotNull
     public Collection<PermissionTemplate> getAllTemplates() {
-        if (!loaded) {
-            loadAll();
-        }
+        ensureLoaded();
         return Collections.unmodifiableCollection(templates.values());
     }
 
@@ -340,9 +347,7 @@ public final class TemplateLoader {
      */
     @NotNull
     public Set<String> getTemplateNames() {
-        if (!loaded) {
-            loadAll();
-        }
+        ensureLoaded();
         return Collections.unmodifiableSet(templates.keySet());
     }
 
@@ -353,9 +358,7 @@ public final class TemplateLoader {
      */
     @NotNull
     public List<PermissionTemplate> getBundledTemplates() {
-        if (!loaded) {
-            loadAll();
-        }
+        ensureLoaded();
         return templates.values().stream()
                 .filter(PermissionTemplate::isBundled)
                 .toList();
@@ -368,9 +371,7 @@ public final class TemplateLoader {
      */
     @NotNull
     public List<PermissionTemplate> getCustomTemplates() {
-        if (!loaded) {
-            loadAll();
-        }
+        ensureLoaded();
         return templates.values().stream()
                 .filter(t -> !t.isBundled())
                 .toList();
@@ -383,9 +384,7 @@ public final class TemplateLoader {
      * @return true if the template exists
      */
     public boolean hasTemplate(@NotNull String name) {
-        if (!loaded) {
-            loadAll();
-        }
+        ensureLoaded();
         return templates.containsKey(name.toLowerCase());
     }
 

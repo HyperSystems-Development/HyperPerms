@@ -46,9 +46,8 @@ public final class PermissionResolver {
         Map<String, Boolean> permissions = new LinkedHashMap<>();
         Map<String, String> permissionSources = new LinkedHashMap<>(); // tracks which group each perm came from
 
-        // 1. Collect groups the user belongs to
+        // 1. Collect groups the user belongs to (includes primary group)
         Set<String> userGroups = new HashSet<>(user.getInheritedGroups(contexts));
-        userGroups.add(user.getPrimaryGroup());
 
         // 2. Resolve group inheritance (returns groups sorted by weight, lowest first)
         List<Group> inheritedGroups = inheritanceGraph.resolveInheritance(userGroups, contexts);

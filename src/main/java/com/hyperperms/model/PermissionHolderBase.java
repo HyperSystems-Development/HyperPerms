@@ -106,14 +106,19 @@ public abstract class PermissionHolderBase implements PermissionHolder {
     public DataMutateResult removeNode(@NotNull String permission) {
         Objects.requireNonNull(permission, "permission cannot be null");
         String lowerPerm = permission.toLowerCase();
-        List<Node> toRemove = nodes.stream()
-                .filter(node -> node.getPermission().equals(lowerPerm))
-                .toList();
-        if (toRemove.isEmpty()) {
-            return DataMutateResult.DOES_NOT_EXIST;
+        List<Node> toRemove;
+        synchronized (nodes) {
+            toRemove = nodes.stream()
+                    .filter(node -> node.getPermission().equals(lowerPerm))
+                    .toList();
+            if (toRemove.isEmpty()) {
+                return DataMutateResult.DOES_NOT_EXIST;
+            }
+            for (Node node : toRemove) {
+                nodes.remove(node);
+            }
         }
         for (Node node : toRemove) {
-            nodes.remove(node);
             listener.onNodeRemoved(this, node, DataMutateResult.SUCCESS);
         }
         return DataMutateResult.SUCCESS;

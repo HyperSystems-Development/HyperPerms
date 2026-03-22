@@ -309,11 +309,15 @@ public final class TemplateLoader {
     // ==================== Public API ====================
 
     /**
-     * Ensures templates are loaded (double-checked locking).
+     * Ensures templates are loaded (double-checked locking with volatile flag).
      */
     private void ensureLoaded() {
         if (!loaded) {
-            loadAll();
+            synchronized (this) {
+                if (!loaded) {
+                    loadAll();
+                }
+            }
         }
     }
 

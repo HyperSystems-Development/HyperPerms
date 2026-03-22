@@ -146,7 +146,9 @@ public class ImportCommand extends HpContainerCommand {
                     ctx.sender().sendMessage(Message.raw("Use /hp user <player> addgroup <group> to assign players"));
                 })
                 .exceptionally(e -> {
-                    ctx.sender().sendMessage(Message.raw("Failed to save default groups: " + e.getMessage()));
+                    Throwable cause = (e instanceof java.util.concurrent.CompletionException && e.getCause() != null)
+                            ? e.getCause() : e;
+                    ctx.sender().sendMessage(Message.raw("Failed to save default groups: " + cause.getMessage()));
                     return null;
                 });
         }

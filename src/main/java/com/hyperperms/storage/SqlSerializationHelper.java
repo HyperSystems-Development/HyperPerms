@@ -72,7 +72,7 @@ public final class SqlSerializationHelper {
         }
         ContextSet.Builder builder = ContextSet.builder();
         for (String entry : entries) {
-            if (entry.contains("=")) {
+            if (entry != null && entry.contains("=")) {
                 try {
                     builder.add(Context.parse(entry));
                 } catch (IllegalArgumentException e) {

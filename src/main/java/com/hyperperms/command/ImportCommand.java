@@ -9,6 +9,8 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hyperperms.command.util.CommandUtil.*;
@@ -61,19 +63,21 @@ public class ImportCommand extends HpContainerCommand {
                 ctx.sender().sendMessage(Message.raw("Existing groups will be updated, not replaced."));
             }
 
+            List<CompletableFuture<Void>> saveFutures = new ArrayList<>();
+
             // Create or update default group
             Group defaultGroup = getOrCreateGroup("default");
             defaultGroup.setWeight(0);
             defaultGroup.setDisplayName("Default");
             defaultGroup.setNode(Node.builder("hyperperms.command.check.self").value(true).build());
-            groupManager.saveGroup(defaultGroup);
+            saveFutures.add(groupManager.saveGroup(defaultGroup));
 
             // Create member group
             Group memberGroup = getOrCreateGroup("member");
             memberGroup.setWeight(10);
             memberGroup.setDisplayName("Member");
             memberGroup.addParent("default");
-            groupManager.saveGroup(memberGroup);
+            saveFutures.add(groupManager.saveGroup(memberGroup));
 
             // Create builder group
             Group builderGroup = getOrCreateGroup("builder");
@@ -87,7 +91,7 @@ public class ImportCommand extends HpContainerCommand {
             builderGroup.setNode(Node.builder("hytale.editor.prefab.use").value(true).build());
             builderGroup.setNode(Node.builder("hytale.editor.history").value(true).build());
             builderGroup.setNode(Node.builder("hytale.camera.flycam").value(true).build());
-            groupManager.saveGroup(builderGroup);
+            saveFutures.add(groupManager.saveGroup(builderGroup));
 
             // Create moderator group
             Group modGroup = getOrCreateGroup("moderator");
@@ -104,7 +108,7 @@ public class ImportCommand extends HpContainerCommand {
             modGroup.setNode(Node.builder("hytale.command.tp.others").value(true).build());
             modGroup.setNode(Node.builder("hytale.command.inventory.see").value(true).build());
             modGroup.setNode(Node.builder("hytale.command.who").value(true).build());
-            groupManager.saveGroup(modGroup);
+            saveFutures.add(groupManager.saveGroup(modGroup));
 
             // Create admin group
             Group adminGroup = getOrCreateGroup("admin");
@@ -115,7 +119,7 @@ public class ImportCommand extends HpContainerCommand {
             adminGroup.setNode(Node.builder("hyperperms.command.*").value(true).build());
             adminGroup.setNode(Node.builder("hytale.command.*").value(true).build());
             adminGroup.setNode(Node.builder("hytale.editor.*").value(true).build());
-            groupManager.saveGroup(adminGroup);
+            saveFutures.add(groupManager.saveGroup(adminGroup));
 
             // Create owner group
             Group ownerGroup = getOrCreateGroup("owner");
@@ -123,23 +127,28 @@ public class ImportCommand extends HpContainerCommand {
             ownerGroup.setDisplayName("Owner");
             ownerGroup.setPrefix("&4[Owner] ");
             ownerGroup.setNode(Node.builder("*").value(true).build());
-            groupManager.saveGroup(ownerGroup);
+            saveFutures.add(groupManager.saveGroup(ownerGroup));
 
-            // Invalidate all caches
-            hyperPerms.getCacheInvalidator().invalidateAll();
+            // Wait for all saves to complete before reporting success
+            return CompletableFuture.allOf(saveFutures.toArray(CompletableFuture[]::new))
+                .thenAccept(v -> {
+                    hyperPerms.getCacheInvalidator().invalidateAll();
 
-            ctx.sender().sendMessage(Message.raw(""));
-            ctx.sender().sendMessage(Message.raw("Default groups created:"));
-            ctx.sender().sendMessage(Message.raw("  default (weight 0) - Base permissions"));
-            ctx.sender().sendMessage(Message.raw("  member (weight 10) - Trusted players"));
-            ctx.sender().sendMessage(Message.raw("  builder (weight 20) - Building/editor tools"));
-            ctx.sender().sendMessage(Message.raw("  moderator (weight 50) - Player management"));
-            ctx.sender().sendMessage(Message.raw("  admin (weight 90) - Full command access"));
-            ctx.sender().sendMessage(Message.raw("  owner (weight 100) - Full server access (*)"));
-            ctx.sender().sendMessage(Message.raw(""));
-            ctx.sender().sendMessage(Message.raw("Use /hp user <player> addgroup <group> to assign players"));
-
-            return CompletableFuture.completedFuture(null);
+                    ctx.sender().sendMessage(Message.raw(""));
+                    ctx.sender().sendMessage(Message.raw("Default groups created:"));
+                    ctx.sender().sendMessage(Message.raw("  default (weight 0) - Base permissions"));
+                    ctx.sender().sendMessage(Message.raw("  member (weight 10) - Trusted players"));
+                    ctx.sender().sendMessage(Message.raw("  builder (weight 20) - Building/editor tools"));
+                    ctx.sender().sendMessage(Message.raw("  moderator (weight 50) - Player management"));
+                    ctx.sender().sendMessage(Message.raw("  admin (weight 90) - Full command access"));
+                    ctx.sender().sendMessage(Message.raw("  owner (weight 100) - Full server access (*)"));
+                    ctx.sender().sendMessage(Message.raw(""));
+                    ctx.sender().sendMessage(Message.raw("Use /hp user <player> addgroup <group> to assign players"));
+                })
+                .exceptionally(e -> {
+                    ctx.sender().sendMessage(Message.raw("Failed to save default groups: " + e.getMessage()));
+                    return null;
+                });
         }
 
         private Group getOrCreateGroup(String name) {

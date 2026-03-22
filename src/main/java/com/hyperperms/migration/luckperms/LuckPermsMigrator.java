@@ -20,6 +20,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 /**
@@ -40,6 +42,13 @@ public final class LuckPermsMigrator implements PermissionMigrator {
         Pattern.compile("^[a-z0-9._-]+$", Pattern.CASE_INSENSITIVE);
     private static final int MAX_PERMISSION_LENGTH = 256;
     
+    private static final ExecutorService MIGRATION_EXECUTOR =
+            Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "hyperperms-migration");
+                t.setDaemon(true);
+                return t;
+            });
+
     private final HyperPerms plugin;
     private final LuckPermsStorageDetector detector;
     private LuckPermsStorageReader reader;
@@ -112,7 +121,7 @@ public final class LuckPermsMigrator implements PermissionMigrator {
                 Logger.severe("Failed to generate migration preview", e);
                 throw new RuntimeException("Preview generation failed: " + e.getMessage(), e);
             }
-        });
+        }, MIGRATION_EXECUTOR);
     }
     
     @Override
@@ -197,9 +206,9 @@ public final class LuckPermsMigrator implements PermissionMigrator {
                     reader.close();
                 }
             }
-        });
+        }, MIGRATION_EXECUTOR);
     }
-    
+
     // ==================== Preview Generation ====================
     
     private MigrationPreview generatePreview(MigrationOptions options) throws IOException {

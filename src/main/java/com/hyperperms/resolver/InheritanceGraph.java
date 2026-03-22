@@ -120,14 +120,15 @@ public final class InheritanceGraph {
      */
     public boolean wouldCreateCycle(@NotNull Group group, @NotNull String parentName) {
         // Check if parentName eventually inherits from group
+        String targetName = group.getName().toLowerCase();
         Set<String> visited = new HashSet<>();
         Deque<String> queue = new ArrayDeque<>();
-        queue.add(parentName);
+        queue.add(parentName.toLowerCase());
 
         while (!queue.isEmpty()) {
-            String current = queue.poll();
+            String current = queue.poll().toLowerCase();
 
-            if (current.equalsIgnoreCase(group.getName())) {
+            if (current.equals(targetName)) {
                 return true; // Found a cycle
             }
 

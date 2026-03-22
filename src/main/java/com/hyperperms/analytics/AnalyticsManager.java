@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
@@ -39,7 +40,9 @@ public final class AnalyticsManager {
 
     // In-memory counters for high-frequency check aggregation
     // Key = permission, Value = [checkCount, grantCount, denyCount]
-    private final ConcurrentHashMap<String, long[]> checkCounters = new ConcurrentHashMap<>();
+    // Wrapped in AtomicReference for atomic swap during flush
+    private final AtomicReference<ConcurrentHashMap<String, long[]>> checkCountersRef =
+            new AtomicReference<>(new ConcurrentHashMap<>());
 
     // Event subscriptions
     private EventBus.Subscription checkSubscription;
@@ -149,7 +152,7 @@ public final class AnalyticsManager {
         }
 
         // Final flush
-        if (enabled && !checkCounters.isEmpty()) {
+        if (enabled && !checkCountersRef.get().isEmpty()) {
             flushCounters();
         }
 
@@ -191,7 +194,7 @@ public final class AnalyticsManager {
         boolean granted = event.getResult().asBoolean();
 
         // Update in-memory counters
-        checkCounters.compute(permission, (k, v) -> {
+        checkCountersRef.get().compute(permission, (k, v) -> {
             if (v == null) {
                 v = new long[3]; // [checkCount, grantCount, denyCount]
             }
@@ -241,19 +244,18 @@ public final class AnalyticsManager {
      * Flushes in-memory counters to storage.
      */
     private void flushCounters() {
-        if (checkCounters.isEmpty()) return;
-
-        // Swap out the counters
-        Map<String, long[]> toFlush = new ConcurrentHashMap<>(checkCounters);
-        checkCounters.clear();
+        // Atomically swap the counters map so new writes go to a fresh map
+        // while we flush the old one — no data loss window
+        ConcurrentHashMap<String, long[]> toFlush = checkCountersRef.getAndSet(new ConcurrentHashMap<>());
+        if (toFlush.isEmpty()) return;
 
         // Write to storage
         storage.bulkUpdatePermissionChecks(toFlush).whenComplete((v, e) -> {
             if (e != null) {
                 Logger.warn("[Analytics] Failed to flush counters: %s", e.getMessage());
-                // Put back unflushed data
-                toFlush.forEach((k, counts) -> 
-                    checkCounters.merge(k, counts, (existing, newCounts) -> {
+                // Merge unflushed data back into the current live map
+                toFlush.forEach((k, counts) ->
+                    checkCountersRef.get().merge(k, counts, (existing, newCounts) -> {
                         existing[0] += newCounts[0];
                         existing[1] += newCounts[1];
                         existing[2] += newCounts[2];

@@ -30,6 +30,9 @@ public final class CommandDispatcher {
         return !CommandUtil.requirePermission(ctx, hp, permission.value());
     }
 
+    /** Maximum age for any pending confirmation before it is cleaned up. */
+    private static final long MAX_CONFIRMATION_AGE_MS = 300_000; // 5 minutes
+
     /**
      * Handle confirmation flow. Returns true if the command should execute
      * (second invocation within timeout). First invocation shows warning and returns false.
@@ -38,6 +41,9 @@ public final class CommandDispatcher {
                                               @NotNull Confirm confirm) {
         long now = System.currentTimeMillis();
         long timeoutMillis = confirm.timeoutSeconds() * 1000L;
+
+        // Lazily clean up expired entries to prevent unbounded growth
+        pendingConfirmations.entrySet().removeIf(e -> (now - e.getValue()) > MAX_CONFIRMATION_AGE_MS);
 
         Long timestamp = pendingConfirmations.get(commandKey);
         if (timestamp != null && (now - timestamp) <= timeoutMillis) {

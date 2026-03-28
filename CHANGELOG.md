@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.3] - 2026-03-28
+
+**Server Version:** `2026.03.26` (release & pre-release)
+
+### Fixed
+
+- **API compatibility** - Updated `TabListListener` to handle `Universe.get().getPlayers()` returning `Collection<PlayerRef>` instead of `List<PlayerRef>`, fixing compilation against the March 26 server update
+
+## [2.9.3-rc1] - 2026-03-22
+
 ### Added
 
 - **Per-world permissions** - `setperm` and `unsetperm` commands (group and user) now accept an optional `world` argument to restrict permissions to a specific world
@@ -18,6 +28,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **LuckPerms H2 migration version mismatch** - Use isolated classloader (platform classloader as parent) when loading H2 driver from LuckPerms libs, preventing other plugins' H2 versions from being picked up via parent-first delegation
 - **H2 driver selection** - Prefer modern H2 driver (`h2-driver-2.1.214.jar`) over legacy (`h2-driver-legacy-1.4.199.jar`) to match the current LuckPerms database format (`luckperms-h2-v2.mv.db`)
 - **H2 migration column access** - Use unquoted column name for ResultSet access (SQL quoting caused `Column """VALUE""" not found`)
+- **Analytics flush data loss** - Prevent race condition where permission check counters could be lost during flush
+- **ImportCommand silent failures** - Await all group save futures before reporting success
+- **Non-atomic node mutations** - Synchronize compound removeIf+add operations in setNode and addGroup
+- **SQL serialization** - Use Gson instead of hand-rolled JSON parser for correct escaping of special characters
+- **Cycle detection case sensitivity** - Normalize group names to lowercase in inheritance cycle detection
+- **Template loader race condition** - Prevent concurrent template loading from clearing the map mid-load
+- **Confirmation memory leak** - Clean up expired pending confirmations to prevent unbounded map growth
+- **Migration thread starvation** - Use dedicated executor instead of common ForkJoinPool for LuckPerms migration
+- **SQLite nested ResultSet** - Collect all rows before loading nodes to avoid driver conflicts on single connection
+- **SQLite backup consistency** - Checkpoint WAL before copying database file to capture all committed writes
+- **SQLite restore PRAGMAs** - Re-enable WAL and foreign_keys after restoring a backup
+- **Clone command data loss** - Await save future in clone command before reporting success
+- **Group rename atomicity** - Create new group before deleting old to prevent data loss on crash; await all save futures
+- **JSON storage path traversal** - Validate names on load/delete paths to prevent directory traversal
+- **WildcardMatcher trace inconsistency** - Add stripped-prefix matching to checkWithTrace() to match check() behavior
 
 ## [2.9.1] - 2026-03-08
 

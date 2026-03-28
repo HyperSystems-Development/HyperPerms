@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -150,7 +151,7 @@ public class TabListListener {
      * @param joiningPlayer the joining player
      */
     private void updatePlayerList(@NotNull PlayerRef joiningPlayer) {
-        List<PlayerRef> allPlayers = Universe.get().getPlayers();
+        List<PlayerRef> allPlayers = new ArrayList<>(Universe.get().getPlayers());
 
         // Build list entries for all players asynchronously
         List<CompletableFuture<ServerPlayerListPlayer>> futures = new ArrayList<>();
@@ -254,7 +255,7 @@ public class TabListListener {
                 );
 
                 // Send to all connected players
-                List<PlayerRef> allPlayers = Universe.get().getPlayers();
+                Collection<PlayerRef> allPlayers = Universe.get().getPlayers();
                 for (PlayerRef player : allPlayers) {
                     player.getPacketHandler().write(updatePacket);
                 }
@@ -291,7 +292,7 @@ public class TabListListener {
             return;
         }
 
-        List<PlayerRef> allPlayers = Universe.get().getPlayers();
+        Collection<PlayerRef> allPlayers = Universe.get().getPlayers();
         if (allPlayers.isEmpty()) {
             return;
         }

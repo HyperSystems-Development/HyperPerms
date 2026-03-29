@@ -21,7 +21,6 @@ import org.jetbrains.annotations.NotNull;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -255,7 +254,7 @@ public class TabListListener {
                 );
 
                 // Send to all connected players
-                Collection<PlayerRef> allPlayers = Universe.get().getPlayers();
+                var allPlayers = new ArrayList<>(Universe.get().getPlayers());
                 for (PlayerRef player : allPlayers) {
                     player.getPacketHandler().write(updatePacket);
                 }
@@ -292,7 +291,7 @@ public class TabListListener {
             return;
         }
 
-        Collection<PlayerRef> allPlayers = Universe.get().getPlayers();
+        var allPlayers = new ArrayList<>(Universe.get().getPlayers());
         if (allPlayers.isEmpty()) {
             return;
         }

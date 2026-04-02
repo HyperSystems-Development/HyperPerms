@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+*No changes yet*
+
+## [2.9.4] - 2026-04-02
+
+**Server Version:** `2026.03.26-89796e57b`
+
 ### Fixed
 - **TabListListener runtime crash** — `Universe.getPlayers()` return type differs between Maven artifact (`Collection`) and runtime server (`List`), causing `NoSuchMethodError`. Fixed by copying into `new ArrayList<>()` to decouple from the return type descriptor
 

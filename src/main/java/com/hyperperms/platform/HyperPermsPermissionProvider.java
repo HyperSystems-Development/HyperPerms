@@ -301,14 +301,31 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         // By returning exactly one virtual group, iteration order is irrelevant.
         //
         // MULTI-PROVIDER AGGREGATION NOTE: PermissionsModule.getGroupsForUser() aggregates
-        // non-empty group sets from ALL registered providers. This means HyperPerms users
-        // will appear in BOTH our virtual group ("user:<uuid>") AND vanilla's "Default"
-        // group (since HytalePermissionsProvider returns ["Default"] for users without
-        // explicit vanilla groups). The combined result seen by Hytale is
-        // ["user:<uuid>", "Default"]. This is expected behavior — vanilla's Default group
-        // has no permissions by default, so it's harmless. However, if someone adds perms
-        // to vanilla's Default group via /perm, those perms will apply AND be lost on
-        // restart due to the OP/Default overwrite behavior.
+        // non-empty group sets from ALL registered providers, so HyperPerms users also appear
+        // in vanilla's default group (harmless).
+        //
+        // OP RECOGNITION (Hytale 0.5.2): the engine determines operator status — and gates
+        // several capabilities — by GROUP MEMBERSHIP, not by a permission check:
+        //   OpSelfCommand/OpAddCommand/OpRemoveCommand: getGroupsForUser(uuid).contains("hytale:Admin")
+        //   FlyCameraModule / WorldMapTracker also key off getGroupsForUser group names.
+        // Because we funnel resolution through the single "user:<uuid>" virtual group, a
+        // HyperPerms admin would never be seen in hytale:Admin and would show as "not OP" even
+        // though their permission checks pass. To bridge this, advertise hytale:Admin for users
+        // who effectively resolve the "*" (superuser) permission. This is additive and does not
+        // change permission resolution (still funneled through user:<uuid>); it only makes
+        // vanilla's group-membership-based OP/capability checks recognize HyperPerms admins.
+        boolean isSuperuser;
+        try {
+            ContextSet contexts = hyperPerms.getContexts(uuid);
+            isSuperuser = hyperPerms.hasPermission(uuid, "*", contexts);
+        } catch (Exception e) {
+            isSuperuser = false;
+        }
+
+        if (isSuperuser) {
+            // "hytale:Admin" is the literal Hytale 0.5.2 OP group the engine checks for.
+            return Set.of("user:" + uuid.toString(), "hytale:Admin");
+        }
         return Set.of("user:" + uuid.toString());
     }
 

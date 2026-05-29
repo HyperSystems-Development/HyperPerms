@@ -136,14 +136,16 @@ For MariaDB/MySQL, add connection details:
 
 </details>
 
-## Important: HyperPerms is the Authoritative Permission Provider
+## Important: HyperPerms and Operator (OP) status on 0.5.2
 
-On Hytale 0.5.2+, HyperPerms registers itself as the **sole** permission provider — it removes Hytale's built-in provider while enabled (and restores it on disable). This means HyperPerms controls every permission decision, with no fallback to Hytale's default `hytale:Adventurer`/`hytale:Builder`/… groups.
+On Hytale 0.5.2+, HyperPerms registers as the **primary** permission provider (it puts itself first while keeping Hytale's built-in provider registered). All permission *decisions* are made by HyperPerms.
+
+Hytale 0.5.2 determines **operator status by group membership** — internally it checks whether a player is in the `hytale:Admin` group. To make this work for HyperPerms-managed admins, HyperPerms automatically reports a player as being in `hytale:Admin` whenever they effectively have the `*` permission (e.g. via the bundled `admin`/`owner` groups). So **granting a HyperPerms group the `*` node makes its members OP**, recognized by Hytale and OP-gated features.
 
 Manage everything through HyperPerms:
 
-- Use `/hp` commands (e.g. `/hp group create <name>`), **not** Hytale's vanilla `/perm` or `/setgroup` — those operate on vanilla data that HyperPerms no longer consults, and `/perm reload` does not reload HyperPerms (use `/hp reload`).
-- Grant admin/operator access by putting a player in a HyperPerms group that has the `*` node (the bundled `admin`/`owner` groups do). Hytale's `/op self` is intentionally disabled while a third-party permission plugin is active and will simply report that permissions are managed externally.
+- Use `/hp` commands (e.g. `/hp group create <name>`), **not** Hytale's vanilla `/perm` or `/setgroup` — those operate on Hytale's built-in data, and `/perm reload` does not reload HyperPerms (use `/hp reload`).
+- Grant admin/operator access by putting a player in a HyperPerms group that has the `*` node (the bundled `admin`/`owner` groups do). Hytale's vanilla `/op self` is advisory-disabled while HyperPerms is active.
 
 ## Optional: SQLite & Analytics
 

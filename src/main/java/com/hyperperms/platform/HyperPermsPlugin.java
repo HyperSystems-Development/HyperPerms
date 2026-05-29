@@ -26,9 +26,6 @@ public class HyperPermsPlugin extends JavaPlugin {
 
     private HyperPerms hyperPerms;
     private HyperPermsPermissionProvider permissionProvider;
-    // Hytale's built-in provider, removed at enable to make HyperPerms authoritative;
-    // retained so it can be restored on disable (so the server returns to vanilla perms).
-    private com.hypixel.hytale.server.core.permissions.provider.PermissionProvider removedStandardProvider;
     private HytaleAdapter adapter;
     private com.hyperperms.chat.ChatListener chatListener;
     private com.hyperperms.tablist.TabListListener tabListListener;
@@ -134,17 +131,10 @@ public class HyperPermsPlugin extends JavaPlugin {
             }
         }
 
-        // Unregister permission provider and restore Hytale's built-in provider so the server
-        // returns to vanilla permission behavior (we removed it on enable to be authoritative).
+        // Unregister permission provider
         if (permissionProvider != null) {
             try {
-                PermissionsModule module = PermissionsModule.get();
-                module.removeProvider(permissionProvider);
-                if (removedStandardProvider != null && !module.getProviders().contains(removedStandardProvider)) {
-                    module.addProvider(removedStandardProvider);
-                    Logger.info("Restored Hytale's built-in permission provider on disable");
-                }
-                removedStandardProvider = null;
+                PermissionsModule.get().removeProvider(permissionProvider);
             } catch (Exception e) {
                 getLogger().at(Level.WARNING).withCause(e).log("Failed to unregister permission provider");
             }
@@ -201,46 +191,33 @@ public class HyperPermsPlugin extends JavaPlugin {
         try {
             var providers = new java.util.ArrayList<>(module.getProviders());
 
-            // Authoritative mode: remove every provider, then re-add HyperPerms as the SOLE
-            // primary, followed by any OTHER third-party providers. The vanilla standard
-            // provider (HytalePermissionsProvider) is intentionally NOT re-added, so HyperPerms
-            // is the only source of permission decisions. This eliminates Hytale's built-in
-            // group fallback (e.g. the hytale:Adventurer default granting
-            // hytale.world_map.teleport.marker via PermissionsModule.hasPermission's
-            // multi-provider loop) from granting nodes the admin never granted. We keep a
-            // reference to the removed vanilla provider so onDisable can restore it; otherwise
-            // disabling HyperPerms would leave the server with no permission provider.
+            // Already first? Nothing to do.
+            if (!providers.isEmpty() && providers.getFirst() == permissionProvider) {
+                Logger.debug("HyperPerms is already the first permission provider");
+                return;
+            }
+
+            // Make HyperPerms the FIRST provider while KEEPING the others (including Hytale's
+            // built-in HytalePermissionsProvider). Hytale's 0.5.2 first-party features key OP
+            // and other capabilities off PermissionsModule.getGroupsForUser(), which aggregates
+            // across ALL registered providers - removing the built-in provider broke OP
+            // recognition for HyperPerms admins (see getGroupsForUser in
+            // HyperPermsPermissionProvider, which now advertises hytale:Admin for "*" users).
             for (var p : providers) {
                 module.removeProvider(p);
             }
             module.addProvider(permissionProvider);
             for (var p : providers) {
-                if (p == permissionProvider) {
-                    continue;
+                if (p != permissionProvider) {
+                    module.addProvider(p);
                 }
-                if (isVanillaStandardProvider(p)) {
-                    removedStandardProvider = p;
-                    Logger.info("Removed Hytale's built-in permission provider - HyperPerms is now authoritative");
-                    continue;
-                }
-                // Preserve any other third-party provider (ordered after HyperPerms)
-                module.addProvider(p);
             }
 
-            Logger.info("HyperPerms is now the primary (authoritative) permission provider");
+            Logger.info("Reordered permission providers - HyperPerms is now the primary provider");
         } catch (Exception e) {
-            Logger.warn("Could not assert HyperPerms as the authoritative permission provider: %s", e.getMessage());
+            Logger.warn("Could not reorder permission providers: %s", e.getMessage());
+            Logger.warn("Some plugins may not be able to enumerate permissions via the native API");
         }
-    }
-
-    /**
-     * Identifies Hytale's built-in standard permission provider (HytalePermissionsProvider).
-     * Matched by its documented provider name and class simple name for robustness.
-     */
-    private static boolean isVanillaStandardProvider(
-            com.hypixel.hytale.server.core.permissions.provider.PermissionProvider p) {
-        return "HytalePermissionsProvider".equals(p.getName())
-                || "HytalePermissionsProvider".equals(p.getClass().getSimpleName());
     }
 
     /**

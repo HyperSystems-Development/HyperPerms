@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.9.6] - 2026-05-29
+
+**Server Version:** `0.5.2`
+
+Hotfix for operator (OP) recognition on Hytale 0.5.2.
+
+### Fixed
+
+- **HyperPerms admins were not recognized as OP on 0.5.2.** Hytale 0.5.2 determines operator status by *group membership* — it checks `getGroupsForUser(uuid).contains("hytale:Admin")` (OpSelfCommand/OpAddCommand/OpRemoveCommand), and `FlyCameraModule`/`WorldMapTracker` key off group names too. HyperPerms funnels all resolution through a single `user:<uuid>` virtual group, so admins were never seen in `hytale:Admin` and showed as "not OP" even though their permission checks passed. `getGroupsForUser` now also advertises `hytale:Admin` for any user who effectively resolves the `*` permission (superuser), so HyperPerms admins are recognized as OP. Permission resolution itself is unchanged (still funneled through `user:<uuid>`).
+
+### Changed
+
+- **Reverted authoritative-provider mode** introduced in 2.9.5. HyperPerms no longer removes Hytale's built-in provider; it registers itself first and keeps the built-in provider registered. Removing it broke OP recognition, because Hytale's `getGroupsForUser` aggregates across all providers. (The minor `hytale:Adventurer` fallback that 2.9.5's authoritative mode eliminated returns; it remains overridable with an explicit negation.)
+
 ## [2.9.5] - 2026-05-29
 
 **Server Version:** `0.5.2` ("Update 5", rev `8b2f3de`) — first release-channel build, Java 25

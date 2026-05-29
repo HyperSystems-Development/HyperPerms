@@ -489,6 +489,15 @@ public final class PermissionRegistry {
         register("hytale.editor.selection.modify", "Modify selections", "hytale", "Hytale");
         register("hytale.editor.history", "Access edit history", "hytale", "Hytale");
         register("hytale.camera.flycam", "Use fly camera", "hytale", "Hytale");
+        // World-map teleport + system update notify (built-in 0.5.2 nodes from HytalePermissions.class).
+        // Registered so the web editor and registry-backed wildcard expansion surface them; they
+        // previously existed only as aliases and were not tickable/discoverable.
+        register("hytale.world_map.teleport.coordinate", "Teleport to world-map coordinates", "hytale", "Hytale");
+        register("hytale.world_map.teleport.marker", "Teleport to world-map markers", "hytale", "Hytale");
+        register("hytale.world_map.teleport.*", "All world-map teleport permissions", "hytale", "Hytale");
+        register("hytale.world_map.*", "All world-map permissions", "hytale", "Hytale");
+        register("hytale.system.update.notify", "Receive server update notifications", "hytale", "Hytale");
+        register("hytale.system.update.*", "All system update permissions", "hytale", "Hytale");
 
         // ==================== Simplified Aliases (for user convenience) ====================
         // These map to actual Hytale paths via PermissionAliases

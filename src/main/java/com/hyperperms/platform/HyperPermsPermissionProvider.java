@@ -133,6 +133,35 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         return new CaseInsensitiveSet(expanded);
     }
 
+    @Override
+    public String getGroupParent(String groupName) {
+        // HyperPerms resolves inheritance internally (multi-parent, weighted) through its own
+        // resolver and the single virtual user group. It deliberately does NOT expose a vanilla
+        // single-parent chain: returning null makes PermissionsModule.checkParentChain a no-op,
+        // so Hytale never double-walks a parent chain over HyperPerms groups (which would
+        // bypass our negation/weight resolution). All effective inheritance is already baked
+        // into the permissions returned by getGroupPermissions()/getEffectiveGroupPermissions().
+        return null;
+    }
+
+    @Override
+    public Set<String> getAllRegisteredGroups() {
+        // Surface HyperPerms-managed groups to Hytale. Used for group enumeration and by
+        // plugins like EssentialsPlus that read via getFirstPermissionProvider() (HyperPerms
+        // is forced first). Never null.
+        return hyperPerms.getGroupManager().getGroupNames();
+    }
+
+    @Override
+    public Set<String> getEffectiveGroupPermissions(String groupName) {
+        // HyperPerms' getGroupPermissions() already returns the FULLY inheritance-resolved and
+        // wildcard/alias-expanded permission set (PermissionResolver.resolveGroup walks the
+        // inheritance graph), so the "effective" set is identical. Delegating keeps a single
+        // source of truth. Note: 0.5.2 has no internal caller for this method; it exists for
+        // interface conformance and third-party/future consumers.
+        return getGroupPermissions(groupName);
+    }
+
     /**
      * Gets the direct permissions for a user (not inherited from groups).
      * <p>
@@ -223,6 +252,27 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         hyperPerms.getUserManager().saveUser(user);
         hyperPerms.getCacheInvalidator().invalidate(uuid);
         Logger.debug("Removed user %s from group %s", uuid, groupName);
+    }
+
+    @Override
+    public void setUserGroup(UUID uuid, String groupName) {
+        // Vanilla semantics are "this user's group is now <groupName>". HyperPerms models a
+        // user's main group as its primary group, so we set the primary group rather than
+        // destructively clearing additive (secondary) group memberships, which would be
+        // surprising for an admin who, e.g., ran vanilla /setgroup on a HyperPerms server.
+        // Only act on groups HyperPerms actually manages; ignore unknown/vanilla group names
+        // gracefully so vanilla /setgroup with a non-HyperPerms group is a clean no-op.
+        Group group = hyperPerms.getGroupManager().getGroup(groupName);
+        if (group == null) {
+            Logger.debug("Ignoring setUserGroup for non-existent group '%s' (user %s) - not a HyperPerms group", groupName, uuid);
+            return;
+        }
+
+        User user = hyperPerms.getUserManager().getOrCreateUser(uuid);
+        user.setPrimaryGroup(groupName);
+        hyperPerms.getUserManager().saveUser(user);
+        hyperPerms.getCacheInvalidator().invalidate(uuid);
+        Logger.debug("Set primary group of user %s to %s", uuid, groupName);
     }
 
     @Override

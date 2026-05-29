@@ -81,7 +81,7 @@ dependencies {
     compileOnly 'org.jetbrains:annotations:26.0.1'
 
     // VaultUnlocked API (soft dependency - compileOnly)
-    compileOnly files('libs/VaultUnlocked-Hytale-2.19.0.jar')
+    compileOnly files('libs/VaultUnlocked-Hytale-2.19.1.jar')
 
     // PlaceholderAPI Hytale (soft dependency - compileOnly)
     compileOnly 'at.helpch:placeholderapi-hytale:1.0.4'

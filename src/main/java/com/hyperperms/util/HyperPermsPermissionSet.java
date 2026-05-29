@@ -63,6 +63,23 @@ public class HyperPermsPermissionSet extends AbstractSet<String> {
     @Override
     public boolean contains(Object o) {
         if (o instanceof String permission) {
+            // Suppress Hytale's COARSE global-wildcard probes. PermissionsModule's static
+            // hasPermission(Set, id) probes contains("-*") FIRST and contains("*") as
+            // short-circuits around the per-node probes. If we answered them, a group with
+            // "-*" (deny-all-then-grant, the standard LuckPerms model) would veto every
+            // explicit grant, and a "*" grant-all would override explicit negations - because
+            // these fire before the per-node decision. Returning false makes Hytale fall
+            // through to contains("-"+id)/contains(id), which delegate to checkPermission(id)
+            // and honor HyperPerms' most-specific-first resolution (an exact grant beats a
+            // global "-*"; an exact "-node" beats a global "*"). checkPermission still resolves
+            // real "*"/"-*" nodes for those per-node queries, so global grant/deny semantics
+            // stay correct on a per-node basis. NOTE: this must match ONLY the global probes -
+            // per-node negations ("-essentials.home") and sub-wildcards ("essentials.*") must
+            // still be delegated.
+            if (isCoarseGlobalProbe(permission)) {
+                return false;
+            }
+
             ContextSet contexts = hyperPerms.getContexts(uuid);
 
             // Handle Hytale's negation check syntax: "-permission"
@@ -82,6 +99,23 @@ public class HyperPermsPermissionSet extends AbstractSet<String> {
             return state.asBoolean();
         }
         return false;
+    }
+
+    /**
+     * Returns true only for Hytale's two coarse global-wildcard probe strings: {@code "*"}
+     * and {@code "-*"}. These are the short-circuit probes that
+     * {@code PermissionsModule.hasPermission(Set, id)} performs before/around the per-node
+     * probes; HyperPerms suppresses them so its own most-specific-first resolution (via the
+     * per-node {@code contains(id)} / {@code contains("-"+id)} probes) decides the outcome.
+     * <p>
+     * It must NOT match per-node negations (e.g. {@code "-essentials.home"}) or sub-wildcards
+     * (e.g. {@code "essentials.*"}), which still need to be delegated to {@code checkPermission}.
+     *
+     * @param permission the probe string Hytale passed to {@link #contains(Object)}
+     * @return true iff the string is exactly "*" or "-*"
+     */
+    static boolean isCoarseGlobalProbe(@NotNull String permission) {
+        return permission.equals("*") || permission.equals("-*");
     }
 
     /**

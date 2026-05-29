@@ -289,4 +289,35 @@ class PermissionResolverTest {
         // Builder (weight 90) should win over Moderator (weight 80)
         assertFalse(resolver.check(user, "worldedit.use", ContextSet.empty()).asBoolean());
     }
+
+    @Test
+    void testDenyAllThenSpecificGrant() {
+        // The standard LuckPerms-style model: deny everything (-*) then grant specific nodes.
+        // The explicit grant must win because it is more specific than the global deny. This is
+        // the resolution foundation behind the HyperPermsPermissionSet "-*"/"*" probe fix: the
+        // resolver already returns TRUE here, so the native permission check must agree.
+        createGroup("default", 0);
+        User user = new User(UUID.randomUUID(), "Test");
+        user.addNode(Node.builder("*").denied().build()); // -*  (deny all)
+        user.addNode(Node.of("essentials.home"));          // explicit grant
+
+        assertTrue(resolver.check(user, "essentials.home", ContextSet.empty()).asBoolean(),
+                "explicit grant must beat global deny (-*)");
+        assertFalse(resolver.check(user, "essentials.kit", ContextSet.empty()).asBoolean(),
+                "an ungranted node remains denied under -*");
+    }
+
+    @Test
+    void testGrantAllThenSpecificDeny() {
+        // Grant everything (*), then deny a specific node. The explicit negation must win.
+        createGroup("default", 0);
+        User user = new User(UUID.randomUUID(), "Test");
+        user.addNode(Node.of("*"));                                     // grant all
+        user.addNode(Node.builder("essentials.home").denied().build()); // -essentials.home
+
+        assertFalse(resolver.check(user, "essentials.home", ContextSet.empty()).asBoolean(),
+                "explicit negation must beat global grant (*)");
+        assertTrue(resolver.check(user, "essentials.kit", ContextSet.empty()).asBoolean(),
+                "other nodes remain granted under *");
+    }
 }

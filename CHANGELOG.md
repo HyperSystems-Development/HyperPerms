@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.9.5] - 2026-05-29
+
+**Server Version:** `0.5.2` ("Update 5", rev `8b2f3de`) — first release-channel build, Java 25
+
+Compatibility release for Hytale 0.5.2. Verified by booting the local 0.5.2 server: HyperPerms loads, enables, and registers as the authoritative permission provider with no errors.
+
+### Fixed
+
+- **Plugin failed to load on 0.5.2 (manifest decode)** — 0.5.2 added a strict `SemverRange` codec that rejected two manifest version-range forms, so the plugin did not load at all:
+  - `ServerVersion` expanded to a bare `0.5.2` (bare versions are only valid when the patch is zero). Now uses `^${serverVersion}` → `^0.5.2` (i.e. `>=0.5.2 <0.6.0`).
+  - The optional dependency range `">= 1.0.2"` had a space after the operator. Now `">=1.0.2"`.
+- **`PermissionProvider` interface conformance** — Hytale 0.5.2 expanded `PermissionProvider` from 10 to 14 methods. Implemented the four new methods (`setUserGroup`, `getGroupParent`, `getAllRegisteredGroups`, `getEffectiveGroupPermissions`); without them the plugin failed to compile/load against 0.5.2.
+- **Deny-by-default permission model** — a group using `-*` (deny-all) plus specific grants silently denied **every** granted permission on native command checks, because Hytale's resolver probes the global `-*`/`*` wildcards before the per-node entries. HyperPerms now suppresses those coarse global probes so its own most-specific-first resolution decides each node. Standard LuckPerms-style deny-all-then-grant setups now work (and now agree with `/hp check`).
+
+### Changed
+
+- **Authoritative permission provider** — HyperPerms now removes Hytale's built-in provider while enabled, so it is the sole source of permission decisions (the built-in provider is restored on disable). Previously the vanilla `hytale:Adventurer` default could grant built-in nodes (e.g. `hytale.world_map.teleport.marker`) that an admin never granted. Manage all permissions via `/hp`; vanilla `/perm` and `/setgroup` operate on data HyperPerms no longer consults, and `/op self` is advisory-disabled while HyperPerms is active (grant admin via a HyperPerms group with the `*` node).
+- **Default build channel is now `release`** — a plain `./gradlew build`/`shadowJar` targets the current Hytale release (0.5.2). Use `-Phytale_channel=pre-release` or `./gradlew buildPreRelease` for pre-release builds.
+
+### Added
+
+- Registered the 0.5.2 built-in nodes in the permission registry so they surface in the web editor and wildcard expansion: `hytale.world_map.teleport.coordinate`, `hytale.world_map.teleport.marker`, `hytale.system.update.notify` (plus the `hytale.world_map.*`, `hytale.world_map.teleport.*`, and `hytale.system.update.*` wildcards).
+
+### Removed
+
+- Obsolete `warnAboutVanillaGroupOverwrite` startup check — it tested the legacy `OP`/`Default` vanilla group keys, which no longer exist in 0.5.2 (groups are namespaced `hytale:Admin`/`hytale:Adventurer`/…), so it could never fire. Its premise (vanilla force-overwriting built-in groups on load) is also obsolete in 0.5.2.
+
 ## [2.9.4] - 2026-04-02
 
 **Server Version:** `2026.03.26-89796e57b`

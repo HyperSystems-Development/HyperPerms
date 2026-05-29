@@ -136,9 +136,14 @@ For MariaDB/MySQL, add connection details:
 
 </details>
 
-## Important: Vanilla Group Overwrite
+## Important: HyperPerms is the Authoritative Permission Provider
 
-Hytale's built-in permission system forcibly resets the `OP` and `Default` groups every time the server starts. Any custom permissions added to these groups via `/perm` will be **lost on restart**. Always use HyperPerms groups instead (`/hp group create <name>`). HyperPerms logs a warning at startup if it detects custom permissions in vanilla groups.
+On Hytale 0.5.2+, HyperPerms registers itself as the **sole** permission provider — it removes Hytale's built-in provider while enabled (and restores it on disable). This means HyperPerms controls every permission decision, with no fallback to Hytale's default `hytale:Adventurer`/`hytale:Builder`/… groups.
+
+Manage everything through HyperPerms:
+
+- Use `/hp` commands (e.g. `/hp group create <name>`), **not** Hytale's vanilla `/perm` or `/setgroup` — those operate on vanilla data that HyperPerms no longer consults, and `/perm reload` does not reload HyperPerms (use `/hp reload`).
+- Grant admin/operator access by putting a player in a HyperPerms group that has the `*` node (the bundled `admin`/`owner` groups do). Hytale's `/op self` is intentionally disabled while a third-party permission plugin is active and will simply report that permissions are managed externally.
 
 ## Optional: SQLite & Analytics
 
@@ -173,7 +178,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'com.github.HyperSystemsDev:HyperPerms:2.8.9'
+    compileOnly 'com.github.HyperSystems-Development:HyperPerms:2.9.5'
 }
 ```
 
@@ -209,9 +214,9 @@ api.getGroupManager().createGroup(admin);
 <details>
 <summary><strong>Building from Source</strong></summary>
 
-**Requirements:** Java 25, Gradle 9.3+
+**Requirements:** Java 25, Gradle 9.3+, Hytale 0.5.2+
 
-All dependencies are resolved automatically from Maven. The Hytale Server API comes from `maven.hytale.com` and VaultUnlocked from `repo.codemc.io`.
+The Hytale Server API is resolved automatically from `maven.hytale.com` (release channel by default; use `-Phytale_channel=pre-release` or `./gradlew buildPreRelease` for pre-release builds), and PlaceholderAPI from `repo.helpch.at`. VaultUnlocked is a compile-only soft dependency supplied as a jar in `libs/` (from [TheNewEconomy/VaultUnlocked-Hytale](https://github.com/TheNewEconomy/VaultUnlocked-Hytale)).
 
 ```bash
 ./gradlew shadowJar

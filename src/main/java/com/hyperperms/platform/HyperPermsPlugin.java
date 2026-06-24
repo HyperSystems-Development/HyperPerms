@@ -7,10 +7,12 @@ import com.hypixel.hytale.server.core.event.events.ecs.ChangeGameModeEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 
 import java.util.logging.Level;
 
@@ -71,6 +73,10 @@ public class HyperPermsPlugin extends JavaPlugin {
         // Enable HyperPerms core
         hyperPerms.enable();
 
+        // Verify the Hytale-core reflection targets used by optional integrations resolve on
+        // this server build; logs a clear warning per missing target instead of failing silently.
+        com.hyperperms.util.ReflectionUtil.verifyHytaleCoreTargets();
+
         // Set the player context provider for context calculators
         hyperPerms.setPlayerContextProvider(adapter);
 
@@ -79,11 +85,18 @@ public class HyperPermsPlugin extends JavaPlugin {
 
         // Wire up centralized sync: whenever any user's cache is invalidated,
         // automatically sync their resolved permissions to Hytale's provider
-        hyperPerms.getCacheInvalidator().setSyncListener(uuid -> {
+        hyperPerms.getCacheInvalidator().setSyncListener((uuid, refreshTree) -> {
             if (adapter.isOnline(uuid)) {
                 var user = hyperPerms.getUserManager().getUser(uuid);
                 if (user != null) {
                     syncPermissionsToHytale(uuid, user);
+                    // Push a fresh command tree so newly-granted (or revoked) command
+                    // permissions take effect immediately, without a relog. Skipped for blunt
+                    // bulk invalidations (e.g. the global game-mode invalidateAll) so we don't
+                    // rebuild every online player's tree on the event thread at once.
+                    if (refreshTree) {
+                        resendCommandTree(uuid);
+                    }
                 }
             }
         });
@@ -547,6 +560,30 @@ public class HyperPermsPlugin extends JavaPlugin {
             } catch (Exception e) {
                 Logger.severe("Failed to sync permissions to Hytale for " + user.getUsername(), e);
             }
+        }
+    }
+
+    /**
+     * Resends the client command tree to an online player.
+     * <p>
+     * Hytale filters the visible command tree by the player's permissions and only sends
+     * it on connect / on its own group mutations. When HyperPerms changes a user's groups
+     * or permissions it mutates its own model directly (bypassing
+     * {@code PermissionsModule.addUserToGroup}, which is what normally triggers the engine's
+     * resend), so newly-granted commands would otherwise not appear until the player relogs.
+     * This pushes a fresh tree immediately. No-op if the player is offline.
+     *
+     * @param uuid the player's UUID
+     */
+    public void resendCommandTree(java.util.UUID uuid) {
+        try {
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            if (playerRef != null && playerRef.getPacketHandler() instanceof GamePacketHandler handler) {
+                handler.sendCommandTree();
+                Logger.debug("Resent command tree for %s", uuid);
+            }
+        } catch (Exception e) {
+            Logger.debug("Failed to resend command tree for %s: %s", uuid, e.getMessage());
         }
     }
 

@@ -300,6 +300,26 @@ public class HytaleAdapter implements PlayerContextProvider {
     }
 
     /**
+     * Gets the usernames of all currently-tracked online players.
+     * Used to back player-name tab-completion for {@code /hp} commands.
+     *
+     * @return a set of online usernames (never null)
+     */
+    @NotNull
+    public java.util.Set<String> getOnlineUsernames() {
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (PlayerData data : playerData.values()) {
+            if (data.playerRef != null) {
+                String username = data.playerRef.getUsername();
+                if (username != null) {
+                    names.add(username);
+                }
+            }
+        }
+        return names;
+    }
+
+    /**
      * Gets the count of online players.
      *
      * @return the number of online players

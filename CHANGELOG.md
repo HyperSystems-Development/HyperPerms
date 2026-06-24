@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [2.10.0] - 2026-06-23
+
+**Server Version:** `0.5.6` (release) / `0.6.0-pre.4` (pre-release) — verified compiling, testing, and packaging from a single source on both channels.
+
+Quality-of-life release: in-game command ergonomics plus fixes for several silently-broken paths. No code changes were required for Hytale `0.6.0-pre.x` compatibility — the API surface HyperPerms uses is intact (the `0.5.2 → 0.6.0-pre` diff is worldgen-dominated).
+
+### Added
+
+- **Tab-completion for `/hp` commands.** Group, track, permission-node, and online-player arguments now offer suggestions as you type (case-insensitive prefix match). Previously every argument was a plain string with no completion. Powered by a new `@Arg(kind = …)` model wired through `CommandScanner`.
+- **Instant command-tree refresh.** When a player's groups or permissions change, HyperPerms now pushes a fresh command tree to the affected online player, so newly-granted commands appear immediately instead of only after a relog.
+- **Clickable download link** in the "update available" notification (alongside `/hp update`).
+- **Startup self-check** that verifies the Hytale-core reflection targets used by optional integrations resolve on the running build, logging a clear warning if any are missing.
+
+### Fixed
+
+- **PlaceholderAPI offline-player fallback never worked.** The internal `getPlayerRef` referenced a non-existent class (`com.hypixel.hytale.server.HytaleServer` — missing `.core`) and a non-existent `getPlayerManager()` chain, so it silently returned null. Now uses the canonical `Universe.get().getPlayer(uuid)`.
+- **MysticNameTags nameplate refresh never worked.** The `World` class literal omitted the `.world` sub-package (`…universe.World` instead of `…universe.world.World`), so reflection setup failed silently.
+- **Event listener leaks across `/reload`.** `ChatListener`, `TabListListener`, and `UpdateNotificationListener` stored their `EventRegistration` handles but never called `unregister()` (a stale comment claimed no such API existed), leaving duplicate handlers after a reload/restart. They now properly unregister, and warn if a registration unexpectedly returns null.
+- **Stale "ghost" entries in the player/tab list.** HyperPerms only ever *added* player-list entries and never removed them, so players who quit lingered until the next full-list send. Disconnects now broadcast `RemoveFromServerPlayerList`.
+
+### Changed
+
+- Centralized the Hytale-core reflection string literals (`Universe`, `PlayerRef`, `World`) into `ReflectionUtil` so a future Hytale package move is a one-line fix and the two optional integrations can't drift independently.
+
 ## [2.9.6] - 2026-05-29
 
 **Server Version:** `0.5.2`

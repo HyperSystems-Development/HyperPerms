@@ -3,6 +3,7 @@ package com.hyperperms.command.groups;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.api.PermissionHolder;
 import com.hyperperms.command.annotation.*;
+import com.hyperperms.command.suggest.ArgKind;
 import com.hyperperms.command.annotation.Command;
 import com.hyperperms.api.context.Context;
 import com.hyperperms.api.context.ContextSet;
@@ -46,7 +47,7 @@ public class UserCommands {
 
     @Command(name = "info", description = "Show user's groups and permissions")
     public CompletableFuture<Void> info(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier) {
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
             ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
@@ -147,8 +148,8 @@ public class UserCommands {
 
     @Command(name = "setperm", description = "Set a permission on a user")
     public CompletableFuture<Void> setperm(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "permission", description = "Permission node") String permission,
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "permission", description = "Permission node", kind = ArgKind.NODE) String permission,
             @OptionalArg(name = "value", description = "true or false (default: true)") String valueStr,
             @OptionalArg(name = "duration", description = "Duration (e.g. 1d2h30m, permanent)") String durationStr,
             @OptionalArg(name = "world", description = "World name (restricts permission to that world)") String world) {
@@ -202,8 +203,8 @@ public class UserCommands {
 
     @Command(name = "unsetperm", description = "Remove a permission from a user")
     public CompletableFuture<Void> unsetperm(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "permission", description = "Permission node") String permission,
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "permission", description = "Permission node", kind = ArgKind.NODE) String permission,
             @OptionalArg(name = "world", description = "World name (remove only the world-specific entry)") String world) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
@@ -239,8 +240,8 @@ public class UserCommands {
 
     @Command(name = "setexpiry", description = "Set or clear expiry on a user permission")
     public CompletableFuture<Void> setexpiry(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "permission", description = "Permission node") String permissionStr,
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "permission", description = "Permission node", kind = ArgKind.NODE) String permissionStr,
             @Arg(name = "duration", description = "Duration (e.g. 1d2h30m) or 'permanent'") String durationStr) {
         String permission = permissionStr.toLowerCase();
 
@@ -285,8 +286,8 @@ public class UserCommands {
 
     @Command(name = "addgroup", description = "Add a user to a group")
     public CompletableFuture<Void> addgroup(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "group", description = "Group name") String groupName,
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName,
             @OptionalArg(name = "duration", description = "Duration (e.g. 1d2h30m, permanent)") String durationStr) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
@@ -326,8 +327,8 @@ public class UserCommands {
 
     @Command(name = "removegroup", description = "Remove a user from a group")
     public CompletableFuture<Void> removegroup(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "group", description = "Group name") String groupName) {
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
             ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
@@ -349,8 +350,8 @@ public class UserCommands {
 
     @Command(name = "setprimarygroup", description = "Set a user's primary/display group")
     public CompletableFuture<Void> setprimarygroup(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "group", description = "Group name") String groupName) {
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
             ctx.sender().sendMessage(Message.raw("Group not found: " + groupName));
@@ -380,8 +381,8 @@ public class UserCommands {
 
     @Command(name = "promote", description = "Promote a user along a track")
     public CompletableFuture<Void> promote(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "track", description = "Track name") String trackName) {
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "track", description = "Track name", kind = ArgKind.TRACK) String trackName) {
         Track track = plugin.getTrackManager().getTrack(trackName);
         if (track == null) {
             ctx.sender().sendMessage(Message.raw("Track not found: " + trackName));
@@ -457,8 +458,8 @@ public class UserCommands {
 
     @Command(name = "demote", description = "Demote a user along a track")
     public CompletableFuture<Void> demote(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "track", description = "Track name") String trackName) {
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "track", description = "Track name", kind = ArgKind.TRACK) String trackName) {
         Track track = plugin.getTrackManager().getTrack(trackName);
         if (track == null) {
             ctx.sender().sendMessage(Message.raw("Track not found: " + trackName));
@@ -528,7 +529,7 @@ public class UserCommands {
 
     @Command(name = "setprefix", description = "Set a user's custom prefix")
     public CompletableFuture<Void> setprefix(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
             @OptionalArg(name = "prefix", description = "Prefix text (omit to clear)") String prefix) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
@@ -555,7 +556,7 @@ public class UserCommands {
 
     @Command(name = "setsuffix", description = "Set a user's custom suffix")
     public CompletableFuture<Void> setsuffix(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
             @OptionalArg(name = "suffix", description = "Suffix text (omit to clear)") String suffix) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
@@ -582,7 +583,7 @@ public class UserCommands {
 
     @Command(name = "clear", description = "Clear all data for a user")
     public CompletableFuture<Void> clear(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier) {
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
             ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
@@ -631,8 +632,8 @@ public class UserCommands {
 
     @Command(name = "clone", description = "Copy permissions from one user to another")
     public CompletableFuture<Void> clone_(CommandContext ctx,
-            @Arg(name = "source", description = "Source player name or UUID") String sourceId,
-            @Arg(name = "target", description = "Target player name or UUID") String targetId) {
+            @Arg(name = "source", description = "Source player name or UUID", kind = ArgKind.PLAYER) String sourceId,
+            @Arg(name = "target", description = "Target player name or UUID", kind = ArgKind.PLAYER) String targetId) {
         User source = PlayerResolver.resolve(plugin, sourceId);
         if (source == null) {
             ctx.sender().sendMessage(Message.raw("Source user not found: " + sourceId));

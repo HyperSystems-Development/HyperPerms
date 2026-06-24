@@ -113,8 +113,11 @@ public final class MysticNameTagsIntegration {
             try {
                 // MysticNameTagsAPI
                 Class<?> apiClass = Class.forName("com.mystichorizons.mysticnametags.api.MysticNameTagsAPI");
-                Class<?> playerRefClass = Class.forName("com.hypixel.hytale.server.core.universe.PlayerRef");
-                Class<?> worldClass = Class.forName("com.hypixel.hytale.server.core.universe.World");
+                Class<?> playerRefClass = Class.forName(ReflectionUtil.PLAYER_REF_CLASS);
+                // NOTE: World lives in the `.universe.world` sub-package; the previous literal
+                // "com.hypixel.hytale.server.core.universe.World" was wrong, so refreshNameplate
+                // resolution silently failed. Centralized in ReflectionUtil.WORLD_CLASS.
+                Class<?> worldClass = Class.forName(ReflectionUtil.WORLD_CLASS);
 
                 tmpApiGetActiveTagDisplay = apiClass.getMethod("getActiveTagDisplay", UUID.class);
                 tmpApiGetActiveTagView = apiClass.getMethod("getActiveTagView", UUID.class);

@@ -4,6 +4,7 @@ import com.hyperperms.HyperPerms;
 import com.hyperperms.command.HpContainerCommand;
 import com.hyperperms.command.HpSubCommand;
 import com.hyperperms.command.annotation.*;
+import com.hyperperms.command.suggest.ArgKind;
 import com.hyperperms.command.annotation.Command;
 import com.hyperperms.api.context.Context;
 import com.hyperperms.api.context.ContextSet;
@@ -62,7 +63,7 @@ public class GroupCommands {
 
     @Command(name = "delete", description = "Delete a group")
     public CompletableFuture<Void> delete(CommandContext ctx,
-            @Arg(name = "name", description = "Group name") String groupName) {
+            @Arg(name = "name", description = "Group name", kind = ArgKind.GROUP) String groupName) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
             ctx.sender().sendMessage(Message.raw("Group not found: " + groupName));
@@ -129,7 +130,7 @@ public class GroupCommands {
 
     @Command(name = "info", description = "View group info")
     public CompletableFuture<Void> info(CommandContext ctx,
-            @Arg(name = "name", description = "Group name") String groupName) {
+            @Arg(name = "name", description = "Group name", kind = ArgKind.GROUP) String groupName) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
             ctx.sender().sendMessage(Message.raw("Group not found: " + groupName));
@@ -212,8 +213,8 @@ public class GroupCommands {
 
     @Command(name = "setperm", description = "Set a permission on a group")
     public CompletableFuture<Void> setperm(CommandContext ctx,
-            @Arg(name = "group", description = "Group name") String groupName,
-            @Arg(name = "permission", description = "Permission node") String permission,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName,
+            @Arg(name = "permission", description = "Permission node", kind = ArgKind.NODE) String permission,
             @OptionalArg(name = "value", description = "true or false (default: true)") String valueStr,
             @OptionalArg(name = "duration", description = "Duration (e.g. 1d2h30m, permanent)") String durationStr,
             @OptionalArg(name = "world", description = "World name (restricts permission to that world)") String world) {
@@ -267,8 +268,8 @@ public class GroupCommands {
 
     @Command(name = "unsetperm", description = "Remove a permission from a group")
     public CompletableFuture<Void> unsetperm(CommandContext ctx,
-            @Arg(name = "group", description = "Group name") String groupName,
-            @Arg(name = "permission", description = "Permission node") String permission,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName,
+            @Arg(name = "permission", description = "Permission node", kind = ArgKind.NODE) String permission,
             @OptionalArg(name = "world", description = "World name (remove only the world-specific entry)") String world) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
@@ -304,8 +305,8 @@ public class GroupCommands {
 
     @Command(name = "setexpiry", description = "Set or clear expiry on a group permission")
     public CompletableFuture<Void> setexpiry(CommandContext ctx,
-            @Arg(name = "group", description = "Group name") String groupName,
-            @Arg(name = "permission", description = "Permission node") String permissionStr,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName,
+            @Arg(name = "permission", description = "Permission node", kind = ArgKind.NODE) String permissionStr,
             @Arg(name = "duration", description = "Duration (e.g. 1d2h30m) or 'permanent'") String durationStr) {
         String permission = permissionStr.toLowerCase();
 
@@ -350,7 +351,7 @@ public class GroupCommands {
 
     @Command(name = "setweight", description = "Set a group's weight/priority")
     public CompletableFuture<Void> setweight(CommandContext ctx,
-            @Arg(name = "group", description = "Group name") String groupName,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName,
             @Arg(name = "weight", description = "Weight value") String weightStr) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
@@ -378,7 +379,7 @@ public class GroupCommands {
 
     @Command(name = "setprefix", description = "Set a group's chat prefix")
     public CompletableFuture<Void> setprefix(CommandContext ctx,
-            @Arg(name = "group", description = "Group name") String groupName,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName,
             @OptionalArg(name = "prefix", description = "Prefix text (omit to clear)") String prefix,
             @OptionalArg(name = "priority", description = "Priority for multi-group resolution") String priorityStr) {
         Group group = plugin.getGroupManager().getGroup(groupName);
@@ -416,7 +417,7 @@ public class GroupCommands {
 
     @Command(name = "setsuffix", description = "Set a group's chat suffix")
     public CompletableFuture<Void> setsuffix(CommandContext ctx,
-            @Arg(name = "group", description = "Group name") String groupName,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName,
             @OptionalArg(name = "suffix", description = "Suffix text (omit to clear)") String suffix,
             @OptionalArg(name = "priority", description = "Priority for multi-group resolution") String priorityStr) {
         Group group = plugin.getGroupManager().getGroup(groupName);
@@ -454,7 +455,7 @@ public class GroupCommands {
 
     @Command(name = "setdisplayname", description = "Set a group's display name")
     public CompletableFuture<Void> setdisplayname(CommandContext ctx,
-            @Arg(name = "group", description = "Group name") String groupName,
+            @Arg(name = "group", description = "Group name", kind = ArgKind.GROUP) String groupName,
             @OptionalArg(name = "displayname", description = "Display name (omit to clear)") String displayName) {
         Group group = plugin.getGroupManager().getGroup(groupName);
         if (group == null) {
@@ -478,7 +479,7 @@ public class GroupCommands {
 
     @Command(name = "rename", description = "Rename a group")
     public CompletableFuture<Void> rename(CommandContext ctx,
-            @Arg(name = "oldname", description = "Current group name") String oldName,
+            @Arg(name = "oldname", description = "Current group name", kind = ArgKind.GROUP) String oldName,
             @Arg(name = "newname", description = "New group name") String newName) {
         Group group = plugin.getGroupManager().getGroup(oldName);
         if (group == null) {

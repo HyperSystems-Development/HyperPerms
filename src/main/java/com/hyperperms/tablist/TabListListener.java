@@ -9,6 +9,7 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList;
+import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList;
 import com.hypixel.hytale.protocol.packets.interface_.ServerPlayerListPlayer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
@@ -87,6 +88,10 @@ public class TabListListener {
             this::onPlayerDisconnect
         );
 
+        if (connectRegistration == null || disconnectRegistration == null) {
+            Logger.warn("Tab list listener registration returned null - tab list may not update on join/leave");
+        }
+
         // Set up the name applier callback for when permissions change
         tabListManager.setNameApplier(this::refreshPlayerInList);
 
@@ -99,11 +104,21 @@ public class TabListListener {
      * @param eventRegistry the event registry
      */
     public void unregister(@NotNull EventRegistry eventRegistry) {
-        // Clear registrations
+        // Release the registration handles so the handlers don't leak across reloads/restarts.
         if (connectRegistration != null) {
+            try {
+                connectRegistration.unregister();
+            } catch (Exception e) {
+                Logger.warn("Failed to unregister tab-list connect listener: %s", e.getMessage());
+            }
             connectRegistration = null;
         }
         if (disconnectRegistration != null) {
+            try {
+                disconnectRegistration.unregister();
+            } catch (Exception e) {
+                Logger.warn("Failed to unregister tab-list disconnect listener: %s", e.getMessage());
+            }
             disconnectRegistration = null;
         }
 
@@ -228,6 +243,19 @@ public class TabListListener {
 
         // Invalidate cache
         tabListManager.invalidateCache(uuid);
+
+        // Broadcast a removal so the leaving player doesn't linger as a ghost entry in
+        // everyone else's list. HyperPerms previously only ever ADDED entries, so quitters
+        // accumulated as stale rows until the next full-list send.
+        if (tabListManager.isEnabled()) {
+            RemoveFromServerPlayerList removePacket =
+                new RemoveFromServerPlayerList(new UUID[]{uuid});
+            for (PlayerRef player : Universe.get().getPlayers()) {
+                if (!player.getUuid().equals(uuid)) {
+                    player.getPacketHandler().write(removePacket);
+                }
+            }
+        }
 
         Logger.debug("Player list: Player disconnected: %s", playerRef.getUsername());
     }

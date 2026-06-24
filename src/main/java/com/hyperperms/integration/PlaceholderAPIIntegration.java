@@ -207,32 +207,11 @@ public final class PlaceholderAPIIntegration {
      */
     @Nullable
     private Object getPlayerRef(@NotNull UUID uuid) {
-        try {
-            // Try to get the player from HytaleServer
-            Class<?> hytaleServerClass = Class.forName("com.hypixel.hytale.server.HytaleServer");
-            Method getMethod = hytaleServerClass.getMethod("get");
-            Object server = getMethod.invoke(null);
-
-            if (server == null) {
-                return null;
-            }
-
-            // Get the player manager
-            Method getPlayerManagerMethod = hytaleServerClass.getMethod("getPlayerManager");
-            Object playerManager = getPlayerManagerMethod.invoke(server);
-
-            if (playerManager == null) {
-                return null;
-            }
-
-            // Get the player by UUID
-            Class<?> playerManagerClass = playerManager.getClass();
-            Method getPlayerMethod = playerManagerClass.getMethod("getPlayer", UUID.class);
-            return getPlayerMethod.invoke(playerManager, uuid);
-        } catch (Exception e) {
-            Logger.debug("Failed to get PlayerRef for UUID %s: %s", uuid, e.getMessage());
-            return null;
-        }
+        // Canonical server-wide lookup: Universe.get().getPlayer(uuid). The previous
+        // implementation referenced the wrong class ("com.hypixel.hytale.server.HytaleServer",
+        // missing ".core") and a non-existent getPlayerManager() chain, so it silently failed
+        // and the PAPI offline fallback never worked. Centralized in ReflectionUtil.
+        return ReflectionUtil.getOnlinePlayerRef(uuid);
     }
 
     /**

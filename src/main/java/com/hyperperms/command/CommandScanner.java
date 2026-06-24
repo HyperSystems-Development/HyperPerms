@@ -3,12 +3,14 @@ package com.hyperperms.command;
 import com.hyperperms.HyperPerms;
 import com.hyperperms.command.annotation.*;
 import com.hyperperms.command.annotation.Command;
+import com.hyperperms.command.suggest.HpSuggestionProviders;
 import com.hyperperms.command.util.CommandUtil;
 import com.hyperperms.util.Logger;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
+import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionProvider;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
@@ -124,9 +126,20 @@ public final class CommandScanner {
                     OptionalArg optArg = param.getAnnotation(OptionalArg.class);
 
                     if (arg != null) {
-                        argRefs[i] = describeArg(arg.name(), arg.description(), ArgTypes.STRING);
+                        RequiredArg<String> ra = describeArg(arg.name(), arg.description(), ArgTypes.STRING);
+                        SuggestionProvider sp = HpSuggestionProviders.forKind(arg.kind(), plugin);
+                        if (sp != null) {
+                            ra.suggest(sp);
+                        }
+                        argRefs[i] = ra;
                     } else if (optArg != null) {
-                        argRefs[i] = describeOptionalArg(optArg.name(), optArg.description(), ArgTypes.STRING);
+                        com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg<String> oa =
+                                describeOptionalArg(optArg.name(), optArg.description(), ArgTypes.STRING);
+                        SuggestionProvider sp = HpSuggestionProviders.forKind(optArg.kind(), plugin);
+                        if (sp != null) {
+                            oa.suggest(sp);
+                        }
+                        argRefs[i] = oa;
                     }
                 }
             }

@@ -2,6 +2,7 @@ package com.hyperperms.update;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.util.Logger;
+import com.hypixel.hytale.event.EventRegistration;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
@@ -37,6 +38,10 @@ public final class UpdateNotificationListener {
     /** Tracks players who have already been notified this session */
     private final Set<UUID> notifiedPlayers = ConcurrentHashMap.newKeySet();
 
+    /** Event registration handles, released on unregister to avoid listener leaks across reloads. */
+    private EventRegistration<?, ?> connectRegistration;
+    private EventRegistration<?, ?> disconnectRegistration;
+
     /**
      * Creates a new update notification listener.
      *
@@ -57,8 +62,11 @@ public final class UpdateNotificationListener {
      * @param eventRegistry the event registry to register with
      */
     public void register(@NotNull EventRegistry eventRegistry) {
-        eventRegistry.register(PlayerConnectEvent.class, this::onPlayerConnect);
-        eventRegistry.register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
+        connectRegistration = eventRegistry.register(PlayerConnectEvent.class, this::onPlayerConnect);
+        disconnectRegistration = eventRegistry.register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
+        if (connectRegistration == null || disconnectRegistration == null) {
+            Logger.warn("[UpdateNotify] Listener registration returned null - update notifications may not fire");
+        }
         Logger.debug("[UpdateNotify] Registered update notification listener");
     }
 
@@ -68,6 +76,22 @@ public final class UpdateNotificationListener {
      * @param eventRegistry the event registry to unregister from
      */
     public void unregister(@NotNull EventRegistry eventRegistry) {
+        if (connectRegistration != null) {
+            try {
+                connectRegistration.unregister();
+            } catch (Exception e) {
+                Logger.warn("[UpdateNotify] Failed to unregister connect listener: %s", e.getMessage());
+            }
+            connectRegistration = null;
+        }
+        if (disconnectRegistration != null) {
+            try {
+                disconnectRegistration.unregister();
+            } catch (Exception e) {
+                Logger.warn("[UpdateNotify] Failed to unregister disconnect listener: %s", e.getMessage());
+            }
+            disconnectRegistration = null;
+        }
         scheduler.shutdown();
         try {
             scheduler.awaitTermination(2, TimeUnit.SECONDS);
@@ -220,6 +244,16 @@ public final class UpdateNotificationListener {
                 .insert(Message.raw("/hp update").color(GREEN))
                 .insert(Message.raw(" to update the plugin.").color(GRAY))
         );
+
+        // Clickable download link for the new release, when available.
+        String downloadUrl = info.downloadUrl();
+        if (downloadUrl != null && !downloadUrl.isEmpty()) {
+            playerRef.sendMessage(
+                Message.raw("Or ").color(GRAY)
+                    .insert(Message.raw("[click here to download v" + newVersion + "]")
+                        .color(GREEN).link(downloadUrl))
+            );
+        }
 
         Logger.debug("[UpdateNotify] Sent update notification to %s", playerRef.getUsername());
     }

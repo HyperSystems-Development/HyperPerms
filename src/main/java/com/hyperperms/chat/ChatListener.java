@@ -138,24 +138,29 @@ public class ChatListener {
             PlayerChatEvent.class,
             this::onPlayerChatAsync
         );
+        if (chatEventRegistration == null) {
+            Logger.warn("Chat listener registration returned null - chat formatting will not be applied");
+            return;
+        }
 
         Logger.info("Chat listener registered with priority: " + priority);
     }
     
     /**
-     * Unregisters the chat event listener.
-     * <p>
-     * Note: Hytale's EventRegistry doesn't have a direct unregister method.
-     * Event registrations are typically cleaned up when the plugin is disabled.
+     * Unregisters the chat event listener by releasing its {@link EventRegistration} handle,
+     * preventing a duplicate/leaked handler across {@code /reload} or a plugin restart.
      *
-     * @param eventRegistry the event registry (currently unused)
+     * @param eventRegistry the event registry (unused; the handle carries its own unregister action)
      */
     public void unregister(@NotNull EventRegistry eventRegistry) {
-        // Hytale's EventRegistry doesn't have a direct unregister method
-        // The registration is cleaned up automatically when the plugin shuts down
         if (chatEventRegistration != null) {
+            try {
+                chatEventRegistration.unregister();
+                Logger.info("Chat listener unregistered");
+            } catch (Exception e) {
+                Logger.warn("Failed to unregister chat listener: %s", e.getMessage());
+            }
             chatEventRegistration = null;
-            Logger.info("Chat listener marked for cleanup");
         }
     }
     

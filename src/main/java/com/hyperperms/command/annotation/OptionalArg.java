@@ -1,5 +1,7 @@
 package com.hyperperms.command.annotation;
 
+import com.hyperperms.command.suggest.ArgKind;
+
 import java.lang.annotation.*;
 
 /**
@@ -14,4 +16,6 @@ public @interface OptionalArg {
     String name();
     /** Description shown in help. */
     String description() default "";
+    /** Semantic kind, used to attach tab-completion suggestions. Defaults to no suggestions. */
+    ArgKind kind() default ArgKind.STRING;
 }

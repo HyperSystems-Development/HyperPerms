@@ -2,6 +2,7 @@ package com.hyperperms.command.groups;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.command.annotation.*;
+import com.hyperperms.command.suggest.ArgKind;
 import com.hyperperms.command.annotation.Command;
 import com.hyperperms.config.ConfigManager;
 import com.hyperperms.model.Node;
@@ -53,7 +54,7 @@ public class DebugCommands {
 
     @Command(name = "tree", description = "Show inheritance tree for a user")
     public CompletableFuture<Void> tree(CommandContext ctx,
-            @Arg(name = "user", description = "Player name or UUID") String identifier) {
+            @Arg(name = "user", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
             ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
@@ -136,8 +137,8 @@ public class DebugCommands {
 
     @Command(name = "resolve", description = "Debug permission resolution step-by-step")
     public CompletableFuture<Void> resolve(CommandContext ctx,
-            @Arg(name = "user", description = "Player name or UUID") String identifier,
-            @Arg(name = "permission", description = "Permission to resolve") String permission) {
+            @Arg(name = "user", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "permission", description = "Permission to resolve", kind = ArgKind.NODE) String permission) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
             ctx.sender().sendMessage(Message.raw("User not found: " + identifier));
@@ -167,7 +168,7 @@ public class DebugCommands {
 
     @Command(name = "contexts", description = "Show all current contexts for a user")
     public CompletableFuture<Void> contexts(CommandContext ctx,
-            @Arg(name = "user", description = "Player name or UUID") String identifier) {
+            @Arg(name = "user", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
             ctx.sender().sendMessage(Message.raw("User not found: " + identifier));

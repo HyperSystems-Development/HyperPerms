@@ -8,7 +8,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 /**
  * Manages targeted cache invalidation by tracking user-group memberships.
@@ -27,9 +26,22 @@ public final class CacheInvalidator {
     // Maps user UUID -> set of groups they belong to (for reverse lookup)
     private final Map<UUID, Set<String>> userGroups = new ConcurrentHashMap<>();
 
+    /**
+     * Listener notified for each affected user when permissions are invalidated.
+     * <p>
+     * The {@code resendCommandTree} flag distinguishes a targeted permission/group change
+     * (where the client command tree should be refreshed) from a blunt bulk invalidation such
+     * as the global game-mode {@link #invalidateAll()} (where refreshing every online player's
+     * command tree on the event thread would be wasteful).
+     */
+    @FunctionalInterface
+    public interface SyncListener {
+        void onSync(@NotNull UUID uuid, boolean resendCommandTree);
+    }
+
     // Optional listener called after each user invalidation to sync permissions to Hytale
     @Nullable
-    private volatile Consumer<UUID> syncListener;
+    private volatile SyncListener syncListener;
 
     // Reentrant guard: prevents infinite recursion if sync triggers another invalidation
     private final ThreadLocal<Boolean> syncing = ThreadLocal.withInitial(() -> false);
@@ -49,7 +61,7 @@ public final class CacheInvalidator {
      *
      * @param listener the sync listener, or null to disable
      */
-    public void setSyncListener(@Nullable Consumer<UUID> listener) {
+    public void setSyncListener(@Nullable SyncListener listener) {
         this.syncListener = listener;
     }
 
@@ -130,8 +142,8 @@ public final class CacheInvalidator {
             TabListAPI.invalidate(uuid);
         }
 
-        // Notify sync listener for affected users
-        notifySyncAll(snapshot);
+        // Notify sync listener for affected users (group permission change -> refresh trees)
+        notifySyncAll(snapshot, true);
 
         Logger.debug("Invalidated cache for %d users in group '%s'", snapshot.size(), groupName);
         return snapshot.size();
@@ -163,8 +175,8 @@ public final class CacheInvalidator {
             TabListAPI.invalidate(uuid);
         }
 
-        // Notify sync listener for affected users
-        notifySyncAll(toInvalidate);
+        // Notify sync listener for affected users (group permission change -> refresh trees)
+        notifySyncAll(toInvalidate, true);
 
         Logger.debug("Invalidated cache for %d users across %d groups",
                 toInvalidate.size(), groupNames.size());
@@ -204,9 +216,11 @@ public final class CacheInvalidator {
         ChatAPI.invalidateAll();
         TabListAPI.invalidateAll();
 
-        // Notify sync listener for all tracked users
+        // Notify sync listener for all tracked users. This is a blunt invalidation (e.g. the
+        // global game-mode change), so do NOT resend command trees — refreshing every online
+        // player's tree on the event thread would be a needless stampede.
         Set<UUID> allUsers = new HashSet<>(userGroups.keySet());
-        notifySyncAll(allUsers);
+        notifySyncAll(allUsers, false);
 
         Logger.debug("Invalidated all cache entries (%d users synced)", allUsers.size());
     }
@@ -234,12 +248,13 @@ public final class CacheInvalidator {
      * @param uuid the user's UUID
      */
     private void notifySync(@NotNull UUID uuid) {
-        Consumer<UUID> listener = syncListener;
+        SyncListener listener = syncListener;
         if (listener == null) return;
         if (syncing.get()) return; // prevent recursion
         try {
             syncing.set(true);
-            listener.accept(uuid);
+            // Single-user invalidation: targeted permission/context change, refresh the tree.
+            listener.onSync(uuid, true);
         } catch (Exception e) {
             Logger.warn("Sync listener failed for %s: %s", uuid, e.getMessage());
         } finally {
@@ -252,15 +267,15 @@ public final class CacheInvalidator {
      *
      * @param uuids the user UUIDs
      */
-    private void notifySyncAll(@NotNull Collection<UUID> uuids) {
-        Consumer<UUID> listener = syncListener;
+    private void notifySyncAll(@NotNull Collection<UUID> uuids, boolean resendCommandTree) {
+        SyncListener listener = syncListener;
         if (listener == null) return;
         if (syncing.get()) return;
         try {
             syncing.set(true);
             for (UUID uuid : uuids) {
                 try {
-                    listener.accept(uuid);
+                    listener.onSync(uuid, resendCommandTree);
                 } catch (Exception e) {
                     Logger.warn("Sync listener failed for %s: %s", uuid, e.getMessage());
                 }

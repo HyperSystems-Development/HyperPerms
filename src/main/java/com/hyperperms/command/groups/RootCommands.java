@@ -2,6 +2,7 @@ package com.hyperperms.command.groups;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.command.annotation.*;
+import com.hyperperms.command.suggest.ArgKind;
 import com.hyperperms.command.annotation.Command;
 import com.hyperperms.model.User;
 import com.hyperperms.util.PlayerResolver;
@@ -31,8 +32,8 @@ public class RootCommands {
 
     @Command(name = "check", description = "Check if a player has a permission")
     public CompletableFuture<Void> check(CommandContext ctx,
-            @Arg(name = "player", description = "Player name or UUID") String identifier,
-            @Arg(name = "permission", description = "Permission node to check") String permission) {
+            @Arg(name = "player", description = "Player name or UUID", kind = ArgKind.PLAYER) String identifier,
+            @Arg(name = "permission", description = "Permission node to check", kind = ArgKind.NODE) String permission) {
         User user = PlayerResolver.resolve(plugin, identifier);
         if (user == null) {
             ctx.sender().sendMessage(Message.raw("\u2717 User not found: " + identifier).color(RED));

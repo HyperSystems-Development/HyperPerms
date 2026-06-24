@@ -520,6 +520,17 @@ public class HyperPermsPlugin extends JavaPlugin {
                 java.util.Set<String> resolvedSet = new java.util.HashSet<>(expandedGranted);
                 resolvedSet.removeAll(expandedDenied);
 
+                // QuestLines Claims compat: never sync questlinesclaims.* nodes into the native
+                // provider. QuestLines sums these node amounts across ALL registered providers, so a
+                // synced copy in the native provider would be double-counted on top of HyperPerms'
+                // own provider. HyperPerms still answers questlinesclaims.* boolean checks as the
+                // first provider, so excluding them from the native sync is invisible to QuestLines'
+                // hasPermission calls. (Also prunes any copies a previous version already wrote.)
+                // No-op unless QuestLines is installed.
+                if (com.hyperperms.integration.QuestLinesCompat.isInstalled()) {
+                    resolvedSet.removeIf(com.hyperperms.integration.QuestLinesCompat::isQuestLinesNode);
+                }
+
                 // IMPORTANT: Only modify OTHER providers, not our own!
                 PermissionsModule.get().getProviders().forEach(provider -> {
                     if (provider != permissionProvider) {

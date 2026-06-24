@@ -2,6 +2,7 @@ package com.hyperperms.platform;
 
 import com.hyperperms.HyperPerms;
 import com.hyperperms.api.context.ContextSet;
+import com.hyperperms.integration.QuestLinesCompat;
 import com.hyperperms.model.Group;
 import com.hyperperms.model.Node;
 import com.hyperperms.model.User;
@@ -113,6 +114,17 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         // Handle virtual user group - use HyperPermsPermissionSet which delegates
         // contains() checks to hasPermission(), properly handling negations
         if (groupName.startsWith("user:")) {
+            // QuestLines Claims compat: when QuestLines is present the virtual user group must
+            // expose NO permissions. QuestLines sums permission-node amounts across BOTH
+            // getUserPermissions() AND each of the user's groups' getGroupPermissions(); since
+            // our virtual group returns the same fully-resolved set as getUserPermissions(),
+            // every questlinesclaims.claim.chunks.<n> / rent.limit.<n> node would otherwise be
+            // counted twice. Returning empty here makes getUserPermissions() the single summable
+            // source. Boolean resolution is unaffected (getUserPermissions is checked first and
+            // still carries the full resolved set, including negations). No-op without QuestLines.
+            if (QuestLinesCompat.isInstalled()) {
+                return Collections.emptySet();
+            }
             UUID uuid = UUID.fromString(groupName.substring(5));
             return new HyperPermsPermissionSet(hyperPerms, uuid);
         }

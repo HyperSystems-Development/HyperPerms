@@ -9,6 +9,14 @@
 
 **[Documentation](https://www.hyperperms.com/wiki)** | **[Web Editor](https://hyperperms.com)** | **[Discord](https://discord.com/invite/aZaa5vcFYh)** | **[CurseForge](https://www.curseforge.com/hytale/mods/hyperperms)**
 
+> **Version 3.0.0 targets Hytale Update 6 (`0.6.0-pre.x`) and does not run on 0.5.x.** Update 6
+> changed `PermissionProvider` and the player-list packet in ways that cannot be supported from one
+> build. **Running Hytale 0.5.x? Stay on HyperPerms 2.10.x.**
+>
+> The headline change for operators: **the whitelist is now the `hytale.server.join` permission.**
+> Grant it to a HyperPerms group to whitelist that group. See
+> [HYTALE_PERMISSIONS.md](HYTALE_PERMISSIONS.md#update-6-060-the-whitelist-is-now-a-permission).
+
 ![Web Editor](web-editor.png)
 
 ## Features
@@ -136,11 +144,11 @@ For MariaDB/MySQL, add connection details:
 
 </details>
 
-## Important: HyperPerms and Operator (OP) status on 0.5.2
+## Important: HyperPerms and Operator (OP) status
 
-On Hytale 0.5.2+, HyperPerms registers as the **primary** permission provider (it puts itself first while keeping Hytale's built-in provider registered). All permission *decisions* are made by HyperPerms.
+HyperPerms registers as the **primary** permission provider (it puts itself first while keeping Hytale's built-in provider registered). All permission *decisions* are made by HyperPerms.
 
-Hytale 0.5.2 determines **operator status by group membership** — internally it checks whether a player is in the `hytale:Admin` group. To make this work for HyperPerms-managed admins, HyperPerms automatically reports a player as being in `hytale:Admin` whenever they effectively have the `*` permission (e.g. via the bundled `admin`/`owner` groups). So **granting a HyperPerms group the `*` node makes its members OP**, recognized by Hytale and OP-gated features.
+Hytale determines **operator status by group membership** — internally it checks whether a player is in the `hytale:Admin` group. To make this work for HyperPerms-managed admins, HyperPerms automatically reports a player as being in `hytale:Admin` whenever they effectively have the `*` permission (e.g. via the bundled `admin`/`owner` groups). So **granting a HyperPerms group the `*` node makes its members OP**, recognized by Hytale and OP-gated features.
 
 Manage everything through HyperPerms:
 
@@ -216,9 +224,9 @@ api.getGroupManager().createGroup(admin);
 <details>
 <summary><strong>Building from Source</strong></summary>
 
-**Requirements:** Java 25, Gradle 9.3+, Hytale 0.5.2+
+**Requirements:** Java 25, Gradle 9.3+, Hytale 0.6.0+
 
-The Hytale Server API is resolved automatically from `maven.hytale.com` (release channel by default; use `-Phytale_channel=pre-release` or `./gradlew buildPreRelease` for pre-release builds), and PlaceholderAPI from `repo.helpch.at`. VaultUnlocked is a compile-only soft dependency supplied as a jar in `libs/` (from [TheNewEconomy/VaultUnlocked-Hytale](https://github.com/TheNewEconomy/VaultUnlocked-Hytale)).
+The Hytale Server API is resolved automatically from `maven.hytale.com`. The **pre-release channel is the default**, because 3.x targets Update 6 (`0.6.0-pre.x`); `-Phytale_channel=release` or `./gradlew buildRelease` is retained for when Update 6 promotes to the release channel and will not compile before then. PlaceholderAPI comes from `repo.helpch.at`. VaultUnlocked is a compile-only soft dependency supplied as a jar in `libs/` (from [TheNewEconomy/VaultUnlocked-Hytale](https://github.com/TheNewEconomy/VaultUnlocked-Hytale)).
 
 ```bash
 ./gradlew shadowJar

@@ -92,6 +92,24 @@ public interface StorageProvider {
      */
     CompletableFuture<Optional<UUID>> lookupUuid(@NotNull String username);
 
+    /**
+     * Finds every stored user who holds the given permission as a <em>direct</em> grant of their
+     * own: a node stored on the user, with a positive value, that has not expired.
+     * <p>
+     * Deliberately narrow. A user who resolves the permission through a group, a track, or a
+     * wildcard is <b>not</b> returned, because the grant belongs to the group rather than to the
+     * user. This matches the contract of Hytale's
+     * {@code PermissionProvider#getUsersWithPermission}, which backs {@code /whitelist list} and
+     * {@code /whitelist clear}: revoking a group's grant from a user would not stick, so
+     * reporting them as revoked would be a lie.
+     * <p>
+     * Contexts are ignored — a node that applies only in some contexts still counts as held.
+     *
+     * @param permission the exact permission node, matched literally (no wildcard expansion)
+     * @return the UUIDs of users carrying the node directly; empty if none do
+     */
+    CompletableFuture<Set<UUID>> findUsersWithNode(@NotNull String permission);
+
     // ==================== Group Operations ====================
 
     /**

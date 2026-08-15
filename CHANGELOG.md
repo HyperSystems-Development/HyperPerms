@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [3.0.0] - 2026-08-15
+
+**Server Version:** `0.6.0-pre.12.2` (pre-release). **This release drops Hytale 0.5.x.** Update 6 changed two APIs HyperPerms sits directly on top of, in ways that cannot be satisfied from one source tree; stay on 2.10.x for 0.5.x servers.
+
+Update 6 rewrote how the server hands permissions to a provider, and — most importantly — turned the whitelist into an ordinary permission that flows through whichever provider is first in the chain. That is HyperPerms. Everything below follows from that.
+
+### Breaking
+
+- **Requires Hytale 0.6.0 or newer.** `PermissionProvider` gained an abstract `getUsersWithPermission(String)` with no default, and `ServerPlayerListPlayer`'s constructor gained `Spectating` and `LivesRemaining` parameters. Neither can be written to compile against both 0.5.x and 0.6.x. The default build channel is now `pre-release`; `./gradlew buildRelease` is retained for when Update 6 promotes.
+
+### Fixed
+
+- **`/whitelist add` silently did nothing on a HyperPerms server.** Update 6 removed `HytaleWhitelistProvider` and rebuilt the whitelist on the `hytale.server.join` permission, so `AccessControlModule` now implements the command as `addUserPermission(uuid, …)` against the *first* permission provider — which HyperPerms deliberately makes itself. HyperPerms ignores engine-issued grants by design (they would plant direct user nodes that outrank group negations), so the command reported success and left the player locked out of the server. `addUserPermissions` now persists an explicit allowlist of nodes where a dropped write is a user-visible lie, starting with `hytale.server.join`; everything else is still ignored.
+- **Tab list formatting erased spectator and hardcore state.** HyperPerms rebuilds each player-list entry to inject the prefix/suffix, and was still using the four-argument constructor. Against 0.6.x that would have reset every player's `Spectating` flag to false and dropped `LivesRemaining` entirely, un-greying every spectator and blanking the hardcore lives counter server-wide. Entries now carry both fields through, read the same way `ServerPlayerListModule` reads them.
+
+### Added
+
+- **`getUsersWithPermission` implementation** (required by 0.6.x). Answers with users who hold the node as a *direct, live, positive* grant of their own — group inheritance, tracks, and wildcards deliberately excluded, matching the engine's contract that a listed user is one whom revocation will actually affect. Backs `/whitelist list` and `/whitelist clear`.
+- **`StorageProvider.findUsersWithNode(String)`** across all three backends: an indexed query on SQLite and MariaDB (new `idx_user_nodes_permission`, added to existing databases on startup), and a file scan on JSON. Unlike the other reads in the storage layer this one fails loudly rather than degrading to an empty set — Hytale's own javadoc warns that a provider answering "nobody" when it means "I cannot tell" makes revocation report success against users who still hold the permission. When storage cannot answer in time, HyperPerms returns what it knows from loaded users and logs exactly what may be missing.
+- **Live permission-catalog sync.** `PermissionRegistry` now imports every node the running server registered via `PermissionsModule.registerPermission`, so the catalog tracks whatever build is actually running instead of drifting. A node missing from the registry does not expand under a wildcard such as `hytale.command.*`, and Update 6 alone added roughly forty commands. Curated descriptions still win over generated ones.
+- **Curated entries and aliases for Update 6's operator-facing nodes:** `hytale.server.join`; `hytale.command.spectate.{self,watch,other}`; `hytale.command.player.lives.{get,set,clear}` and `player.respawn.other`; the newly split `give.armor.other`, `model.{,set.,reset.}other`, `recipe.{learn,forget,list}.other`, and `warp.go`; plus `hytale.editor.blockSpawner`, `hytale.movement.noclip`, and `hytale.status.backup.error`. The bare aliases cover both halves of each new `.other` split so existing group grants survive the upgrade.
+- **Contract tests** for `findUsersWithNode` covering negations, expiry, group inheritance, and wildcards.
+
+### Notes for operators
+
+- **Granting `hytale.server.join` to a HyperPerms group whitelists that whole group.** This is the intended way to run a whitelist under HyperPerms, and it composes with contexts and tracks the way any other node does.
+- **`/whitelist remove` cannot revoke a group's grant.** It removes a direct grant only. This is the engine's own model, not a HyperPerms limitation — Hytale's `removeUserPermissionFromAll` documents that a user holding a permission through a group keeps it. Use `/hp group permission unset` for group-level grants.
+- **`/whitelist add` may report "already whitelisted" for a player with no direct grant** if HyperPerms resolves `hytale.server.join` for them through a group or a `*` wildcard. The report is accurate — they can connect — but no direct grant is stored and they will not appear in `/whitelist list`.
+- **Vanilla `/perm user remove` now reaches HyperPerms data.** Update 6 changed `PermissionsModule.removeUserPermission` to iterate every provider rather than only the first, so the command now deletes matching HyperPerms user nodes where it previously left them alone.
+
 ## [2.10.0] - 2026-06-23
 
 **Server Version:** `0.5.6` (release) / `0.6.0-pre.4` (pre-release) — verified compiling, testing, and packaging from a single source on both channels.

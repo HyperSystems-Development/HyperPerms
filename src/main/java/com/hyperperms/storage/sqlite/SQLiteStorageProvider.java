@@ -179,6 +179,9 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
             // Create indexes
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_user_nodes_uuid ON user_nodes(user_uuid)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_group_nodes_name ON group_nodes(group_name)");
+            // Reverse lookup for findUsersWithNode (whitelist list/clear), which searches by
+            // permission rather than by owner.
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_user_nodes_permission ON user_nodes(permission)");
         }
     }
 
@@ -402,6 +405,32 @@ public final class SQLiteStorageProvider extends AbstractStorageProvider {
                 Logger.severe("Failed to lookup UUID for: " + username, e);
             }
             return Optional.empty();
+        });
+    }
+
+    @Override
+    public CompletableFuture<Set<UUID>> findUsersWithNode(@NotNull String permission) {
+        return executeAsync(() -> {
+            Set<UUID> uuids = new HashSet<>();
+            // value = 1 excludes negations; the expiry clause excludes lapsed timed nodes.
+            String sql = """
+                SELECT DISTINCT user_uuid FROM user_nodes
+                WHERE permission = ? AND value = 1 AND (expiry IS NULL OR expiry > ?)
+                """;
+            // A SQLException is deliberately allowed to propagate (executeAsync wraps it and
+            // fails the future) rather than being swallowed into an empty set: callers use this
+            // to decide who to revoke from, and "nobody" must not stand in for "I could not
+            // tell". See StorageProvider#findUsersWithNode.
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                stmt.setString(1, permission);
+                stmt.setLong(2, System.currentTimeMillis());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        uuids.add(UUID.fromString(rs.getString("user_uuid")));
+                    }
+                }
+            }
+            return uuids;
         });
     }
 

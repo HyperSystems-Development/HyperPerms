@@ -8,9 +8,10 @@ version = project.mod_version
 
 // ---------------------------------------------------------------------------
 // Hytale Maven version resolution
-// Fetches the latest release from maven.hytale.com at build time.
-// Use -Phytale_channel=pre-release  (or run ./gradlew buildPreRelease)
-// to target the pre-release channel instead.
+// Fetches the latest version of the configured channel from maven.hytale.com at
+// build time. The default channel is pre-release (Update 6 / 0.6.0-pre.x); see
+// gradle.properties for why 0.5.x is no longer source-compatible.
+// Use -Phytale_channel=release (or run ./gradlew buildRelease) to override.
 // ---------------------------------------------------------------------------
 def resolveHytaleVersion(String channel) {
     def url = "https://maven.hytale.com/${channel}/com/hypixel/hytale/Server/maven-metadata.xml"
@@ -20,7 +21,7 @@ def resolveHytaleVersion(String channel) {
     return matcher.group(1)
 }
 
-def hytaleChannel = project.findProperty('hytale_channel') ?: 'release'
+def hytaleChannel = project.findProperty('hytale_channel') ?: 'pre-release'
 def hytaleVersion = resolveHytaleVersion(hytaleChannel)
 
 // Shared version property avoids accessing project at execution time
@@ -187,16 +188,18 @@ tasks.named('build') {
     mustRunAfter 'clean'
 }
 
+// Retained for when Update 6 promotes to the release channel. Until then this
+// task fails to compile: 3.x targets the 0.6.x API. Build 0.5.x from the 2.10.x branch.
 tasks.register('buildRelease', GradleBuild) {
     group       = 'build'
-    description = 'Clean build against the latest Hytale release server'
+    description = 'Clean build against the latest Hytale release server (0.6.x only)'
     tasks       = ['clean', 'shadowJar']
     startParameter.projectProperties = ['hytale_channel': 'release']
 }
 
 tasks.register('buildPreRelease', GradleBuild) {
     group       = 'build'
-    description = 'Clean build against the latest Hytale pre-release server'
+    description = 'Clean build against the latest Hytale pre-release server (default channel)'
     tasks       = ['clean', 'shadowJar']
     startParameter.projectProperties = ['hytale_channel': 'pre-release']
 }

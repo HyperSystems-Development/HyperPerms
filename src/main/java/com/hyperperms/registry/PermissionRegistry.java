@@ -2,6 +2,8 @@ package com.hyperperms.registry;
 
 import com.hyperperms.discovery.RuntimePermissionDiscovery;
 import com.hyperperms.util.Logger;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -343,6 +345,79 @@ public final class PermissionRegistry {
      */
     public void registerDiscoveredPermissions(@NotNull RuntimePermissionDiscovery discovery) {
         discovery.registerAll(this);
+    }
+
+    /**
+     * Imports every permission the running server has registered with
+     * {@code PermissionsModule.registerPermission}, which is the authoritative list of nodes
+     * Hytale itself checks: one entry per command (including auto-generated subcommand nodes)
+     * plus the explicit constants in {@code HytalePermissions}.
+     * <p>
+     * The hand-written {@link #registerHytalePermissions()} catalog below cannot keep pace with
+     * this on its own — Update 6 alone added roughly forty commands — and a node missing from the
+     * registry does not expand under a wildcard such as {@code hytale.command.*}. Reading the
+     * live list means the catalog tracks whatever build the server is actually running, so the
+     * hand-written entries only need to cover aliases and descriptions.
+     * <p>
+     * Existing entries win, so a curated description is never overwritten by a generated one.
+     * Call after {@link #registerBuiltInPermissions()}, once core plugins have registered.
+     *
+     * @return the number of nodes newly added to the registry
+     */
+    public int syncFromServer() {
+        Map<String, Set<String>> serverPermissions;
+        try {
+            // Touch HytalePermissions first. Its constants self-register during class
+            // initialisation, so reading the map before the class is loaded would miss every
+            // non-command node -- hytale.server.join among them.
+            Objects.requireNonNull(HytalePermissions.SERVER_JOIN);
+            serverPermissions = PermissionsModule.getRegisteredPermissions();
+        } catch (Throwable t) {
+            // Never fatal: an out-of-step server API costs wildcard expansion of unlisted nodes,
+            // not a working permission check.
+            Logger.warn("Could not read the server's registered permissions: %s", t.toString());
+            return 0;
+        }
+
+        int added = 0;
+        for (Map.Entry<String, Set<String>> entry : serverPermissions.entrySet()) {
+            String node = entry.getKey();
+            if (register(node, describeServerPermission(node, entry.getValue()), categoryOf(node), "Hytale")) {
+                added++;
+            }
+        }
+
+        Logger.info("Synced %d new permission(s) from the server (%d known to the server in total)",
+                added, serverPermissions.size());
+        return added;
+    }
+
+    /**
+     * Builds a description for a server-registered node, naming the built-in groups that grant it
+     * when the server reports any (for example {@code hytale:Admin}).
+     *
+     * @param node   the permission node
+     * @param groups the built-in groups the server grants it to; may be empty
+     * @return a human-readable description
+     */
+    @NotNull
+    private static String describeServerPermission(@NotNull String node, @NotNull Set<String> groups) {
+        if (groups.isEmpty()) {
+            return "Hytale permission: " + node;
+        }
+        return "Hytale permission: " + node + " (granted to " + String.join(", ", new TreeSet<>(groups)) + ")";
+    }
+
+    /**
+     * Derives a registry category from a node's namespace, so synced nodes land beside the
+     * hand-written entries rather than in a bucket of their own.
+     *
+     * @param node the permission node
+     * @return the category name
+     */
+    @NotNull
+    private static String categoryOf(@NotNull String node) {
+        return node.startsWith("hytale.") ? "hytale" : "server";
     }
 
     /**
@@ -765,7 +840,59 @@ public final class PermissionRegistry {
         register("hytale.mods.*", "All mod-related permissions", "hytale", "Hytale");
         register("hytale.mods.outdated.notify", "Receive outdated mod notifications", "hytale", "Hytale");
 
+        registerUpdate6Permissions();
+
         Logger.debug("Registered Hytale permissions for wildcard expansion");
+    }
+
+    /**
+     * Nodes introduced by Hytale Update 6 (0.6.0) that warrant a curated description.
+     * <p>
+     * {@link #syncFromServer()} would pick most of these up anyway, but they are listed here so
+     * that an admin browsing the registry, or an operator reading a wildcard expansion, sees what
+     * each one actually does. The commands Update 6 added are left to the sync — there are around
+     * forty of them and their generated descriptions are adequate.
+     */
+    private void registerUpdate6Permissions() {
+        // ==================== Whitelist (Update 6) ====================
+        // The whitelist stopped being a provider of its own in 0.6.0. HytaleWhitelistProvider was
+        // removed and the server now refuses a connection unless the player resolves this node,
+        // which is what /whitelist add and /whitelist remove now grant and revoke. Granting it
+        // through a HyperPerms group whitelists that whole group.
+        register("hytale.server.join", "Connect to the server while RequireJoinPermission is on (the whitelist)", "hytale", "Hytale");
+
+        // ==================== Spectator (Update 6) ====================
+        register("hytale.command.spectate.*", "All spectator commands", "hytale", "Hytale");
+        register("hytale.command.spectate.self", "Enter and leave spectator mode", "hytale", "Hytale");
+        register("hytale.command.spectate.watch", "Spectate a specific player or fly freely", "hytale", "Hytale");
+        register("hytale.command.spectate.other", "Force another player into or out of spectator mode", "hytale", "Hytale");
+
+        // ==================== Hardcore lives (Update 6) ====================
+        register("hytale.command.player.lives.*", "All hardcore lives commands", "hytale", "Hytale");
+        register("hytale.command.player.lives.get", "View remaining hardcore lives", "hytale", "Hytale");
+        register("hytale.command.player.lives.set", "Set remaining hardcore lives", "hytale", "Hytale");
+        register("hytale.command.player.lives.clear", "Clear hardcore lives tracking", "hytale", "Hytale");
+        register("hytale.command.player.respawn.other", "Revive another player", "hytale", "Hytale");
+
+        // ==================== New .other splits (Update 6) ====================
+        // Each of these used to be covered by its parent command's node; 0.6.0 split the
+        // act-on-someone-else case out, and no built-in group is granted them by default.
+        register("hytale.command.give.armor.other", "Give armour to another player", "hytale", "Hytale");
+        register("hytale.command.model.other", "Change another player's model", "hytale", "Hytale");
+        register("hytale.command.model.set.other", "Set another player's model", "hytale", "Hytale");
+        register("hytale.command.model.reset.other", "Reset another player's model", "hytale", "Hytale");
+        register("hytale.command.recipe.learn.other", "Teach another player a recipe", "hytale", "Hytale");
+        register("hytale.command.recipe.forget.other", "Make another player forget a recipe", "hytale", "Hytale");
+        register("hytale.command.recipe.list.other", "List another player's recipes", "hytale", "Hytale");
+        register("hytale.command.warp.go", "Travel to a warp", "hytale", "Hytale");
+
+        // ==================== Editor and movement (Update 6) ====================
+        register("hytale.editor.blockSpawner", "Open the block spawner configuration panel", "hytale", "Hytale");
+        register("hytale.movement.noclip", "Use server-side no-clip", "hytale", "Hytale");
+
+        // ==================== Status notifications (Update 6) ====================
+        register("hytale.status.*", "All server status notifications", "hytale", "Hytale");
+        register("hytale.status.backup.error", "Receive backup failure notifications", "hytale", "Hytale");
     }
 
     /**

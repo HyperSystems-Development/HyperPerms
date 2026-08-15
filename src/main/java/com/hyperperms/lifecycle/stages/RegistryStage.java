@@ -37,6 +37,9 @@ public final class RegistryStage implements Stage {
         // Initialize permission registry
         PermissionRegistry permissionRegistry = PermissionRegistry.getInstance();
         permissionRegistry.registerBuiltInPermissions();
+        // Pull in whatever nodes this particular server build registered, so the catalog does
+        // not go stale the next time Hytale adds commands. Curated entries above win.
+        permissionRegistry.syncFromServer();
         container.register(PermissionRegistry.class, permissionRegistry);
 
         // Initialize runtime permission discovery

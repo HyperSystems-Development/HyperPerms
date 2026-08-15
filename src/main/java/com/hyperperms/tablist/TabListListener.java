@@ -11,13 +11,17 @@ import com.hypixel.hytale.protocol.packets.connection.PongType;
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList;
 import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList;
 import com.hypixel.hytale.protocol.packets.interface_.ServerPlayerListPlayer;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.io.PacketHandler;
+import com.hypixel.hytale.server.core.modules.entity.component.PlayerLives;
+import com.hypixel.hytale.server.core.modules.entity.component.Spectating;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -392,14 +396,59 @@ public class TabListListener {
         int ping = getPingValue(playerRef.getPacketHandler());
         UUID worldUuid = playerRef.getWorldUuid();
 
+        // Read the engine-owned fields up front, on the caller's thread, so the async
+        // continuation below never touches the entity store. HyperPerms only replaces the
+        // *name* on a list entry; every other field must carry through untouched or the
+        // client loses state the engine put there (see the two helpers below).
+        boolean spectating = isSpectating(playerRef);
+        Integer livesRemaining = livesRemaining(playerRef);
+
         // Format the display name asynchronously
         return formatPlayerNameAsync(uuid, playerName)
             .thenApply(formattedName -> new ServerPlayerListPlayer(
                 uuid,
                 formattedName,
                 worldUuid,
-                ping
+                ping,
+                spectating,
+                livesRemaining
             ));
+    }
+
+    /**
+     * Whether the player is currently spectating.
+     * <p>
+     * Mirrors {@code ServerPlayerListModule}: the client greys a spectator's list row from this
+     * flag, so a HyperPerms-formatted entry that dropped it would silently un-grey every
+     * spectator on the server.
+     *
+     * @param playerRef the player reference
+     * @return true if the player holds the {@code Spectating} component
+     */
+    private static boolean isSpectating(@NotNull PlayerRef playerRef) {
+        return playerRef.getComponentConcurrent(Spectating.getComponentType()) != null;
+    }
+
+    /**
+     * The player's remaining hardcore lives for their list entry, or {@code null} when the
+     * world's hardcore mode surfaces no per-player count.
+     * <p>
+     * Mirrors {@code ServerPlayerListModule}: a player who has not died yet carries no
+     * {@link PlayerLives} component and shows the configured starting count.
+     *
+     * @param playerRef the player reference
+     * @return the remaining lives, or null when the mode shows none
+     */
+    @Nullable
+    private static Integer livesRemaining(@NotNull PlayerRef playerRef) {
+        var defaults = HytaleServer.get().getConfig().getDefaults();
+        if (!defaults.getHardcoreMode().showsPersonalLives(defaults.getHardcoreLives())) {
+            return null;
+        }
+
+        PlayerLives lives = playerRef.getComponentConcurrent(PlayerLives.getComponentType());
+        int remaining = lives != null ? lives.getRemaining() : defaults.getHardcoreLives();
+        return Math.max(remaining, 0);
     }
 
     /**

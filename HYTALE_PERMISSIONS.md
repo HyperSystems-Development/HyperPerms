@@ -2,6 +2,42 @@
 
 This document contains the **actual permission nodes** that Hytale's server checks, discovered by decompiling HytaleServer.jar. HyperPerms uses an alias system to map user-friendly web UI permissions to these actual Hytale permissions.
 
+**Current target:** Hytale `0.6.0-pre.12.2` (Update 6).
+
+> **This list is a curated subset, not the whole set.** Since HyperPerms 3.0.0 the registry also
+> imports every node the running server registered with `PermissionsModule.registerPermission`,
+> which is the authoritative list for whatever build you are on. Update 6 added around forty
+> commands; the ones worth reading about by name are documented below, the rest are picked up
+> automatically. Run `/hp perms list --category hytale` to see what your server actually registered.
+
+---
+
+## Update 6 (0.6.0): the whitelist is now a permission
+
+The single change most likely to surprise you. `HytaleWhitelistProvider` is **gone**. When
+`RequireJoinPermission` is on, the server refuses any player who does not resolve:
+
+| Actual Hytale Permission | Description |
+|--------------------------|-------------|
+| `hytale.server.join` | Connect to the server while the join requirement is on |
+
+No built-in group is granted it, so turning the requirement on refuses everyone until you grant it
+(admins keep their way in because the admin group holds every permission). An existing
+`whitelist.json` is migrated to grants on first boot and renamed `whitelist.json.migrated`.
+
+What this means on a HyperPerms server:
+
+- **Grant it to a group to whitelist that group.** `/hp group permission set <group> hytale.server.join`
+  is the idiomatic approach, and it composes with contexts and tracks like any other node.
+- **`/whitelist add <player>` works** and stores a direct user node — HyperPerms makes a specific
+  exception for this node, because it normally ignores engine-issued grants.
+- **`/whitelist remove` only revokes a direct grant.** It cannot take back a grant that belongs to a
+  group; that is Hytale's model, not a HyperPerms limitation. Use `/hp group permission unset`.
+- **`/whitelist list` shows direct grants only.** A player whitelisted via a group will not appear,
+  even though they can connect.
+
+---
+
 ## Permission Generation Pattern
 
 From `HytalePermissions.java`:
@@ -112,6 +148,7 @@ Example: To change another player's gamemode, you need `hytale.command.gamemode.
 | `hytale.editor.packs.create` | Create packs |
 | `hytale.editor.packs.edit` | Edit packs |
 | `hytale.editor.packs.delete` | Delete packs |
+| `hytale.editor.blockSpawner` | Open the block spawner panel (**camelCase!**, Update 6) |
 
 ---
 
@@ -120,10 +157,59 @@ Example: To change another player's gamemode, you need `hytale.command.gamemode.
 | Actual Hytale Permission | Description |
 |--------------------------|-------------|
 | `hytale.camera.flycam` | Fly camera mode |
+| `hytale.movement.noclip` | Server-side no-clip (Update 6; also needs fly) |
 | `hytale.world_map.teleport.coordinate` | Teleport via coordinates |
 | `hytale.world_map.teleport.marker` | Teleport via markers |
 | `hytale.system.update.notify` | Update notifications |
 | `hytale.mods.outdated.notify` | Receive outdated mod notifications |
+| `hytale.status.backup.error` | Receive backup failure notifications (Update 6) |
+
+---
+
+## Spectator Mode (Update 6)
+
+Follows the usual `.self`/`.other` split, with a third node for following a named player.
+
+| Actual Hytale Permission | Description |
+|--------------------------|-------------|
+| `hytale.command.spectate.self` | Enter and leave spectator mode |
+| `hytale.command.spectate.watch` | Spectate a specific player, or fly freely |
+| `hytale.command.spectate.other` | Force another player into or out of spectator mode |
+
+---
+
+## Hardcore Lives (Update 6)
+
+`/player lives` sits in the WorldEditor group; `/player respawn` is in Builder, with reviving
+someone else split into its own node.
+
+| Actual Hytale Permission | Description |
+|--------------------------|-------------|
+| `hytale.command.player.lives.get` | View remaining hardcore lives |
+| `hytale.command.player.lives.set` | Set remaining hardcore lives |
+| `hytale.command.player.lives.clear` | Clear hardcore lives tracking |
+| `hytale.command.player.respawn.other` | Revive another player |
+
+---
+
+## Newly Split `.other` Nodes (Update 6)
+
+Each of these was previously covered by its parent command's node. Update 6 split the
+act-on-someone-else case out, and **no built-in group is granted them by default** — an operator
+who relied on the parent node will need to grant these explicitly. HyperPerms' bare aliases
+(`hytale.command.model`, `hytale.command.recipe`, `hytale.command.give.armor`) expand to cover
+both halves, so an existing HyperPerms group grant keeps working.
+
+| Actual Hytale Permission | Description |
+|--------------------------|-------------|
+| `hytale.command.give.armor.other` | `/give armor --player <other>` |
+| `hytale.command.model.other` | Change another player's model |
+| `hytale.command.model.set.other` | Set another player's model |
+| `hytale.command.model.reset.other` | Reset another player's model |
+| `hytale.command.recipe.learn.other` | Teach another player a recipe |
+| `hytale.command.recipe.forget.other` | Make another player forget a recipe |
+| `hytale.command.recipe.list.other` | List another player's recipes |
+| `hytale.command.warp.go` | Travel to a warp (previously implied by `/warp list`) |
 
 ---
 
@@ -199,6 +285,14 @@ Hytale's built-in `HytalePermissionsProvider` forcibly re-inserts the default OP
 **Recommendation:** Always use HyperPerms groups instead of modifying vanilla's OP or Default groups. Use `/hp group create <name>` to create persistent groups.
 
 HyperPerms logs a warning at startup if it detects custom permissions in vanilla's OP or Default groups.
+
+### Vanilla `/perm user remove` Reaches HyperPerms Data (Update 6)
+
+Before 0.6.0, `PermissionsModule.removeUserPermission` wrote only to the *first* registered
+provider. Update 6 changed it to iterate **every** provider, on the reasoning that a check reads
+every provider so a removal must too. HyperPerms is first in the chain, so this is not a change in
+who receives the call — but the built-in provider now also gets it, and any other provider on the
+server does too. If you run a second permission plugin, expect `/perm user remove` to affect both.
 
 ### Multi-Provider Group Aggregation
 

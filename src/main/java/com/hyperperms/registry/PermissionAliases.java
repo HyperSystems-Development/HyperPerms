@@ -542,6 +542,39 @@ public final class PermissionAliases {
         // Spawn set command (distinct from spawn teleport)
         alias("hytale.command.spawnset", "hytale.command.spawn.self", "hytale.command.spawn.other");
 
+        // ==================== Update 6 (Hytale 0.6.0) ====================
+        // Spectator mode, following the established .self/.other split. "watch" is the
+        // spectate-a-named-player form and is included in the bare alias because a spectator who
+        // cannot follow anyone is not much of a spectator.
+        alias("hytale.command.spectate",
+            "hytale.command.spectate.self", "hytale.command.spectate.watch");
+        alias("hytale.command.spectate.self", "hytale.command.spectate.self");
+        alias("hytale.command.spectate.watch", "hytale.command.spectate.watch");
+        alias("hytale.command.spectate.other", "hytale.command.spectate.other");
+
+        // Hardcore lives
+        alias("hytale.command.lives",
+            "hytale.command.player.lives.get",
+            "hytale.command.player.lives.set",
+            "hytale.command.player.lives.clear");
+        alias("hytale.command.player.lives",
+            "hytale.command.player.lives.get",
+            "hytale.command.player.lives.set",
+            "hytale.command.player.lives.clear");
+
+        // Commands whose act-on-someone-else form was split out in 0.6.0. The bare alias covers
+        // both halves so an existing group grant keeps working across the upgrade.
+        alias("hytale.command.model",
+            "hytale.command.model.other", "hytale.command.model.set.other", "hytale.command.model.reset.other");
+        alias("hytale.command.recipe",
+            "hytale.command.recipe.learn.other", "hytale.command.recipe.forget.other", "hytale.command.recipe.list.other");
+        alias("hytale.command.give.armor",
+            "hytale.command.give.armor.other");
+        alias("hytale.command.warp.go", "hytale.command.warp.go");
+
+        // The whitelist is a permission in 0.6.0, not a separate list.
+        alias("hytale.server.join", "hytale.server.join");
+
         // Building/Editor commands (simplified -> actual)
         alias("hytale.command.fill", "hytale.editor.selection.fill");
         alias("hytale.command.walls", "hytale.editor.selection.walls");

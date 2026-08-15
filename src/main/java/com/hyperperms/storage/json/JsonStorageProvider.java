@@ -18,6 +18,7 @@ import java.nio.file.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 
 /**
@@ -191,6 +192,52 @@ public final class JsonStorageProvider extends AbstractStorageProvider {
                 .filter(u -> username.equalsIgnoreCase(u.getUsername()))
                 .map(User::getUuid)
                 .findFirst());
+    }
+
+    @Override
+    public CompletableFuture<Set<UUID>> findUsersWithNode(@NotNull String permission) {
+        return executeAsync(() -> {
+            Set<UUID> holders = new HashSet<>();
+            // One file per user, so this is a full scan. Acceptable because the callers are rare
+            // admin commands (/whitelist list, /whitelist clear), and the JSON backend is the
+            // small-server option; SQL backends answer the same question from an index.
+            try (var stream = Files.list(usersDirectory)) {
+                stream.filter(p -> p.toString().endsWith(".json")).forEach(file -> {
+                    try {
+                        User user = gson.fromJson(Files.readString(file), User.class);
+                        if (user != null && holdsDirectly(user, permission)) {
+                            holders.add(user.getUuid());
+                        }
+                    } catch (Exception e) {
+                        // A single unreadable file must not be reported as "this user does not
+                        // hold it" -- that is the mistake findUsersWithNode exists to avoid.
+                        throw new CompletionException(
+                            new IOException("Unreadable user file: " + file.getFileName(), e));
+                    }
+                });
+            } catch (IOException e) {
+                throw new CompletionException(e);
+            }
+            return holders;
+        });
+    }
+
+    /**
+     * Whether the user carries the permission as a direct, live, positive node of their own.
+     * Group membership and wildcards deliberately do not count.
+     *
+     * @param user       the user to inspect
+     * @param permission the exact permission node
+     * @return true if the user holds the node directly
+     */
+    private static boolean holdsDirectly(@NotNull User user, @NotNull String permission) {
+        for (Node node : user.getNodes()) {
+            if (node.getValue() && !node.isExpired() && !node.isGroupNode()
+                    && node.getPermission().equals(permission)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ==================== Group Operations ====================

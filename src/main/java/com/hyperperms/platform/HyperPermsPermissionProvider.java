@@ -11,10 +11,14 @@ import com.hyperperms.resolver.PermissionResolver;
 import com.hyperperms.util.CaseInsensitiveSet;
 import com.hyperperms.util.HyperPermsPermissionSet;
 import com.hyperperms.util.Logger;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.permissions.provider.PermissionProvider;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * HyperPerms implementation of Hytale's PermissionProvider interface.
@@ -29,6 +33,32 @@ import java.util.*;
 public class HyperPermsPermissionProvider implements PermissionProvider {
 
     private static final String PROVIDER_NAME = "HyperPerms";
+
+    /**
+     * Permissions that {@link #addUserPermissions} persists instead of ignoring.
+     * <p>
+     * The blanket ignore below exists so that engine-issued grants cannot plant direct user nodes
+     * that outrank group negations. That is still the right default, but as of Hytale 0.6.0 the
+     * whitelist is no longer a separate provider: {@code AccessControlModule} implements
+     * {@code /whitelist add} as {@code addUserPermission(uuid, "hytale.server.join")} routed to
+     * {@link com.hypixel.hytale.server.core.permissions.PermissionsModule#getFirstPermissionProvider()},
+     * which HyperPerms deliberately makes itself. Ignoring that call makes the command report
+     * success and leave the player locked out.
+     * <p>
+     * So: keep ignoring everything, except the small set of nodes where a dropped write is a
+     * user-visible lie. Each entry needs that justification.
+     */
+    private static final Set<String> PERSISTED_ENGINE_GRANTS = Set.of(
+        // Backs /whitelist add. Without it the whitelist silently does nothing.
+        HytalePermissions.SERVER_JOIN.getId()
+    );
+
+    /**
+     * How long {@link #getUsersWithPermission} waits on storage before giving up. Its callers
+     * ({@code /whitelist list}, {@code /whitelist clear}) run on the command thread, so this is
+     * short enough not to hang the server and long enough for a healthy backend.
+     */
+    private static final long USER_LOOKUP_TIMEOUT_SECONDS = 5L;
 
     private final HyperPerms hyperPerms;
 
@@ -52,8 +82,26 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         // Hytale and other plugins call this method to "grant" permissions to users,
         // but HyperPerms manages permissions through groups and explicit /hp commands.
         // Persisting these would create direct user nodes that override group negations.
-        Logger.debug("Ignoring addUserPermissions from Hytale API for %s (%d permissions) - permissions are managed through HyperPerms groups",
-                uuid, permissions.size());
+        // The one exception is PERSISTED_ENGINE_GRANTS - see its javadoc.
+        Set<String> persist = new HashSet<>(permissions);
+        persist.retainAll(PERSISTED_ENGINE_GRANTS);
+
+        if (persist.size() < permissions.size()) {
+            Logger.debug("Ignoring %d of %d permissions from Hytale API for %s - permissions are managed through HyperPerms groups",
+                    permissions.size() - persist.size(), permissions.size(), uuid);
+        }
+
+        if (persist.isEmpty()) {
+            return;
+        }
+
+        User user = hyperPerms.getUserManager().getOrCreateUser(uuid);
+        for (String permission : persist) {
+            user.setNode(Node.of(permission));
+        }
+        hyperPerms.getUserManager().saveUser(user);
+        hyperPerms.getCacheInvalidator().invalidate(uuid);
+        Logger.info("Granted %s to %s via the Hytale permission API", persist, uuid);
     }
 
     @Override
@@ -162,6 +210,64 @@ public class HyperPermsPermissionProvider implements PermissionProvider {
         // plugins like EssentialsPlus that read via getFirstPermissionProvider() (HyperPerms
         // is forced first). Never null.
         return hyperPerms.getGroupManager().getGroupNames();
+    }
+
+    @Override
+    public Set<UUID> getUsersWithPermission(String permission) {
+        // Contract (Hytale 0.6.0+): only users who hold the node as a grant of their own. A user
+        // who resolves it through a group, a track, or a wildcard is excluded, because revoking
+        // it from them would not stick. Hytale's own javadoc is explicit that a provider must not
+        // answer "nobody" when it means "I cannot tell", so a storage failure below is surfaced
+        // loudly and the in-memory answer is still returned rather than swallowed.
+        Set<UUID> holders = new HashSet<>();
+
+        // Loaded users first: their in-memory state may hold unsaved changes that storage has
+        // not seen yet, and this costs no I/O.
+        for (User user : hyperPerms.getUserManager().getLoadedUsers()) {
+            if (holdsDirectly(user, permission)) {
+                holders.add(user.getUuid());
+            }
+        }
+
+        // Then everyone else, from storage. Indexed on the SQL backends; a file scan on JSON.
+        try {
+            holders.addAll(hyperPerms.getStorage()
+                    .findUsersWithNode(permission)
+                    .get(USER_LOOKUP_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Logger.warn("Interrupted while listing holders of '%s'; the result covers only the %d loaded user(s)",
+                    permission, holders.size());
+        } catch (TimeoutException e) {
+            Logger.warn("Storage did not answer within %ds while listing holders of '%s'; the result covers only the %d loaded user(s). Offline holders will be missed",
+                    USER_LOOKUP_TIMEOUT_SECONDS, permission, holders.size());
+        } catch (ExecutionException e) {
+            Logger.severe("Failed to list holders of '" + permission
+                    + "' from storage; the result covers only loaded users. Offline holders will be missed",
+                    e.getCause() != null ? e.getCause() : e);
+        }
+
+        return holders;
+    }
+
+    /**
+     * Whether the user carries the permission as a direct, live, positive node of their own.
+     * <p>
+     * Deliberately narrow, and deliberately not routed through the resolver: group inheritance
+     * and wildcards must not count here. See {@link #getUsersWithPermission}.
+     *
+     * @param user       the user to inspect
+     * @param permission the exact permission node
+     * @return true if the user holds the node directly
+     */
+    private static boolean holdsDirectly(@NotNull User user, @NotNull String permission) {
+        for (Node node : user.getNodes()) {
+            if (node.getValue() && !node.isExpired() && !node.isGroupNode()
+                    && node.getPermission().equals(permission)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

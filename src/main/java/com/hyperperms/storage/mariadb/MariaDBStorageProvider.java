@@ -27,6 +27,7 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -180,9 +181,15 @@ public final class MariaDBStorageProvider implements StorageProvider {
                     expiry BIGINT,
                     contexts_json TEXT NOT NULL,
                     FOREIGN KEY (user_uuid) REFERENCES users(uuid) ON DELETE CASCADE,
-                    UNIQUE KEY uk_user_perm_ctx (user_uuid, permission, contexts_json(255))
+                    UNIQUE KEY uk_user_perm_ctx (user_uuid, permission, contexts_json(255)),
+                    KEY idx_user_nodes_permission (permission)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """);
+
+            // Reverse lookup for findUsersWithNode, which searches by permission rather than by
+            // owner; uk_user_perm_ctx leads with user_uuid and so cannot serve it. Declared in
+            // the CREATE above for fresh installs; added here for databases created before 3.0.0.
+            ensureUserNodePermissionIndex(stmt);
 
             // Group nodes table
             stmt.execute("""
@@ -197,6 +204,41 @@ public final class MariaDBStorageProvider implements StorageProvider {
                     UNIQUE KEY uk_group_perm_ctx (group_name, permission, contexts_json(255))
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """);
+        }
+    }
+
+    /**
+     * Adds the {@code user_nodes(permission)} index to a database created before 3.0.0, where the
+     * CREATE TABLE above ran without it.
+     * <p>
+     * Checked against {@code information_schema} rather than issuing
+     * {@code CREATE INDEX IF NOT EXISTS}, which MariaDB accepts but MySQL rejects — the driver
+     * happily connects to either. A failure here costs a slower whitelist query, not a broken
+     * server, so it is logged rather than thrown.
+     *
+     * @param stmt an open statement on the schema being initialised
+     */
+    private void ensureUserNodePermissionIndex(@NotNull Statement stmt) {
+        String exists = """
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = DATABASE() AND table_name = 'user_nodes'
+              AND index_name = 'idx_user_nodes_permission' LIMIT 1
+            """;
+        try (ResultSet rs = stmt.executeQuery(exists)) {
+            if (rs.next()) {
+                return;
+            }
+        } catch (SQLException e) {
+            Logger.warn("Could not check for idx_user_nodes_permission: %s", e.getMessage());
+            return;
+        }
+
+        try {
+            stmt.execute("CREATE INDEX idx_user_nodes_permission ON user_nodes(permission)");
+            Logger.info("Added idx_user_nodes_permission index to user_nodes");
+        } catch (SQLException e) {
+            Logger.warn("Could not add idx_user_nodes_permission (whitelist lookups will be slower): %s",
+                e.getMessage());
         }
     }
 
@@ -402,6 +444,34 @@ public final class MariaDBStorageProvider implements StorageProvider {
                 }
             } catch (SQLException e) {
                 Logger.severe("Failed to get user UUIDs", e);
+            }
+            return uuids;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Set<UUID>> findUsersWithNode(@NotNull String permission) {
+        return supplyAsync(() -> {
+            Set<UUID> uuids = new HashSet<>();
+            // value = 1 excludes negations; the expiry clause excludes lapsed timed nodes.
+            String sql = """
+                SELECT DISTINCT user_uuid FROM user_nodes
+                WHERE permission = ? AND value = 1 AND (expiry IS NULL OR expiry > ?)
+                """;
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, permission);
+                stmt.setLong(2, System.currentTimeMillis());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        uuids.add(UUID.fromString(rs.getString("user_uuid")));
+                    }
+                }
+            } catch (SQLException e) {
+                // Failed rather than swallowed into an empty set, unlike the other reads here:
+                // callers use this to decide who to revoke from, and "nobody" must not stand in
+                // for "I could not tell". See StorageProvider#findUsersWithNode.
+                throw new CompletionException(e);
             }
             return uuids;
         });
